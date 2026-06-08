@@ -183,6 +183,12 @@ export default function TodayScreen() {
         </View>
         <View style={styles.quickRow}>
           <QuickTile
+            testID="quick-bible"
+            icon="book-outline"
+            label="Bible"
+            onPress={() => router.push("/bible")}
+          />
+          <QuickTile
             testID="quick-calendar"
             icon="calendar-outline"
             label="Calendar"
@@ -194,6 +200,8 @@ export default function TodayScreen() {
             label="Churches"
             onPress={() => router.push("/churches")}
           />
+        </View>
+        <View style={styles.quickRow}>
           <QuickTile
             testID="quick-examen"
             icon="sunny-outline"

@@ -71,10 +71,12 @@ function composeExaminationBody(sections: ExaminationSection[], answers: Examina
 
 export default function JournalScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ date?: string; entry?: string; mode?: string }>();
+  const params = useLocalSearchParams<{ date?: string; entry?: string; mode?: string; verse_ref?: string; verse_text?: string }>();
   const initialDate = typeof params.date === "string" ? params.date : todayISO();
   const entryId = typeof params.entry === "string" ? params.entry : null;
   const initialMode: JournalKind = ((typeof params.mode === "string" && ["free", "examen", "examination"].includes(params.mode)) ? params.mode : "free") as JournalKind;
+  const incomingVerseRef = typeof params.verse_ref === "string" ? params.verse_ref : "";
+  const incomingVerseText = typeof params.verse_text === "string" ? params.verse_text : "";
 
   const [date, setDate] = useState(initialDate);
   const [kind, setKind] = useState<JournalKind>(initialMode);
@@ -142,6 +144,15 @@ export default function JournalScreen() {
     (async () => {
       try {
         await Promise.all([load(), loadTemplates()]);
+        // If a verse deep-link was supplied, prefill (only for new free-mode entries).
+        if (!entryId && incomingVerseRef && incomingVerseText) {
+          setKind("free");
+          setTitle((prev) => prev || incomingVerseRef);
+          setBody((prev) => {
+            if (prev.trim()) return prev;
+            return `“${incomingVerseText}”\n— ${incomingVerseRef}\n\n`;
+          });
+        }
       } finally {
         if (!c) setLoading(false);
       }
@@ -149,7 +160,7 @@ export default function JournalScreen() {
     return () => {
       c = true;
     };
-  }, [load, loadTemplates]);
+  }, [load, loadTemplates, entryId, incomingVerseRef, incomingVerseText]);
 
   const computedBody = useMemo(() => {
     if (kind === "examen") return composeExamenBody(examenPrompts, examenAnswers);

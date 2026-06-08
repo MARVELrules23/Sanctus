@@ -21,6 +21,7 @@ from liturgical import get_liturgical_day
 from usccb import fetch_readings, usccb_url_for
 from churches import nearby_churches, enrich_with_masstimes, search_churches
 from prayers import EXAMEN_PROMPTS, EXAMINATION_SECTIONS
+import bible as bible_svc
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
@@ -135,6 +136,11 @@ async def ensure_indexes():
     await db.weight_log.create_index([("user_id", 1), ("date", -1)])
     await db.user_churches.create_index([("user_id", 1), ("church_id", 1)], unique=True)
     await db.user_churches.create_index([("user_id", 1), ("saved_at", -1)])
+    await db.bible_books.create_index([("book_slug", 1), ("chapter", 1)])
+    await db.bible_highlights.create_index(
+        [("user_id", 1), ("book_slug", 1), ("chapter", 1), ("verse", 1)], unique=True,
+    )
+    await db.bible_highlights.create_index([("user_id", 1), ("updated_at", -1)])
 
 
 async def get_current_user(authorization: Optional[str] = Header(None)) -> User:
@@ -1177,6 +1183,72 @@ async def unsave_church(church_id: str, user: User = Depends(get_current_user)):
     if res.deleted_count == 0:
         raise HTTPException(status_code=404, detail="church not in saved list")
     return {"ok": True}
+
+
+# -------- bible (douay-rheims challoner) --------
+
+class HighlightRequest(BaseModel):
+    book: str
+    chapter: int
+    verse: int
+    color: str  # rose | gold | sage | violet
+
+
+@api.get("/bible/books")
+async def bible_books():
+    return {"items": bible_svc.all_books()}
+
+
+@api.get("/bible/chapter/{book_slug}/{chapter}")
+async def bible_chapter(book_slug: str, chapter: int, user: User = Depends(get_current_user)):
+    data = await bible_svc.get_chapter(db, book_slug, chapter)
+    cursor = db.bible_highlights.find(
+        {"user_id": user.user_id, "book_slug": book_slug, "chapter": chapter},
+        {"_id": 0, "verse": 1, "color": 1},
+    )
+    hl_list = await cursor.to_list(length=500)
+    data["highlights"] = [{"verse": h["verse"], "color": h["color"]} for h in hl_list]
+    return data
+
+
+@api.post("/bible/highlight")
+async def bible_set_highlight(payload: HighlightRequest, user: User = Depends(get_current_user)):
+    slug, ch, v = bible_svc.parse_verse_ref(payload.book, payload.chapter, payload.verse)
+    color = bible_svc.normalize_color(payload.color)
+    now = datetime.now(timezone.utc).isoformat()
+    await db.bible_highlights.update_one(
+        {"user_id": user.user_id, "book_slug": slug, "chapter": ch, "verse": v},
+        {"$set": {"color": color, "updated_at": now},
+         "$setOnInsert": {"user_id": user.user_id, "book_slug": slug,
+                          "chapter": ch, "verse": v, "created_at": now}},
+        upsert=True,
+    )
+    return {"book": slug, "chapter": ch, "verse": v, "color": color}
+
+
+@api.delete("/bible/highlight/{book_slug}/{chapter}/{verse}")
+async def bible_clear_highlight(book_slug: str, chapter: int, verse: int,
+                                user: User = Depends(get_current_user)):
+    slug, ch, v = bible_svc.parse_verse_ref(book_slug, chapter, verse)
+    res = await db.bible_highlights.delete_one(
+        {"user_id": user.user_id, "book_slug": slug, "chapter": ch, "verse": v},
+    )
+    return {"deleted": res.deleted_count}
+
+
+@api.get("/bible/highlights")
+async def bible_my_highlights(user: User = Depends(get_current_user),
+                              book: Optional[str] = None,
+                              limit: int = 500):
+    q: Dict[str, Any] = {"user_id": user.user_id}
+    if book:
+        q["book_slug"] = book
+    cursor = db.bible_highlights.find(q, {"_id": 0, "user_id": 0}).sort("updated_at", -1).limit(min(max(limit, 1), 1000))
+    items = await cursor.to_list(length=limit)
+    # Enrich with citation for convenience.
+    for it in items:
+        it["citation"] = bible_svc.citation_for(it["book_slug"], it["chapter"], it["verse"])
+    return {"items": items, "count": len(items)}
 
 
 @api.get("/")

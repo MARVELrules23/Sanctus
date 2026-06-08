@@ -76,6 +76,40 @@ export type User = {
 
 export type GoalMode = "liturgical" | "goals";
 
+export type BibleColor = "rose" | "gold" | "sage" | "violet";
+
+export type BibleBook = {
+  slug: string;
+  name: string;
+  dr_name: string;
+  abbr: string;
+  section: "ot" | "deutero" | "nt";
+  order: number;
+  chapters: number;
+};
+
+export type BibleVerse = { n: number; text: string };
+
+export type BibleChapter = {
+  book_slug: string;
+  book_name: string;
+  dr_name: string;
+  chapter: number;
+  chapters_total: number;
+  verses: BibleVerse[];
+  highlights: { verse: number; color: BibleColor }[];
+};
+
+export type BibleHighlight = {
+  book_slug: string;
+  chapter: number;
+  verse: number;
+  color: BibleColor;
+  citation: string;
+  updated_at?: string;
+  created_at?: string;
+};
+
 export async function updateMe(patch: { name?: string; picture?: string | null }): Promise<User> {
   // Backend accepts empty string to clear picture; pass through null as empty.
   const body: Record<string, string> = {};

@@ -313,3 +313,77 @@ export const REPORT_REASONS_FALLBACK = [
   "Doctrinal error / scandal",
   "Other",
 ];
+
+// ---- Self-Defense (Phase 4) ----
+export type SDPatron = {
+  name: string;
+  title?: string;
+  feast_day?: string;
+  icon?: string;
+  why_aligned?: string;
+  scripture?: string;
+  short_prayer?: string;
+};
+
+export type SDDiscipline = {
+  id: string;
+  name: string;
+  tradition: string;
+  tagline: string;
+  description: string;
+  skill_areas: string[];
+  equipment_options: string[];
+  icon: string;
+  patron?: SDPatron;
+};
+
+export type SDProgress = {
+  user_id?: string;
+  discipline_id: string;
+  current_level: "beginner" | "intermediate" | "advanced";
+  sessions_generated?: number;
+  sessions_completed: number;
+  recent_focus?: string[];
+  last_session_at?: string | null;
+  last_completed_at?: string | null;
+};
+
+export type SDSessionPlan = {
+  title: string;
+  technique_focus: string;
+  intensity?: "low" | "medium" | "high";
+  duration_minutes?: number;
+  warmup?: Array<{ name: string; duration_seconds?: number; notes?: string }>;
+  drills?: Array<{ name: string; sets?: string; notes?: string; solo_safe?: boolean }>;
+  technique_block?: {
+    name: string;
+    key_points?: string[];
+    common_errors?: string[];
+    progression_hint?: string;
+  };
+  live_application?: Array<{ name: string; description: string; requires_partner?: boolean }>;
+  cooldown?: Array<{ name: string; duration_seconds?: number }>;
+  patron_reflection?: string | null;
+  patron_prayer?: string | null;
+  coach_note?: string;
+};
+
+export type SDSession = {
+  session_id: string;
+  discipline_id: string;
+  discipline_name: string;
+  tradition: string;
+  level: "beginner" | "intermediate" | "advanced";
+  duration_minutes: number;
+  equipment: string[];
+  has_partner: boolean;
+  include_patron_reflection: boolean;
+  patron: SDPatron;
+  plan: SDSessionPlan;
+  generated_at: string;
+  completed_at: string | null;
+  completion_notes: string | null;
+  intensity_actual: "low" | "medium" | "high" | null;
+  source: "generated" | "redo";
+  parent_session_id: string | null;
+};

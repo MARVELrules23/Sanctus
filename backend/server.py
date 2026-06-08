@@ -23,6 +23,7 @@ from churches import nearby_churches, enrich_with_masstimes, search_churches
 from prayers import EXAMEN_PROMPTS, EXAMINATION_SECTIONS
 import bible as bible_svc
 import community as community_svc
+import self_defense as sd_svc
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
@@ -158,6 +159,12 @@ async def ensure_indexes():
     await db.community_dm_messages.create_index([("thread_id", 1), ("created_at", 1)])
     await db.community_reports.create_index([("reporter_id", 1), ("created_at", -1)])
     await db.community_blocks.create_index([("user_id", 1), ("blocked_id", 1)], unique=True)
+    # Self-defense indexes
+    await db.self_defense_sessions.create_index("session_id", unique=True)
+    await db.self_defense_sessions.create_index([("user_id", 1), ("discipline_id", 1), ("generated_at", -1)])
+    await db.self_defense_sessions.create_index([("user_id", 1), ("generated_at", -1)])
+    await db.self_defense_progress.create_index([("user_id", 1), ("discipline_id", 1)], unique=True)
+    await db.self_defense_acks.create_index("user_id", unique=True)
 
 
 async def get_current_user(authorization: Optional[str] = Header(None)) -> User:
@@ -1736,6 +1743,345 @@ async def community_block(user_id: str, user: User = Depends(get_current_user)):
 async def community_unblock(user_id: str, user: User = Depends(get_current_user)):
     await db.community_blocks.delete_one({"user_id": user.user_id, "blocked_id": user_id})
     return {"ok": True}
+
+
+# =====================================================================
+# SELF-DEFENSE — Phase 4: martial arts subsection inside Workouts
+# =====================================================================
+
+class SDGenerateRequest(BaseModel):
+    discipline_id: str
+    duration_minutes: int = 45
+    equipment: List[str] = []
+    has_partner: bool = False
+    override_level: Optional[str] = None  # "beginner" | "intermediate" | "advanced"
+    include_patron_reflection: bool = True
+
+
+class SDCompleteRequest(BaseModel):
+    notes: Optional[str] = None
+    intensity_actual: Optional[str] = None  # "low" | "medium" | "high"
+
+
+def _sd_validate_discipline(discipline_id: str) -> Dict[str, Any]:
+    d = sd_svc.get_discipline(discipline_id)
+    if not d:
+        raise HTTPException(status_code=404, detail="Unknown discipline")
+    return d
+
+
+async def _sd_get_progress(user_id: str, discipline_id: str) -> Dict[str, Any]:
+    doc = await db.self_defense_progress.find_one(
+        {"user_id": user_id, "discipline_id": discipline_id}, {"_id": 0}
+    )
+    if doc:
+        return doc
+    return {
+        "user_id": user_id,
+        "discipline_id": discipline_id,
+        "current_level": "beginner",
+        "sessions_generated": 0,
+        "sessions_completed": 0,
+        "recent_focus": [],
+        "last_session_at": None,
+        "last_completed_at": None,
+    }
+
+
+@api.get("/self-defense/disciplines")
+async def sd_list_disciplines(_: User = Depends(get_current_user)):
+    items = []
+    for d in sd_svc.DISCIPLINES:
+        patron = sd_svc.get_patron(d["id"]) or {}
+        items.append({**d, "patron": patron})
+    return {"items": items, "disclaimer": sd_svc.SAFETY_DISCLAIMER}
+
+
+@api.get("/self-defense/disciplines/{discipline_id}")
+async def sd_discipline_detail(discipline_id: str, user: User = Depends(get_current_user)):
+    d = _sd_validate_discipline(discipline_id)
+    patron = sd_svc.get_patron(discipline_id) or {}
+    progress = await _sd_get_progress(user.user_id, discipline_id)
+    progress["current_level"] = sd_svc.determine_level(progress)
+    return {"discipline": d, "patron": patron, "progress": progress}
+
+
+@api.get("/self-defense/disclaimer")
+async def sd_disclaimer_status(user: User = Depends(get_current_user)):
+    doc = await db.self_defense_acks.find_one({"user_id": user.user_id}, {"_id": 0})
+    return {"text": sd_svc.SAFETY_DISCLAIMER, "acknowledged": bool(doc), "acknowledged_at": (doc or {}).get("acknowledged_at")}
+
+
+@api.post("/self-defense/disclaimer/acknowledge")
+async def sd_disclaimer_ack(user: User = Depends(get_current_user)):
+    now = datetime.now(timezone.utc).isoformat()
+    await db.self_defense_acks.update_one(
+        {"user_id": user.user_id},
+        {"$set": {"user_id": user.user_id, "acknowledged_at": now}},
+        upsert=True,
+    )
+    return {"ok": True, "acknowledged_at": now}
+
+
+@api.post("/self-defense/generate")
+async def sd_generate(payload: SDGenerateRequest, user: User = Depends(get_current_user)):
+    discipline = _sd_validate_discipline(payload.discipline_id)
+    patron = sd_svc.get_patron(payload.discipline_id) or {}
+    progress = await _sd_get_progress(user.user_id, payload.discipline_id)
+    level = (payload.override_level or sd_svc.determine_level(progress)).lower()
+    if level not in sd_svc.LEVEL_ORDER:
+        level = "beginner"
+    duration = max(15, min(int(payload.duration_minutes or 45), 120))
+
+    system = sd_svc.build_session_system_prompt()
+    user_prompt = sd_svc.build_session_user_prompt(
+        discipline=discipline,
+        patron=patron,
+        level=level,
+        duration_minutes=duration,
+        equipment=payload.equipment or [],
+        has_partner=bool(payload.has_partner),
+        sessions_completed=int(progress.get("sessions_completed") or 0),
+        recent_focus=list(progress.get("recent_focus") or []),
+        include_patron_reflection=bool(payload.include_patron_reflection),
+    )
+
+    sess_id_key = f"sd-{user.user_id}-{payload.discipline_id}-{uuid.uuid4().hex[:8]}"
+    plan = await _chat_json(system, user_prompt, session_id=sess_id_key)
+
+    session_id = f"sd_{uuid.uuid4().hex[:14]}"
+    now = datetime.now(timezone.utc)
+    doc = {
+        "session_id": session_id,
+        "user_id": user.user_id,
+        "discipline_id": payload.discipline_id,
+        "discipline_name": discipline["name"],
+        "tradition": discipline["tradition"],
+        "level": level,
+        "duration_minutes": duration,
+        "equipment": payload.equipment or [],
+        "has_partner": bool(payload.has_partner),
+        "include_patron_reflection": bool(payload.include_patron_reflection),
+        "patron": patron,
+        "plan": plan,
+        "generated_at": now,
+        "completed_at": None,
+        "completion_notes": None,
+        "intensity_actual": None,
+        "source": "generated",
+        "parent_session_id": None,
+    }
+    await db.self_defense_sessions.insert_one(doc)
+
+    # Bump progress.sessions_generated and recent_focus
+    new_focus = (plan or {}).get("technique_focus")
+    recent = list(progress.get("recent_focus") or [])
+    if new_focus:
+        recent.append(new_focus)
+        recent = recent[-10:]
+    await db.self_defense_progress.update_one(
+        {"user_id": user.user_id, "discipline_id": payload.discipline_id},
+        {
+            "$set": {
+                "user_id": user.user_id,
+                "discipline_id": payload.discipline_id,
+                "current_level": level,
+                "recent_focus": recent,
+                "last_session_at": now.isoformat(),
+            },
+            "$inc": {"sessions_generated": 1},
+        },
+        upsert=True,
+    )
+
+    return _sd_session_public(doc)
+
+
+@api.get("/self-defense/sessions")
+async def sd_list_sessions(
+    discipline_id: Optional[str] = None,
+    completed: Optional[bool] = None,
+    limit: int = 50,
+    user: User = Depends(get_current_user),
+):
+    q: Dict[str, Any] = {"user_id": user.user_id}
+    if discipline_id:
+        _sd_validate_discipline(discipline_id)
+        q["discipline_id"] = discipline_id
+    if completed is True:
+        q["completed_at"] = {"$ne": None}
+    elif completed is False:
+        q["completed_at"] = None
+    limit = max(1, min(limit, 100))
+    cursor = db.self_defense_sessions.find(q, {"_id": 0}).sort("generated_at", -1).limit(limit)
+    items = [_sd_session_public(d) async for d in cursor]
+    return {"items": items}
+
+
+@api.get("/self-defense/sessions/{session_id}")
+async def sd_get_session(session_id: str, user: User = Depends(get_current_user)):
+    doc = await db.self_defense_sessions.find_one(
+        {"session_id": session_id, "user_id": user.user_id}, {"_id": 0}
+    )
+    if not doc:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return _sd_session_public(doc)
+
+
+@api.delete("/self-defense/sessions/{session_id}")
+async def sd_delete_session(session_id: str, user: User = Depends(get_current_user)):
+    res = await db.self_defense_sessions.delete_one(
+        {"session_id": session_id, "user_id": user.user_id}
+    )
+    if res.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return {"ok": True}
+
+
+@api.post("/self-defense/sessions/{session_id}/complete")
+async def sd_complete_session(session_id: str, payload: SDCompleteRequest,
+                              user: User = Depends(get_current_user)):
+    doc = await db.self_defense_sessions.find_one(
+        {"session_id": session_id, "user_id": user.user_id}, {"_id": 0}
+    )
+    if not doc:
+        raise HTTPException(status_code=404, detail="Session not found")
+    now = datetime.now(timezone.utc)
+    was_completed = doc.get("completed_at") is not None
+    notes = (payload.notes or "").strip()[:1000] or None
+    intensity = payload.intensity_actual if payload.intensity_actual in ("low", "medium", "high") else None
+    await db.self_defense_sessions.update_one(
+        {"session_id": session_id},
+        {"$set": {"completed_at": now, "completion_notes": notes, "intensity_actual": intensity}},
+    )
+
+    if not was_completed:
+        # Bump completion counter and possibly promote level
+        progress = await _sd_get_progress(user.user_id, doc["discipline_id"])
+        completed_count = int(progress.get("sessions_completed") or 0) + 1
+        promoted_level = sd_svc.determine_level({**progress, "sessions_completed": completed_count})
+        await db.self_defense_progress.update_one(
+            {"user_id": user.user_id, "discipline_id": doc["discipline_id"]},
+            {
+                "$set": {
+                    "current_level": promoted_level,
+                    "last_completed_at": now.isoformat(),
+                },
+                "$inc": {"sessions_completed": 1},
+            },
+            upsert=True,
+        )
+    refreshed = await db.self_defense_sessions.find_one(
+        {"session_id": session_id}, {"_id": 0}
+    )
+    return _sd_session_public(refreshed)
+
+
+@api.post("/self-defense/sessions/{session_id}/uncomplete")
+async def sd_uncomplete_session(session_id: str, user: User = Depends(get_current_user)):
+    doc = await db.self_defense_sessions.find_one(
+        {"session_id": session_id, "user_id": user.user_id}, {"_id": 0}
+    )
+    if not doc:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if doc.get("completed_at") is None:
+        return _sd_session_public(doc)
+    await db.self_defense_sessions.update_one(
+        {"session_id": session_id},
+        {"$set": {"completed_at": None, "completion_notes": None, "intensity_actual": None}},
+    )
+    await db.self_defense_progress.update_one(
+        {"user_id": user.user_id, "discipline_id": doc["discipline_id"]},
+        {"$inc": {"sessions_completed": -1}},
+    )
+    # Make sure we don't go below zero
+    await db.self_defense_progress.update_one(
+        {"user_id": user.user_id, "discipline_id": doc["discipline_id"], "sessions_completed": {"$lt": 0}},
+        {"$set": {"sessions_completed": 0}},
+    )
+    refreshed = await db.self_defense_sessions.find_one({"session_id": session_id}, {"_id": 0})
+    return _sd_session_public(refreshed)
+
+
+@api.post("/self-defense/sessions/{session_id}/redo")
+async def sd_redo_session(session_id: str, user: User = Depends(get_current_user)):
+    """Duplicate an existing session as a new uncompleted session (so the user can rerun it)."""
+    src = await db.self_defense_sessions.find_one(
+        {"session_id": session_id, "user_id": user.user_id}, {"_id": 0}
+    )
+    if not src:
+        raise HTTPException(status_code=404, detail="Session not found")
+    new_id = f"sd_{uuid.uuid4().hex[:14]}"
+    now = datetime.now(timezone.utc)
+    doc = {
+        **src,
+        "session_id": new_id,
+        "generated_at": now,
+        "completed_at": None,
+        "completion_notes": None,
+        "intensity_actual": None,
+        "source": "redo",
+        "parent_session_id": session_id,
+    }
+    await db.self_defense_sessions.insert_one(doc)
+    await db.self_defense_progress.update_one(
+        {"user_id": user.user_id, "discipline_id": doc["discipline_id"]},
+        {"$set": {"last_session_at": now.isoformat()}, "$inc": {"sessions_generated": 1}},
+        upsert=True,
+    )
+    return _sd_session_public(doc)
+
+
+@api.get("/self-defense/progress")
+async def sd_progress_all(user: User = Depends(get_current_user)):
+    items: List[Dict[str, Any]] = []
+    for d in sd_svc.DISCIPLINES:
+        prog = await _sd_get_progress(user.user_id, d["id"])
+        prog["current_level"] = sd_svc.determine_level(prog)
+        items.append({
+            "discipline_id": d["id"],
+            "discipline_name": d["name"],
+            "icon": d["icon"],
+            "progress": prog,
+            "patron_name": (sd_svc.get_patron(d["id"]) or {}).get("name"),
+        })
+    return {"items": items}
+
+
+def _sd_session_public(doc: Dict[str, Any]) -> Dict[str, Any]:
+    if not doc:
+        return {}
+    return {
+        "session_id": doc.get("session_id"),
+        "discipline_id": doc.get("discipline_id"),
+        "discipline_name": doc.get("discipline_name"),
+        "tradition": doc.get("tradition"),
+        "level": doc.get("level"),
+        "duration_minutes": doc.get("duration_minutes"),
+        "equipment": doc.get("equipment") or [],
+        "has_partner": bool(doc.get("has_partner")),
+        "include_patron_reflection": bool(doc.get("include_patron_reflection")),
+        "patron": doc.get("patron") or {},
+        "plan": doc.get("plan") or {},
+        "generated_at": _iso(doc.get("generated_at")),
+        "completed_at": _iso(doc.get("completed_at")),
+        "completion_notes": doc.get("completion_notes"),
+        "intensity_actual": doc.get("intensity_actual"),
+        "source": doc.get("source") or "generated",
+        "parent_session_id": doc.get("parent_session_id"),
+    }
+
+
+def _iso(value: Any) -> Optional[str]:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return value
+    if isinstance(value, datetime):
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        return value.isoformat()
+    return None
 
 
 app.include_router(api)

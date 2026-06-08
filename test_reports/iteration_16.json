@@ -1,0 +1,45 @@
+{
+  "summary": "Timezone bug on Sanctus daily-practice 'Completed at' timestamp is FIXED and verified. Backend GET /api/daily-practice now returns `completed_at` as an ISO string with `+00:00` UTC offset (e.g. `2026-06-08T21:31:22.312000+00:00`). Frontend DailyPracticeCard renders this with `new Date(iso).toLocaleTimeString(...)` which correctly converts to the browser's local timezone. Verified with Playwright using browser-context `timezone_id` emulation: in America/New_York (UTC-4) the card showed 5:33 PM (matching backend UTC 21:33:26 = local 5:33 PM) and in America/Los_Angeles (UTC-7) it showed 2:33 PM (matching UTC 21:33:39 = local 2:33 PM). Both 0-minute diff vs in-page `new Date().toLocaleTimeString()` captured at moment of click. Pre-fix behavior would have shown 9:33 PM in NY (4h off); that regression is gone.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "verified_flows": {
+    "backend_iso_includes_tz_offset": {
+      "GET /api/daily-practice": "completed_at = 2026-06-08T21:31:22.312000+00:00 (contains +00:00) — PASS",
+      "POST /api/daily-practice/complete": "completed_at = 2026-06-08T21:31:22.312000+00:00 — PASS"
+    },
+    "frontend_displayed_vs_local": {
+      "America/New_York (UTC-4)": "displayed='5:33 PM' js_local='5:33 PM' diff=0min — PASS",
+      "America/Los_Angeles (UTC-7)": "displayed='2:33 PM' js_local='2:33 PM' diff=0min — PASS"
+    }
+  },
+  "test_report_links": [
+    "/app/test_reports/tz_test.py",
+    "/app/test_reports/iteration_16.json"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "_strip() in /app/backend/daily_practices.py:867 now correctly attaches `tzinfo=timezone.utc` to naive datetimes from MongoDB before isoformat(). Comment in source documents the rationale clearly.",
+    "Frontend /app/frontend/src/components/DailyPracticeCard.tsx:214 uses `new Date(practice.completed_at).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})` — this is correct because the backend now always returns an offset-bearing ISO string, so the Date constructor parses it as an absolute instant rather than mistaking it for local time.",
+    "Suggestion (non-blocking): add a small backend unit test asserting `_strip({'completed_at': datetime(2026,1,1,12,0,0)})['completed_at'].endswith('+00:00')` to lock in the contract going forward."
+  ],
+  "updated_files": [
+    "/app/test_reports/tz_test.py (NEW — standalone Playwright reproducer)"
+  ],
+  "success_rate": {
+    "backend": "100% (1/1 endpoint returns offset-bearing ISO)",
+    "frontend": "100% (2/2 timezones match local within 0 minutes)"
+  },
+  "seed_data_creation": "Reused ui_test_user_1 / TEST_FE_ITER11_TOKEN via /app/backend/tests/setup_iter11_auth.py. Did POST/DELETE on /api/daily-practice/complete for today's date during test — left in completed state at end.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Tip: the in-tool browser_automation harness can't always parse f-strings with embedded curly-brace JS-evaluate strings — when in doubt, write a standalone /app/test_reports/<name>.py and run with `python` (playwright installed at /root/.venv). Use `browser.new_context(timezone_id='...')` for clean per-tab TZ emulation rather than CDP override (simpler and equally effective).",
+  "rca_of_issue": "ROOT CAUSE: MongoDB returns naive datetimes (no tzinfo). Previously `_strip` called `v.isoformat()` directly which produced strings like '2026-06-08T21:31:22.312000' with NO offset. JavaScript's `new Date('2026-06-08T21:31:22.312')` on ISO strings without offset is parsed as LOCAL time per ECMA-262, so a US-East user saw 9:31 PM instead of the correct 5:31 PM EDT (4-hour shift). FIX (verified): `_strip` now does `v = v.replace(tzinfo=timezone.utc)` before isoformat when tzinfo is None, producing '2026-06-08T21:31:22.312000+00:00'. JS Date now parses as absolute UTC instant and toLocaleTimeString converts it to the user's actual local timezone. Verified end-to-end across UTC-4 and UTC-7 with 0-minute drift between displayed value and `new Date().toLocaleTimeString()` captured at click time."
+}

@@ -869,6 +869,11 @@ def _strip(doc: Dict[str, Any]) -> Dict[str, Any]:
     for k in ("assigned_at", "completed_at"):
         v = out.get(k)
         if isinstance(v, datetime):
+            # MongoDB returns naive datetimes (UTC by convention). Attach
+            # UTC tzinfo before isoformat so JS Date() parses correctly
+            # in local time instead of mistaking it for local time.
+            if v.tzinfo is None:
+                v = v.replace(tzinfo=timezone.utc)
             out[k] = v.isoformat()
     return out
 

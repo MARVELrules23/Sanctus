@@ -98,3 +98,48 @@ export type DayDoc<T> = {
   plan: T;
   updated_at: string;
 };
+
+export type Readings = {
+  date: string;
+  liturgical: LiturgicalDay;
+  liturgical_title: string;
+  source: "universalis" | "usccb" | "ai-fallback";
+  first_reading: string;
+  first_reading_excerpt: string;
+  psalm: string;
+  psalm_excerpt: string;
+  second_reading: string;
+  second_reading_excerpt: string;
+  gospel: string;
+  gospel_excerpt: string;
+  gospel_acclamation: string;
+  gospel_acclamation_excerpt: string;
+  reflection: string;
+  usccb_url: string;
+};
+
+export type JournalMood =
+  | "grateful"
+  | "joyful"
+  | "sorrowful"
+  | "contrite"
+  | "hopeful"
+  | "weary"
+  | null;
+
+export type JournalEntry = {
+  entry_id: string;
+  date: string;
+  title: string;
+  body: string;
+  mood: JournalMood;
+  liturgical?: LiturgicalDay;
+  created_at: string;
+  updated_at: string;
+};
+
+export type GroceryItem = { name: string; count: number };
+export type GroceryWeek = { start: string; end: string; items: GroceryItem[]; days_with_meals: number };
+
+export type MealItem = MealPlan["breakfast"];
+export type ExerciseItem = WorkoutPlan["exercises"][number];

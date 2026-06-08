@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 
 from liturgical import get_liturgical_day
+from usccb import fetch_readings, usccb_url_for
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
@@ -64,6 +65,50 @@ class GenerateWorkoutRequest(BaseModel):
     date: str
 
 
+class MealItem(BaseModel):
+    name: str
+    description: str = ""
+    ingredients: List[str] = []
+    prep_minutes: int = 0
+
+
+class SaveMealRequest(BaseModel):
+    date: str
+    breakfast: MealItem
+    lunch: MealItem
+    dinner: MealItem
+    reflection: str = ""
+
+
+class ExerciseItem(BaseModel):
+    name: str
+    sets: str = ""
+    notes: str = ""
+
+
+class SaveWorkoutRequest(BaseModel):
+    date: str
+    title: str
+    focus: str = ""
+    duration_minutes: int = 30
+    exercises: List[ExerciseItem]
+    opening_prayer: str = ""
+    closing_prayer: str = ""
+    reflection: str = ""
+
+
+class SuggestMealSlotRequest(BaseModel):
+    date: str
+    slot: str  # breakfast | lunch | dinner
+    hint: Optional[str] = None
+
+
+class SuggestExerciseRequest(BaseModel):
+    date: str
+    focus: Optional[str] = None
+    hint: Optional[str] = None
+
+
 # ---------- Auth helpers ----------
 async def ensure_indexes():
     await db.users.create_index("email", unique=True)
@@ -71,6 +116,10 @@ async def ensure_indexes():
     await db.user_sessions.create_index("session_token", unique=True)
     await db.user_sessions.create_index("user_id")
     await db.user_sessions.create_index("expires_at", expireAfterSeconds=0)
+    await db.readings.create_index("date", unique=True)
+    await db.journal.create_index("entry_id", unique=True)
+    await db.journal.create_index([("user_id", 1), ("created_at", -1)])
+    await db.journal.create_index([("user_id", 1), ("date", 1)])
 
 
 async def get_current_user(authorization: Optional[str] = Header(None)) -> User:
@@ -360,6 +409,363 @@ async def get_workouts_week(start: str, user: User = Depends(get_current_user)):
     ).to_list(20)
     by_date = {doc["date"]: doc for doc in docs}
     return {dt: by_date.get(dt) for dt in dates}
+
+
+# ---------- Save custom meal / workout ----------
+@api.post("/meals/save")
+async def save_meal(payload: SaveMealRequest, user: User = Depends(get_current_user)):
+    try:
+        d = datetime.strptime(payload.date, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="date must be YYYY-MM-DD")
+    lit = get_liturgical_day(d)
+    plan = {
+        "breakfast": payload.breakfast.model_dump(),
+        "lunch": payload.lunch.model_dump(),
+        "dinner": payload.dinner.model_dump(),
+        "reflection": payload.reflection,
+    }
+    doc = {
+        "user_id": user.user_id,
+        "date": payload.date,
+        "liturgical": lit,
+        "plan": plan,
+        "source": "user",
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.meals.update_one(
+        {"user_id": user.user_id, "date": payload.date},
+        {"$set": doc},
+        upsert=True,
+    )
+    return doc
+
+
+@api.post("/workouts/save")
+async def save_workout(payload: SaveWorkoutRequest, user: User = Depends(get_current_user)):
+    try:
+        d = datetime.strptime(payload.date, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="date must be YYYY-MM-DD")
+    lit = get_liturgical_day(d)
+    plan = {
+        "title": payload.title,
+        "focus": payload.focus,
+        "duration_minutes": payload.duration_minutes,
+        "exercises": [e.model_dump() for e in payload.exercises],
+        "opening_prayer": payload.opening_prayer,
+        "closing_prayer": payload.closing_prayer,
+        "reflection": payload.reflection,
+    }
+    doc = {
+        "user_id": user.user_id,
+        "date": payload.date,
+        "liturgical": lit,
+        "plan": plan,
+        "source": "user",
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.workouts.update_one(
+        {"user_id": user.user_id, "date": payload.date},
+        {"$set": doc},
+        upsert=True,
+    )
+    return doc
+
+
+# ---------- AI suggestions for custom planning ----------
+@api.post("/meals/suggest")
+async def suggest_meal_slot(payload: SuggestMealSlotRequest, user: User = Depends(get_current_user)):
+    if payload.slot not in ("breakfast", "lunch", "dinner"):
+        raise HTTPException(status_code=400, detail="slot must be breakfast/lunch/dinner")
+    try:
+        d = datetime.strptime(payload.date, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="date must be YYYY-MM-DD")
+    lit = get_liturgical_day(d)
+    prefs = await db.preferences.find_one({"user_id": user.user_id}, {"_id": 0}) or PreferencesPayload().model_dump()
+    system = (
+        "You suggest a single Catholic-conscious meal honoring the liturgical day. "
+        "Strict JSON only, no prose."
+    )
+    abstinence = "Abstinence from meat — no chicken/beef/pork; fish or vegetarian only." if lit["is_abstinence"] else ""
+    fast = "Fast day — keep it light." if lit["is_fast"] else ""
+    feast = f"Feast/Solemnity: {lit['feast']}. Make it festive." if lit.get("feast") and lit["rank"] in ("solemnity", "feast") else ""
+    user_prompt = (
+        f"Date: {lit['date']} | Season: {lit['season']} | Slot: {payload.slot}\n"
+        f"{abstinence}\n{fast}\n{feast}\n"
+        f"Preferences: dietary={prefs.get('dietary')}, allergies={prefs.get('allergies') or 'none'}.\n"
+        f"User hint: {payload.hint or 'none'}\n"
+        "Return JSON exactly:\n"
+        "{\"name\": str, \"description\": str, \"ingredients\": [str], \"prep_minutes\": int}"
+    )
+    item = await _chat_json(system, user_prompt, session_id=f"suggest-meal-{user.user_id}-{payload.date}-{payload.slot}")
+    return item
+
+
+@api.post("/workouts/suggest")
+async def suggest_workout(payload: SuggestExerciseRequest, user: User = Depends(get_current_user)):
+    try:
+        d = datetime.strptime(payload.date, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="date must be YYYY-MM-DD")
+    lit = get_liturgical_day(d)
+    prefs = await db.preferences.find_one({"user_id": user.user_id}, {"_id": 0}) or PreferencesPayload().model_dump()
+    system = (
+        "You suggest a Catholic-themed workout outline. Strict JSON only."
+    )
+    user_prompt = (
+        f"Date: {lit['date']} | Day: {d.strftime('%A')} | Season: {lit['season']} | "
+        f"Feast: {lit.get('feast') or 'none'} | Sunday: {lit['is_sunday']}\n"
+        f"User: level={prefs.get('fitness_level')}, goal={prefs.get('fitness_goal')}, focus_hint={payload.focus or payload.hint or 'none'}.\n"
+        "Return JSON exactly:\n"
+        "{\n"
+        "  \"title\": str, \"focus\": str, \"duration_minutes\": int,\n"
+        "  \"exercises\": [{\"name\": str, \"sets\": str, \"notes\": str}],\n"
+        "  \"opening_prayer\": str, \"closing_prayer\": str\n"
+        "}"
+    )
+    item = await _chat_json(system, user_prompt, session_id=f"suggest-workout-{user.user_id}-{payload.date}")
+    return item
+
+
+# ---------- Grocery list ----------
+@api.get("/meals/grocery")
+async def grocery_week(start: str, user: User = Depends(get_current_user)):
+    try:
+        d = datetime.strptime(start, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="start must be YYYY-MM-DD")
+    dates = [(d + timedelta(days=i)).isoformat() for i in range(7)]
+    docs = await db.meals.find(
+        {"user_id": user.user_id, "date": {"$in": dates}}, {"_id": 0}
+    ).to_list(50)
+    # Aggregate ingredients (case-insensitive dedup, keep count)
+    counts: dict[str, int] = {}
+    for doc in docs:
+        plan = doc.get("plan", {})
+        for slot in ("breakfast", "lunch", "dinner"):
+            meal = plan.get(slot) or {}
+            for ing in meal.get("ingredients", []) or []:
+                key = ing.strip().lower()
+                if not key:
+                    continue
+                counts[key] = counts.get(key, 0) + 1
+    items = [
+        {"name": k.title() if not any(c.isupper() for c in k) else k, "count": v}
+        for k, v in sorted(counts.items())
+    ]
+    return {"start": start, "end": dates[-1], "items": items, "days_with_meals": len(docs)}
+
+
+# ---------- Daily Mass Readings ----------
+async def _ai_reflection(lit: dict, date_str: str) -> str:
+    """Short AI-generated reflection — citations come from USCCB, not the model."""
+    try:
+        system = (
+            "You are a Catholic spiritual companion. Write a short, prayerful reflection "
+            "(2-3 sentences) inspired by the day's liturgical context — without paraphrasing "
+            "scripture itself. Plain text, no markdown."
+        )
+        prompt = (
+            f"Date: {date_str} | Season: {lit.get('season')} | "
+            f"Feast: {lit.get('feast') or 'none'} | Sunday: {lit.get('is_sunday')}.\n"
+            "Write 2-3 sentences tying today's liturgy to daily life."
+        )
+        chat = LlmChat(
+            api_key=EMERGENT_LLM_KEY,
+            session_id=f"reflection-{date_str}",
+            system_message=system,
+        ).with_model("anthropic", "claude-sonnet-4-5-20250929")
+        resp = await chat.send_message(UserMessage(text=prompt))
+        return (resp if isinstance(resp, str) else str(resp)).strip()
+    except Exception as e:  # noqa: BLE001
+        logger.warning("reflection AI failed: %s", e)
+        return ""
+
+
+@api.get("/readings")
+async def daily_readings(date: str, user: User = Depends(get_current_user)):
+    try:
+        d = datetime.strptime(date, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="date must be YYYY-MM-DD")
+    cached = await db.readings.find_one({"date": date}, {"_id": 0})
+    if cached and cached.get("source") == "usccb":
+        return cached
+    lit = get_liturgical_day(d)
+    scraped = await fetch_readings(d)
+    if scraped:
+        # Generate short reflection alongside (best-effort).
+        reflection = await _ai_reflection(lit, date)
+        doc = {
+            "date": date,
+            "liturgical": lit,
+            "source": scraped.get("source", "live"),
+            "usccb_url": scraped["url"] or usccb_url_for(d),
+            "liturgical_title": scraped["liturgical_title"] or (lit.get("feast") or lit.get("season") or ""),
+            "first_reading": scraped["first_reading"],
+            "first_reading_excerpt": scraped["first_reading_excerpt"],
+            "psalm": scraped["psalm"],
+            "psalm_excerpt": scraped["psalm_excerpt"],
+            "second_reading": scraped["second_reading"],
+            "second_reading_excerpt": scraped["second_reading_excerpt"],
+            "gospel_acclamation": scraped["gospel_acclamation"],
+            "gospel_acclamation_excerpt": scraped["gospel_acclamation_excerpt"],
+            "gospel": scraped["gospel"],
+            "gospel_excerpt": scraped["gospel_excerpt"],
+            "reflection": reflection,
+            "cached_at": datetime.now(timezone.utc).isoformat(),
+        }
+        await db.readings.update_one({"date": date}, {"$set": doc}, upsert=True)
+        return doc
+
+    # Fallback — USCCB unreachable. Try AI for citations.
+    logger.info("USCCB scrape failed for %s — falling back to AI citations.", date)
+    system = (
+        "You are a careful Catholic liturgical assistant. Provide the official Roman Catholic "
+        "lectionary citations for a given date (Ordinary Form). Cite only chapter/verse references; "
+        "do NOT paraphrase scripture. Use the U.S. lectionary cycle when applicable. "
+        "If uncertain about a specific reading, omit it rather than guess. Return strict JSON only."
+    )
+    user_prompt = (
+        f"Date: {lit['date']} ({d.strftime('%A')}) | Liturgical day: {lit.get('feast') or lit['season']}.\n"
+        "Provide the Mass readings citations and a short reflection. Return JSON exactly:\n"
+        "{\n"
+        "  \"liturgical_title\": str,\n"
+        "  \"first_reading\": str,\n"
+        "  \"psalm\": str,\n"
+        "  \"second_reading\": str,\n"
+        "  \"gospel\": str,\n"
+        "  \"gospel_acclamation\": str,\n"
+        "  \"reflection\": str\n"
+        "}"
+    )
+    try:
+        data = await _chat_json(system, user_prompt, session_id=f"readings-{date}")
+    except Exception as e:  # noqa: BLE001
+        logger.warning("readings AI fallback failed: %s", e)
+        data = {}
+    doc = {
+        "date": date,
+        "liturgical": lit,
+        "source": "ai-fallback",
+        "usccb_url": usccb_url_for(d),
+        "liturgical_title": data.get("liturgical_title", lit.get("feast") or lit.get("season") or ""),
+        "first_reading": data.get("first_reading", ""),
+        "first_reading_excerpt": "",
+        "psalm": data.get("psalm", ""),
+        "psalm_excerpt": "",
+        "second_reading": data.get("second_reading", ""),
+        "second_reading_excerpt": "",
+        "gospel_acclamation": data.get("gospel_acclamation", ""),
+        "gospel_acclamation_excerpt": "",
+        "gospel": data.get("gospel", ""),
+        "gospel_excerpt": "",
+        "reflection": data.get("reflection", ""),
+        "cached_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.readings.update_one({"date": date}, {"$set": doc}, upsert=True)
+    return doc
+
+
+# ---------- Journal ----------
+class JournalSaveRequest(BaseModel):
+    date: str  # YYYY-MM-DD
+    title: Optional[str] = ""
+    body: str
+    mood: Optional[str] = None  # e.g. grateful, sorrowful, joyful, contrite
+
+
+def _journal_doc(d: dict) -> dict:
+    return {
+        "entry_id": d["entry_id"],
+        "date": d["date"],
+        "title": d.get("title", ""),
+        "body": d.get("body", ""),
+        "mood": d.get("mood"),
+        "liturgical": d.get("liturgical"),
+        "created_at": d.get("created_at"),
+        "updated_at": d.get("updated_at"),
+    }
+
+
+@api.post("/journal")
+async def save_journal(payload: JournalSaveRequest, user: User = Depends(get_current_user)):
+    try:
+        d = datetime.strptime(payload.date, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="date must be YYYY-MM-DD")
+    if not payload.body.strip():
+        raise HTTPException(status_code=400, detail="body cannot be empty")
+    lit = get_liturgical_day(d)
+    now = datetime.now(timezone.utc).isoformat()
+    entry_id = f"jrn_{uuid.uuid4().hex[:12]}"
+    doc = {
+        "entry_id": entry_id,
+        "user_id": user.user_id,
+        "date": payload.date,
+        "title": (payload.title or "").strip(),
+        "body": payload.body.strip(),
+        "mood": payload.mood,
+        "liturgical": lit,
+        "created_at": now,
+        "updated_at": now,
+    }
+    await db.journal.insert_one(doc)
+    return _journal_doc(doc)
+
+
+@api.put("/journal/{entry_id}")
+async def update_journal(entry_id: str, payload: JournalSaveRequest, user: User = Depends(get_current_user)):
+    existing = await db.journal.find_one({"entry_id": entry_id, "user_id": user.user_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="entry not found")
+    if not payload.body.strip():
+        raise HTTPException(status_code=400, detail="body cannot be empty")
+    update = {
+        "title": (payload.title or "").strip(),
+        "body": payload.body.strip(),
+        "mood": payload.mood,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.journal.update_one({"entry_id": entry_id, "user_id": user.user_id}, {"$set": update})
+    return _journal_doc({**existing, **update})
+
+
+@api.get("/journal")
+async def list_journal(
+    user: User = Depends(get_current_user),
+    date: Optional[str] = None,
+    limit: int = 50,
+):
+    """List entries for current user. If `date` given, only entries on that day."""
+    query: dict = {"user_id": user.user_id}
+    if date:
+        try:
+            datetime.strptime(date, "%Y-%m-%d").date()
+        except ValueError:
+            raise HTTPException(status_code=400, detail="date must be YYYY-MM-DD")
+        query["date"] = date
+    cursor = db.journal.find(query, {"_id": 0}).sort("created_at", -1).limit(max(1, min(limit, 200)))
+    docs = await cursor.to_list(length=limit)
+    return {"items": [_journal_doc(d) for d in docs]}
+
+
+@api.get("/journal/{entry_id}")
+async def get_journal(entry_id: str, user: User = Depends(get_current_user)):
+    doc = await db.journal.find_one({"entry_id": entry_id, "user_id": user.user_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="entry not found")
+    return _journal_doc(doc)
+
+
+@api.delete("/journal/{entry_id}")
+async def delete_journal(entry_id: str, user: User = Depends(get_current_user)):
+    res = await db.journal.delete_one({"entry_id": entry_id, "user_id": user.user_id})
+    if res.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="entry not found")
+    return {"ok": True}
 
 
 @api.get("/")

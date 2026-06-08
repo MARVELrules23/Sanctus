@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Image,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -13,7 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
-import { api, DayDoc, LiturgicalDay, MealPlan, WorkoutPlan } from "@/src/api";
+import { api, DayDoc, JournalEntry, LiturgicalDay, MealPlan, Readings, WorkoutPlan } from "@/src/api";
 import { useAuth } from "@/src/auth-context";
 import LiturgicalBadge from "@/src/components/LiturgicalBadge";
 import Ornament from "@/src/components/Ornament";
@@ -47,6 +46,8 @@ export default function TodayScreen() {
   const [lit, setLit] = useState<LiturgicalDay | null>(null);
   const [meal, setMeal] = useState<DayDoc<MealPlan> | null>(null);
   const [workout, setWorkout] = useState<DayDoc<WorkoutPlan> | null>(null);
+  const [readings, setReadings] = useState<Readings | null>(null);
+  const [journals, setJournals] = useState<JournalEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [genMeal, setGenMeal] = useState(false);
@@ -61,6 +62,9 @@ export default function TodayScreen() {
     setLit(l);
     setMeal("plan" in m ? (m as DayDoc<MealPlan>) : null);
     setWorkout("plan" in w ? (w as DayDoc<WorkoutPlan>) : null);
+    // Readings + journal are slower / non-critical — load in background.
+    api<Readings>(`/readings?date=${date}`).then(setReadings).catch(() => undefined);
+    api<{ items: JournalEntry[] }>(`/journal?limit=3`).then((r) => setJournals(r.items || [])).catch(() => undefined);
   }, [date]);
 
   useEffect(() => {
@@ -154,6 +158,129 @@ export default function TodayScreen() {
           </View>
           <Text style={styles.devotionTitle}>{devotion.title}</Text>
           <Text style={styles.devotionText}>{devotion.text}</Text>
+        </View>
+
+        {/* Quick actions */}
+        <View style={styles.quickRow} testID="quick-actions-row">
+          <QuickTile
+            testID="quick-rosary"
+            icon="flower-outline"
+            label="Rosary"
+            onPress={() => router.push("/rosary")}
+          />
+          <QuickTile
+            testID="quick-grocery"
+            icon="cart-outline"
+            label="Grocery"
+            onPress={() => router.push("/grocery")}
+          />
+          <QuickTile
+            testID="quick-journal"
+            icon="create-outline"
+            label="Journal"
+            onPress={() => router.push("/journal-list")}
+          />
+        </View>
+
+        {/* Mass Readings */}
+        <Pressable
+          testID="readings-card"
+          onPress={() => router.push({ pathname: "/readings", params: { date } })}
+          style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+        >
+          <View style={styles.cardHeader}>
+            <Ionicons name="bookmark-outline" size={18} color={colors.gold} />
+            <Text style={styles.cardHeaderText}>MASS READINGS</Text>
+            <View style={{ flex: 1 }} />
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          </View>
+          {readings ? (
+            <>
+              <Text style={styles.mealName}>
+                {readings.liturgical_title || lit?.feast || lit?.season}
+              </Text>
+              {readings.gospel ? (
+                <View style={styles.readingRow}>
+                  <Text style={styles.readingLabel}>Gospel</Text>
+                  <Text style={styles.readingCite}>{readings.gospel}</Text>
+                </View>
+              ) : null}
+              {readings.first_reading ? (
+                <View style={styles.readingRow}>
+                  <Text style={styles.readingLabel}>1st</Text>
+                  <Text style={styles.readingCite}>{readings.first_reading}</Text>
+                </View>
+              ) : null}
+              {readings.psalm ? (
+                <View style={styles.readingRow}>
+                  <Text style={styles.readingLabel}>Psalm</Text>
+                  <Text style={styles.readingCite}>{readings.psalm}</Text>
+                </View>
+              ) : null}
+            </>
+          ) : (
+            <Text style={styles.empty}>Loading today&apos;s Mass readings…</Text>
+          )}
+        </Pressable>
+
+        {/* Journal preview */}
+        <View style={styles.card} testID="journal-preview-card">
+          <View style={styles.cardHeader}>
+            <Ionicons name="create-outline" size={18} color={colors.gold} />
+            <Text style={styles.cardHeaderText}>JOURNAL</Text>
+            <View style={{ flex: 1 }} />
+            <Pressable
+              testID="journal-new-button"
+              onPress={() => router.push({ pathname: "/journal", params: { date } })}
+              hitSlop={8}
+            >
+              <Ionicons name="add" size={22} color={colors.gold} />
+            </Pressable>
+          </View>
+          {journals.length === 0 ? (
+            <>
+              <Text style={styles.empty}>
+                Where did you meet the Lord today? A line is enough.
+              </Text>
+              <Pressable
+                testID="journal-empty-add"
+                onPress={() => router.push({ pathname: "/journal", params: { date } })}
+                style={({ pressed }) => [styles.primaryBtn, pressed && styles.pressed]}
+              >
+                <Ionicons name="add" size={16} color={colors.gold} />
+                <Text style={styles.primaryBtnText}>Write today&apos;s entry</Text>
+              </Pressable>
+            </>
+          ) : (
+            <>
+              {journals.slice(0, 2).map((j) => (
+                <Pressable
+                  key={j.entry_id}
+                  testID={`journal-preview-${j.entry_id}`}
+                  onPress={() => router.push({ pathname: "/journal", params: { entry: j.entry_id } })}
+                  style={({ pressed }) => [styles.journalRow, pressed && styles.pressed]}
+                >
+                  <View style={{ flex: 1 }}>
+                    {j.title ? (
+                      <Text style={styles.journalTitle} numberOfLines={1}>{j.title}</Text>
+                    ) : null}
+                    <Text style={styles.journalBody} numberOfLines={2}>
+                      {j.body}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                </Pressable>
+              ))}
+              <Pressable
+                testID="view-journal-button"
+                onPress={() => router.push("/journal-list")}
+                style={({ pressed }) => [styles.linkBtn, pressed && styles.pressed]}
+              >
+                <Text style={styles.linkBtnText}>View all entries</Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.gold} />
+              </Pressable>
+            </>
+          )}
         </View>
 
         {/* Meal */}
@@ -256,11 +383,29 @@ export default function TodayScreen() {
   );
 }
 
+function QuickTile({
+  testID,
+  icon,
+  label,
+  onPress,
+}: {
+  testID: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable testID={testID} onPress={onPress} style={({ pressed }) => [styles.tile, pressed && styles.pressed]}>
+      <Ionicons name={icon} size={22} color={colors.gold} />
+      <Text style={styles.tileLabel}>{label}</Text>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   scroll: { paddingHorizontal: spacing.lg, paddingTop: spacing.lg, paddingBottom: spacing.xl },
-  loadingWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
-  greeting: {
+  loadingWrap: { flex: 1, alignItems: "center", justifyContent: "center" },  greeting: {
     fontFamily: fonts.bodyItalic,
     fontStyle: "italic",
     fontSize: 16,
@@ -369,6 +514,68 @@ const styles = StyleSheet.create({
     fontFamily: fonts.uiSemi,
     color: colors.gold,
     fontSize: 14,
+  },
+  quickRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  tile: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    gap: 6,
+    ...shadow.card,
+  },
+  tileLabel: {
+    fontFamily: fonts.uiSemi,
+    fontSize: 12,
+    color: colors.textPrimary,
+    letterSpacing: 0.6,
+  },
+  readingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginTop: 6,
+  },
+  readingLabel: {
+    fontFamily: fonts.uiSemi,
+    fontSize: 10,
+    letterSpacing: 1.2,
+    color: colors.textMuted,
+    width: 46,
+  },
+  readingCite: {
+    fontFamily: fonts.bodyRegular,
+    fontSize: 14,
+    color: colors.textPrimary,
+    flex: 1,
+  },
+  journalRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSoft,
+  },
+  journalTitle: {
+    fontFamily: fonts.headingSemi,
+    fontSize: 16,
+    color: colors.textPrimary,
+  },
+  journalBody: {
+    fontFamily: fonts.bodyRegular,
+    fontSize: 13,
+    color: colors.textSecondary,
+    lineHeight: 20,
+    marginTop: 2,
   },
   pressed: { opacity: 0.7 },
 });

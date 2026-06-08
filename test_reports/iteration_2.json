@@ -1,0 +1,43 @@
+{
+  "summary": "All 50 backend tests pass (25 new for /api/readings + /api/journal + smoke regression, 25 pre-existing). New /api/readings endpoint successfully fetches live readings today from Universalis (source='universalis'), with correct USCCB cross-reference URL, full citation set (first_reading, psalm, gospel_acclamation, gospel) and a Claude-generated reflection. Future-date readings correctly fall through to ai-fallback (USCCB scrape blocked by Varnish 403). Date validation returns 400. /api/journal CRUD all works: create with empty/whitespace body returns 400, invalid date 400, GET/PUT/DELETE on missing entry 404, second DELETE 404. Cross-user isolation is enforced — a second seeded user (test_user_2) gets 404 on GET/PUT/DELETE of user_1's entries and the list endpoint does not leak them. Listing supports ?date= and ?limit= and is sorted by created_at descending. Meals/save, workouts/save, meals/grocery, meals/generate, workouts/generate still work (smoke). One performance bug found: /api/readings cache only short-circuits when source=='usccb', so live universalis & ai-fallback responses are re-fetched on every call (~4s observed vs the <500ms target in the review request).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "GET /api/readings",
+        "issue": "Cache short-circuit at server.py:594 only returns cached doc when source=='usccb'. Universalis and ai-fallback cached docs are ignored and re-fetched on every call (observed second call ~4.0s for source=universalis — review request expects <500ms). Suggested fix: `if cached and cached.get('source') in ('usccb', 'universalis', 'ai-fallback'): return cached` — and for 'universalis', additionally check the cached date matches today to avoid serving stale today-only data after the calendar rolls."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/conftest.py",
+    "/app/backend/tests/test_sanctus_backend.py",
+    "/app/backend/tests/test_readings_journal.py",
+    "/app/test_reports/pytest/pytest_results.xml",
+    "/app/test_reports/pytest/readings_journal_results.xml"
+  ],
+  "action_items": [
+    "Extend /api/readings cache short-circuit to cover source in ('usccb','universalis','ai-fallback'); guard 'universalis' by also verifying the cached date is still 'today' before serving from cache, so the daily rollover is honored."
+  ],
+  "critical_code_review_comments": [
+    "server.py:587-621 — /api/readings always re-runs `fetch_readings()` + `_ai_reflection()` for cached non-USCCB sources, defeating the per-date cache in the `readings` collection (perf bug, ~4s/call observed).",
+    "server.py:736-752 — list_journal's `limit` query param is not validated as int>0 before being min/max-clamped; FastAPI will coerce ints but `?limit=0` results in `max(1, min(0,200))=1`. Acceptable, but consider explicit Pydantic constraints with Query(ge=1, le=200).",
+    "usccb.py:223-225 — `_is_today` checks both UTC date and local date. Universalis returns USA today's readings; for users east of UTC just past midnight UTC, the cached 'today' may briefly disagree with their local USA date. Low priority.",
+    "Carried over from iter 1: deprecated FastAPI @app.on_event('startup'/'shutdown') usage; consider lifespan context manager."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_readings_journal.py (new)"
+  ],
+  "success_rate": {"backend": "100% (50/50)", "frontend": "not tested (backend-only request)"},
+  "seed_data_creation": "Reuses conftest fixture seeding user_id=test_user_1 (token=test_token_abc). Adds module-scoped second user (user_id=test_user_2, token=test_token_xyz_2) for cross-user isolation tests. Test journal entries prefixed with TEST_; module fixture cleans them and the second user/session on teardown.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend URL lives in EXPO_PUBLIC_BACKEND_URL (frontend/.env). Auth uses Authorization: Bearer <session_token> against rows in user_sessions (NOT a Cookie header — the review request mentioned cookies but actual server.py uses Header(authorization)). Universalis returns USA readings only for *today*; future/past dates fall to USCCB scrape (typically 403 from this server's IP) and then Claude ai-fallback. The /api/readings cache only short-circuits when source=='usccb', so today-source=universalis docs re-fetch every call (~4s); future-date ai-fallback also re-runs Claude every call.",
+  "rca_of_issue": "Performance regression in /api/readings cache: the condition `cached.get('source') == 'usccb'` excludes the two most common live sources (universalis for today, ai-fallback for everything else). Reproduction: GET /api/readings?date=<today> twice in a row — both calls take ~4s and `db.readings` already holds the doc. Mitigation: broaden the cache predicate to include universalis & ai-fallback, with a freshness check on universalis so we don't serve yesterday's universalis data on a new day."
+}

@@ -101,3 +101,41 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+## Backend test plan (this iteration — new endpoints)
+
+### `/api/readings?date=YYYY-MM-DD` (Daily Mass readings)
+- Should authenticate via session cookie.
+- For **today's date**, must return `source: "universalis"` with non-empty `gospel` and `first_reading` citations.
+- For any date, response includes `liturgical_title`, `usccb_url`, `liturgical{}`, and a short `reflection`.
+- For arbitrary past/future date, source may be `usccb` or `ai-fallback`. Should never 5xx.
+- Reject invalid date format with 400.
+- Second call for same date should be cached (fast).
+
+### `/api/journal` (Catholic journal CRUD)
+- `POST /api/journal` with `{date, title?, body, mood?}` creates an entry. Empty body → 400.
+- `GET /api/journal` lists entries for the current user, most recent first, `items[]` shape.
+- `GET /api/journal?date=YYYY-MM-DD` filters by date.
+- `GET /api/journal/{entry_id}` returns one entry, 404 if not owned/missing.
+- `PUT /api/journal/{entry_id}` updates body/title/mood; empty body → 400.
+- `DELETE /api/journal/{entry_id}` deletes; second delete → 404.
+- All endpoints require auth and scope to current user (cannot read another user's entry).
+
+### Existing endpoints (regression smoke)
+- `/api/meals/generate`, `/api/meals/save`, `/api/meals/suggest`, `/api/meals/grocery`
+- `/api/workouts/generate`, `/api/workouts/save`
+- `/api/auth/me`, `/api/liturgical/day`
+
+## Frontend test plan (this iteration)
+- Tabs render and navigate.
+- Today screen: Mass Readings card shows real citations (Gospel/1st/Psalm); tap → `/readings` detail with USCCB link.
+- Today screen: Quick tiles (Rosary, Grocery, Journal) route to correct screens.
+- Today screen: Journal card "Write today's entry" → editor saves → returns to home → preview updated.
+- Meals tab: "Custom plan" → `/edit-meal`; "Grocery list" → `/grocery`.
+- Workouts tab: "Custom plan" → `/edit-workout`; "Rosary" → `/rosary`.
+- Grocery screen: PDF and Text share actions both fire without errors.
+- Journal list: Add new, edit, delete works. Long-press delete on list also works.
+
+## agent_communication
+
+main_agent: "Added live Mass readings (Universalis JSONP, USCCB scrape fallback, AI citations as last resort), Catholic journal with mood tagging (create/edit/delete + list), wired all previously-orphaned screens (rosary, grocery, edit-meal, edit-workout) into navigation, and added real PDF export for the weekly grocery list via expo-print + expo-sharing. Backend extended with `/api/readings` (uses USCCB scraper module) and `/api/journal` CRUD endpoints. Please run backend tests for the new endpoints and a smoke pass over the existing ones."

@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 
 import { api, DayDoc, LiturgicalDay, MealPlan } from "@/src/api";
 import LiturgicalBadge from "@/src/components/LiturgicalBadge";
@@ -19,6 +20,7 @@ import { addDaysISO, parseISO, startOfWeekISO, todayISO } from "@/src/date-utils
 const DOW_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export default function MealsScreen() {
+  const router = useRouter();
   const [weekStart, setWeekStart] = useState(() => startOfWeekISO(todayISO()));
   const [selected, setSelected] = useState(() => todayISO());
   const [meals, setMeals] = useState<Record<string, DayDoc<MealPlan> | null>>({});
@@ -135,6 +137,25 @@ export default function MealsScreen() {
         <Text style={styles.dayHeader}>
           {d.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
         </Text>
+
+        <View style={styles.actionRow}>
+          <Pressable
+            testID="meals-custom-button"
+            onPress={() => router.push({ pathname: "/edit-meal", params: { date: selected } })}
+            style={({ pressed }) => [styles.actionBtn, pressed && styles.pressed]}
+          >
+            <Ionicons name="create-outline" size={14} color={colors.primary} />
+            <Text style={styles.actionBtnText}>Custom plan</Text>
+          </Pressable>
+          <Pressable
+            testID="meals-grocery-button"
+            onPress={() => router.push({ pathname: "/grocery", params: { start: weekStart } })}
+            style={({ pressed }) => [styles.actionBtn, pressed && styles.pressed]}
+          >
+            <Ionicons name="cart-outline" size={14} color={colors.primary} />
+            <Text style={styles.actionBtnText}>Grocery list</Text>
+          </Pressable>
+        </View>
 
         <Ornament />
 
@@ -358,5 +379,28 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   primaryBtnText: { fontFamily: fonts.uiSemi, color: colors.gold, fontSize: 15, letterSpacing: 0.6 },
+  actionRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  actionBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  actionBtnText: {
+    fontFamily: fonts.uiSemi,
+    fontSize: 13,
+    color: colors.primary,
+    letterSpacing: 0.3,
+  },
   pressed: { opacity: 0.7 },
 });

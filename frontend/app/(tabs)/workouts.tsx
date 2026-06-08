@@ -16,6 +16,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { api, DayDoc, GoalMode, LiturgicalDay, WorkoutPlan } from "@/src/api";
 import LiturgicalBadge from "@/src/components/LiturgicalBadge";
 import GoalModeToggle from "@/src/components/GoalModeToggle";
+import AISuggestionModal from "@/src/components/AISuggestionModal";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 import { addDaysISO, parseISO, startOfWeekISO, todayISO } from "@/src/date-utils";
 import { loadGoalMode, saveGoalMode } from "@/src/utils/goal-mode";
@@ -35,6 +36,8 @@ export default function WorkoutsScreen() {
   const [generating, setGenerating] = useState(false);
   const [goalMode, setGoalMode] = useState<GoalMode>("liturgical");
   const [hasWellness, setHasWellness] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
+  const [notes, setNotes] = useState<Record<string, string>>({});
 
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDaysISO(weekStart, i)), [weekStart]);
 
@@ -84,19 +87,33 @@ export default function WorkoutsScreen() {
     };
   }, [load]);
 
-  const generate = async () => {
+  const generate = async (noteOverride?: string | null) => {
     setGenerating(true);
+    const noteToUse =
+      noteOverride === null ? "" : (noteOverride ?? notes[selected] ?? "");
     try {
+      const body: Record<string, unknown> = { date: selected, goal_mode: goalMode };
+      if (noteToUse.trim()) body.user_note = noteToUse.trim();
       const res = await api<DayDoc<WorkoutPlan>>("/workouts/generate", {
         method: "POST",
-        body: { date: selected, goal_mode: goalMode },
+        body,
       });
       setWorkouts((w) => ({ ...w, [selected]: res }));
+      setNotes((n) => ({ ...n, [selected]: noteToUse.trim() }));
     } catch (e) {
       console.warn("workout gen failed", e);
     } finally {
       setGenerating(false);
     }
+  };
+
+  const submitAiSuggestion = async (note: string) => {
+    setAiOpen(false);
+    await generate(note);
+  };
+
+  const clearNote = () => {
+    setNotes((n) => ({ ...n, [selected]: "" }));
   };
 
   const onGoalModeChange = (m: GoalMode) => {
@@ -243,9 +260,43 @@ export default function WorkoutsScreen() {
               <Text style={styles.reflectionText}>{current.plan.reflection}</Text>
             </View>
 
+            {notes[selected] ? (
+              <Pressable
+                testID="workouts-applied-note"
+                onPress={() => setAiOpen(true)}
+                style={({ pressed }) => [styles.appliedNote, pressed && styles.pressed]}
+              >
+                <Ionicons name="sparkles" size={14} color={colors.gold} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.appliedNoteLabel}>YOUR NOTE TO THE AI</Text>
+                  <Text style={styles.appliedNoteText} numberOfLines={2}>
+                    {notes[selected]}
+                  </Text>
+                </View>
+                <Pressable
+                  onPress={clearNote}
+                  hitSlop={10}
+                  testID="workouts-clear-note"
+                  style={{ padding: 4 }}
+                >
+                  <Ionicons name="close" size={16} color={colors.textMuted} />
+                </Pressable>
+              </Pressable>
+            ) : null}
+
+            <Pressable
+              testID="workouts-ai-suggest-button"
+              onPress={() => setAiOpen(true)}
+              disabled={generating}
+              style={({ pressed }) => [styles.aiSuggestBtn, pressed && styles.pressed]}
+            >
+              <Ionicons name="sparkles" size={16} color={colors.gold} />
+              <Text style={styles.aiSuggestBtnText}>Suggest to AI</Text>
+            </Pressable>
+
             <Pressable
               testID="workouts-regenerate-button"
-              onPress={generate}
+              onPress={() => generate()}
               disabled={generating}
               style={({ pressed }) => [styles.regenBtn, pressed && styles.pressed]}
             >
@@ -268,7 +319,7 @@ export default function WorkoutsScreen() {
             </Text>
             <Pressable
               testID="workouts-generate-button"
-              onPress={generate}
+              onPress={() => generate()}
               disabled={generating}
               style={({ pressed }) => [styles.primaryBtn, pressed && styles.pressed]}
             >
@@ -281,10 +332,38 @@ export default function WorkoutsScreen() {
                 </>
               )}
             </Pressable>
+            <Pressable
+              testID="workouts-ai-suggest-empty"
+              onPress={() => setAiOpen(true)}
+              disabled={generating}
+              style={({ pressed }) => [styles.aiSuggestSecondary, pressed && styles.pressed]}
+            >
+              <Ionicons name="chatbubbles-outline" size={14} color={colors.primary} />
+              <Text style={styles.aiSuggestSecondaryText}>Tell the AI what to focus on</Text>
+            </Pressable>
           </View>
         )}
         <View style={{ height: spacing.xxl }} />
       </ScrollView>
+      <AISuggestionModal
+        visible={aiOpen}
+        title="Talk to the AI about today's workout"
+        subtitle="Your note guides the AI — Sundays still rest, and safety still rules."
+        placeholder="e.g. Focus on upper body, no jumping. I'm sore from yesterday."
+        initialValue={notes[selected] || ""}
+        examples={[
+          "Upper body only — chest, back, shoulders",
+          "Lower body and core, no impact",
+          "Push, pull, legs in one session",
+          "Short — under 25 minutes, no equipment",
+          "Bodyweight only, in a small apartment",
+          "Heavy lifting, focused on strength",
+          "Mobility and stretching, recovery day",
+        ]}
+        submitting={generating}
+        onClose={() => setAiOpen(false)}
+        onSubmit={submitAiSuggestion}
+      />
     </SafeAreaView>
   );
 }
@@ -453,6 +532,61 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.primary,
     letterSpacing: 0.3,
+  },
+  aiSuggestBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
+    backgroundColor: colors.primary,
+    paddingVertical: 12,
+    borderRadius: radius.md,
+    marginTop: spacing.md,
+  },
+  aiSuggestBtnText: {
+    fontFamily: fonts.uiSemi,
+    color: colors.gold,
+    fontSize: 14,
+    letterSpacing: 0.4,
+  },
+  aiSuggestSecondary: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: spacing.md,
+    marginTop: spacing.sm,
+  },
+  aiSuggestSecondaryText: {
+    fontFamily: fonts.uiSemi,
+    color: colors.primary,
+    fontSize: 13,
+    letterSpacing: 0.2,
+  },
+  appliedNote: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    backgroundColor: "#FBF6E8",
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    marginTop: spacing.md,
+  },
+  appliedNoteLabel: {
+    fontFamily: fonts.uiSemi,
+    fontSize: 10,
+    letterSpacing: 1.2,
+    color: colors.gold,
+  },
+  appliedNoteText: {
+    fontFamily: fonts.bodyRegular,
+    fontSize: 13,
+    color: colors.textPrimary,
+    marginTop: 2,
   },
   pressed: { opacity: 0.7 },
 });

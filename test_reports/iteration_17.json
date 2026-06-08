@@ -1,0 +1,72 @@
+{
+  "summary": "Tested the new AI-suggestion (user_note) feature on /meals/generate and /workouts/generate (backend) + the new AISuggestionModal bottom-sheet wired into the Meals and Workouts tabs (frontend). Backend: 8/8 pytest tests pass in /app/backend/tests/test_ai_suggestion.py — note influence verified for meals (protein keywords appear), upper-body intent honored for workouts (push/pull/row/press in plan, no jumping/burpees), Sunday-rest non-override verified even with 'heavy lifting 1 hr PR attempts' note (returned gentle session ≤45 min with stretch/walk/rest/prayer language), backward compat without user_note works on both endpoints, and different notes produce different plans (note_hash properly folded into LLM session_id). Frontend: end-to-end happy paths verified on a mobile (390x844) viewport using a seeded session token — modal slide-up, multiline input, character counter (28/600 then 600 cap when pasting 700 chars), QUICK IDEAS chips replace input, submit disabled when empty/whitespace-only, submit closes modal and triggers generation, applied-note pill renders the user's note above Regenerate on both tabs, tapping the pill reopens the modal pre-filled, X icon and Cancel button both dismiss the modal, X-in-pill clears the note. Workouts empty-state link 'Tell the AI what to focus on' opens the same modal. No critical issues, no regressions.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "verified_flows": {
+    "backend": {
+      "POST /api/meals/generate (with user_note)": "200, plan shape OK, protein keywords in output — PASS",
+      "POST /api/meals/generate (no user_note)": "200, backward compat — PASS",
+      "POST /api/workouts/generate (upper-body note)": "200, exercises mention push/pull/row/press; no jump/burpee — PASS",
+      "POST /api/workouts/generate (no user_note)": "200, backward compat — PASS",
+      "POST /api/workouts/generate (Sunday + aggressive note)": "200, gentle/walk/stretch/prayer + duration<=45 — PASS",
+      "note_hash folded into session_id": "Same date + different notes → different plans — PASS"
+    },
+    "frontend_meals": {
+      "Modal opens on Suggest to AI": "PASS",
+      "Submit disabled when input empty": "aria-disabled=true — PASS",
+      "Example chip replaces input value": "input = chip text — PASS",
+      "Character counter 28/600": "PASS",
+      "Submit closes modal & triggers generation": "PASS",
+      "Applied-note pill appears above Regenerate": "PASS (after ~10s)",
+      "Tap pill reopens modal pre-filled": "PASS",
+      "X icon closes modal": "PASS",
+      "X inside pill clears note": "PASS"
+    },
+    "frontend_workouts": {
+      "Empty-state 'Tell the AI what to focus on' opens modal": "PASS",
+      "Cancel button closes modal": "PASS",
+      "Whitespace-only note keeps submit disabled": "aria-disabled=true — PASS",
+      "Submit + ~16s → applied-note pill + upper-body exercises rendered": "PASS",
+      "Wide 'Suggest to AI' button under reflection (after plan exists)": "PASS",
+      "600-char cap (paste 700 chars → input.value.length === 600)": "PASS",
+      "Quick-ideas chip on workouts modal": "PASS",
+      "Clear (X) removes applied-note pill": "PASS"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_ai_suggestion.py",
+    "/app/test_reports/pytest/iteration_17_ai_suggestion.xml",
+    "/app/test_reports/iteration_17.json"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py:402,470 — `note_hash = sha1(note_clean)[:8] if note_clean else 'none'` is a clean way to keep cache-busting per-note without leaking the raw note into the session_id. Good.",
+    "server.py:383,448 — note_clean is `.strip()[:600]` BEFORE the prompt and BEFORE hashing, so 'foo' and ' foo  ' map to the same note_hash → consistent. Confirmed.",
+    "server.py:5 — `import hashlib` is now present at module top (line 5); previous F821 undefined-name bug on meal generation when a note was supplied is fixed.",
+    "AISuggestionModal.tsx:50 — `canSubmit = trimmed.length > 0 && !submitting` — correctly blocks whitespace-only submits and double-submits during pending generation. UI aria-disabled=true verified in DOM.",
+    "AISuggestionModal.tsx:102 — `onChangeText={(t) => setText(t.slice(0, MAX_LEN))}` clamps at 600 even when the user pastes longer content. Verified end-to-end (paste 700 chars → input.value.length === 600).",
+    "meals.tsx:317 / workouts.tsx:353 — `initialValue={notes[selected] || ''}` makes the modal idempotent across re-opens and date switches; combined with the `useEffect([visible, initialValue])` reset inside the modal, the prefill works on reopen.",
+    "Non-blocking suggestion: the applied-note pill currently lives only in-memory (`useState`) and is dropped on app reload. If the product wants the note to survive reload, the note could be persisted to the meal/workout doc (e.g. add `user_note` to the saved doc and re-hydrate `notes[selected]` from the loaded plan)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_ai_suggestion.py (NEW — 8 pytest cases covering backend AI-suggestion behavior)",
+    "/app/test_reports/iteration_17.json (NEW — this report)"
+  ],
+  "success_rate": {
+    "backend": "100% (8/8 pytest tests pass in 107s)",
+    "frontend": "100% (all 17 interaction assertions pass on mobile viewport 390x844)"
+  },
+  "seed_data_creation": "Re-used ui_test_user_1 / TEST_FE_ITER11_TOKEN via /app/backend/tests/setup_iter11_auth.py for the frontend flow. The default conftest fixture (test_user_1 / test_token_abc) is used for backend pytest. Both are cleaned up by conftest teardown. During testing, the seeded user's `meals` and `workouts` docs for today/upcoming dates were created/updated; that is expected per the conftest cleanup contract.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "The feature works end-to-end with real LLM. Tip: use mobile viewport 390x844; inject `localStorage.setItem('sanctus_session_token', JSON.stringify('TEST_FE_ITER11_TOKEN'))` BEFORE the second navigation so the app boots authenticated. The applied-note pill rendering takes 10-25s after submit because of the live LLM round-trip — poll for visibility with a 30-iteration loop. For backward compat regression of meals generation with note (the previously-broken hashlib path), see test_ai_suggestion.py::TestMealsGenerateWithUserNote::test_meal_with_user_note_returns_200_and_plan_shape.",
+  "rca_of_issue": "n/a — feature addition iteration, not a bug fix. The previously fixed hashlib import is implicitly regression-tested by every meal-with-note test in test_ai_suggestion.py (those would 500 if the import were still missing)."
+}

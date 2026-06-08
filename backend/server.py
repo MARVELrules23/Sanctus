@@ -2,6 +2,7 @@
 import os
 import json
 import uuid
+import hashlib
 import logging
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -444,11 +445,17 @@ async def generate_workout(payload: GenerateWorkoutRequest, user: User = Depends
             "goal_type and activity_level. Sundays still get a gentle session. Tie the encouragement to the goal."
         )
     goals_note = f"PERSONAL GOALS: {wellness_brief}." if (use_goals and wellness_brief) else ""
+    note_clean = (payload.user_note or "").strip()[:600]
+    note_block = (
+        "\nADDITIONAL USER REQUEST (treat as a strong preference — but Sunday rest, "
+        "fitness safety, and abstinence rules still hold): \"" + note_clean + "\""
+    ) if note_clean else ""
     user_prompt = (
         f"Date: {lit['date']} | Day of week: {d.strftime('%A')} | Season: {lit['season']} | "
         f"Feast: {lit.get('feast') or 'none'}.\n"
         f"{goals_note}\n"
-        f"User: fitness_level={prefs.get('fitness_level')}, goal={prefs.get('fitness_goal')}.\n"
+        f"User: fitness_level={prefs.get('fitness_level')}, goal={prefs.get('fitness_goal')}."
+        f"{note_block}\n"
         "Return JSON shaped exactly like:\n"
         "{\n"
         "  \"title\": str,\n"
@@ -460,7 +467,8 @@ async def generate_workout(payload: GenerateWorkoutRequest, user: User = Depends
         "  \"reflection\": str  // 1-2 sentences tying physical effort to the liturgical season\n"
         "}"
     )
-    plan = await _chat_json(system, user_prompt, session_id=f"workout-{user.user_id}-{payload.date}-{payload.goal_mode}")
+    note_hash = hashlib.sha1(note_clean.encode("utf-8")).hexdigest()[:8] if note_clean else "none"
+    plan = await _chat_json(system, user_prompt, session_id=f"workout-{user.user_id}-{payload.date}-{payload.goal_mode}-{note_hash}")
     doc = {
         "user_id": user.user_id,
         "date": payload.date,

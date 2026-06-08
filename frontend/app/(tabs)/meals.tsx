@@ -15,6 +15,7 @@ import { api, DayDoc, GoalMode, LiturgicalDay, MealPlan } from "@/src/api";
 import LiturgicalBadge from "@/src/components/LiturgicalBadge";
 import Ornament from "@/src/components/Ornament";
 import GoalModeToggle from "@/src/components/GoalModeToggle";
+import AISuggestionModal from "@/src/components/AISuggestionModal";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 import { addDaysISO, parseISO, startOfWeekISO, todayISO } from "@/src/date-utils";
 import { loadGoalMode, saveGoalMode } from "@/src/utils/goal-mode";
@@ -31,6 +32,9 @@ export default function MealsScreen() {
   const [generating, setGenerating] = useState(false);
   const [goalMode, setGoalMode] = useState<GoalMode>("liturgical");
   const [hasWellness, setHasWellness] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
+  // Last note per ISO date used in this session — persists only in memory.
+  const [notes, setNotes] = useState<Record<string, string>>({});
 
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDaysISO(weekStart, i)), [weekStart]);
 
@@ -97,19 +101,34 @@ export default function MealsScreen() {
     setWeekStart(ns);
   };
 
-  const generate = async () => {
+  const generate = async (noteOverride?: string | null) => {
     setGenerating(true);
+    // `null` clears the note. `undefined` keeps the existing one.
+    const noteToUse =
+      noteOverride === null ? "" : (noteOverride ?? notes[selected] ?? "");
     try {
+      const body: Record<string, unknown> = { date: selected, goal_mode: goalMode };
+      if (noteToUse.trim()) body.user_note = noteToUse.trim();
       const res = await api<DayDoc<MealPlan>>("/meals/generate", {
         method: "POST",
-        body: { date: selected, goal_mode: goalMode },
+        body,
       });
       setMeals((m) => ({ ...m, [selected]: res }));
+      setNotes((n) => ({ ...n, [selected]: noteToUse.trim() }));
     } catch (e) {
       console.warn("meals gen failed", e);
     } finally {
       setGenerating(false);
     }
+  };
+
+  const submitAiSuggestion = async (note: string) => {
+    setAiOpen(false);
+    await generate(note);
+  };
+
+  const clearNote = () => {
+    setNotes((n) => ({ ...n, [selected]: "" }));
   };
 
   const onGoalModeChange = (m: GoalMode) => {
@@ -201,6 +220,14 @@ export default function MealsScreen() {
             <Ionicons name="cart-outline" size={14} color={colors.primary} />
             <Text style={styles.actionBtnText}>Grocery list</Text>
           </Pressable>
+          <Pressable
+            testID="meals-ai-suggest-button"
+            onPress={() => setAiOpen(true)}
+            style={({ pressed }) => [styles.actionBtn, styles.actionBtnAccent, pressed && styles.pressed]}
+          >
+            <Ionicons name="sparkles-outline" size={14} color={colors.gold} />
+            <Text style={[styles.actionBtnText, styles.actionBtnTextAccent]}>Suggest to AI</Text>
+          </Pressable>
         </View>
 
         <Ornament />
@@ -216,9 +243,32 @@ export default function MealsScreen() {
               <Ionicons name="leaf-outline" size={20} color={colors.liturgical.purple} />
               <Text style={styles.reflectionText}>{current.plan.reflection}</Text>
             </View>
+            {notes[selected] ? (
+              <Pressable
+                testID="meals-applied-note"
+                onPress={() => setAiOpen(true)}
+                style={({ pressed }) => [styles.appliedNote, pressed && styles.pressed]}
+              >
+                <Ionicons name="sparkles" size={14} color={colors.gold} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.appliedNoteLabel}>YOUR NOTE TO THE AI</Text>
+                  <Text style={styles.appliedNoteText} numberOfLines={2}>
+                    {notes[selected]}
+                  </Text>
+                </View>
+                <Pressable
+                  onPress={clearNote}
+                  hitSlop={10}
+                  testID="meals-clear-note"
+                  style={{ padding: 4 }}
+                >
+                  <Ionicons name="close" size={16} color={colors.textMuted} />
+                </Pressable>
+              </Pressable>
+            ) : null}
             <Pressable
               testID="meals-regenerate-button"
-              onPress={generate}
+              onPress={() => generate()}
               disabled={generating}
               style={({ pressed }) => [styles.regenBtn, pressed && styles.pressed]}
             >
@@ -241,7 +291,7 @@ export default function MealsScreen() {
             </Text>
             <Pressable
               testID="meals-generate-button"
-              onPress={generate}
+              onPress={() => generate()}
               disabled={generating}
               style={({ pressed }) => [styles.primaryBtn, pressed && styles.pressed]}
             >
@@ -259,6 +309,24 @@ export default function MealsScreen() {
 
         <View style={{ height: spacing.xxl }} />
       </ScrollView>
+      <AISuggestionModal
+        visible={aiOpen}
+        title="Talk to the AI about today's meals"
+        subtitle="Your note guides the AI — abstinence on Fridays and Lenten fasts still hold."
+        placeholder="e.g. More protein, less carbs. I have leftover chicken to use."
+        initialValue={notes[selected] || ""}
+        examples={[
+          "More protein, less carbs",
+          "Use leftovers from yesterday",
+          "Mediterranean — fish and vegetables",
+          "Quick prep, under 20 minutes per meal",
+          "Family-friendly meals my kids will eat",
+          "Higher calorie, I'm bulking",
+        ]}
+        submitting={generating}
+        onClose={() => setAiOpen(false)}
+        onSubmit={submitAiSuggestion}
+      />
     </SafeAreaView>
   );
 }
@@ -448,6 +516,37 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.primary,
     letterSpacing: 0.3,
+  },
+  actionBtnAccent: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  actionBtnTextAccent: {
+    color: colors.gold,
+  },
+  appliedNote: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    backgroundColor: "#FBF6E8",
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    marginTop: spacing.md,
+  },
+  appliedNoteLabel: {
+    fontFamily: fonts.uiSemi,
+    fontSize: 10,
+    letterSpacing: 1.2,
+    color: colors.gold,
+  },
+  appliedNoteText: {
+    fontFamily: fonts.bodyRegular,
+    fontSize: 13,
+    color: colors.textPrimary,
+    marginTop: 2,
   },
   pressed: { opacity: 0.7 },
 });

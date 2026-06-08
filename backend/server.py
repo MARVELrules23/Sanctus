@@ -1771,12 +1771,7 @@ def _sd_validate_discipline(discipline_id: str) -> Dict[str, Any]:
 
 
 async def _sd_get_progress(user_id: str, discipline_id: str) -> Dict[str, Any]:
-    doc = await db.self_defense_progress.find_one(
-        {"user_id": user_id, "discipline_id": discipline_id}, {"_id": 0}
-    )
-    if doc:
-        return doc
-    return {
+    defaults = {
         "user_id": user_id,
         "discipline_id": discipline_id,
         "current_level": "beginner",
@@ -1786,6 +1781,12 @@ async def _sd_get_progress(user_id: str, discipline_id: str) -> Dict[str, Any]:
         "last_session_at": None,
         "last_completed_at": None,
     }
+    doc = await db.self_defense_progress.find_one(
+        {"user_id": user_id, "discipline_id": discipline_id}, {"_id": 0}
+    )
+    if doc:
+        return {**defaults, **doc}
+    return defaults
 
 
 @api.get("/self-defense/disciplines")

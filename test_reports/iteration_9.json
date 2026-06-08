@@ -1,0 +1,42 @@
+{
+  "summary": "Frontend-only test of Phase 4 Self-Defense entry points & navigation. All 24 UI assertions passed (24/24). Verified: (1) Today tab 'quick-selfdefense' tile renders & routes to /self-defense, (2) sd-disclaimer-modal auto-shows on first visit with safety body text (762 chars), and ack + cancel buttons present, (3) all 6 discipline cards (bjj, goju_ryu, wrestling, boxing, muay_thai, kendo) render with tradition uppercase, name, tagline, patron name, BEGINNER badge and '0 completed'; boxing card lists 'St. Sebastian', (4) disclaimer persistence: modal does NOT auto-show on second visit, shield icon (sd-index-disclaimer) reopens it, sd-disclaimer-cancel closes it, (5) tapping sd-card-boxing navigates to /self-defense/boxing, sd-discipline-screen + sd-patron-card render with 'St. Sebastian', back returns to index, (6) Workouts tab 'workouts-selfdefense-button' visible with 'Self-Defense' label and routes to /self-defense, (7) sd-show-disclaimer link at bottom of index reopens the modal. No issues found in scope of this review.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/tmp/seed_session.py",
+    "/tmp/cleanup_session.py",
+    "/tmp/01_home.png",
+    "/tmp/02_modal.png",
+    "/tmp/03_cards.png",
+    "/tmp/04_boxing.png",
+    "/tmp/05_workouts.png"
+  ],
+  "action_items": [
+    "No action required for Phase 4 self-defense entry points/navigation. (Carry-forward from iteration_8: _sd_get_progress should still merge defaults so sessions_completed is always present after first /generate — not in scope this iteration but worth fixing before deeper UI testing of the discipline progress card.)"
+  ],
+  "critical_code_review_comments": [
+    "self-defense/index.tsx auto-shows modal only when /api/self-defense/disclaimer returns acknowledged=false — works as specified.",
+    "Modal onRequestClose only allows back-dismiss when pendingNav === null; this correctly forces ack on the navigation-from-card flow.",
+    "self-defense/[discipline].tsx reads progress.sessions_completed directly (line ~162). If the backend bug from iteration_8 (missing sessions_completed after first /generate) regresses, this will render 'undefined sessions completed'. Add a `?? 0` guard.",
+    "Frontend uses process.env.EXPO_PUBLIC_BACKEND_URL — matches the protected env var convention (EXPO_PUBLIC_ prefix). Note: review_request used the name 'EXPO_BACKEND_URL'; actual key is EXPO_PUBLIC_BACKEND_URL.",
+    "All Self-Defense interactive elements have testIDs; ScrollView and modal are correctly Native-component-only (no HTML primitives)."
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "not tested this iteration (frontend-only request)",
+    "frontend": "100% (24/24 assertions on the 7 requested flows)"
+  },
+  "seed_data_creation": "Created TEST_FE_iter9_user + bearer token TEST_FE_ITERATION9_TOKEN in MongoDB (users + user_sessions), tested via Playwright by setting localStorage['sanctus_session_token']=JSON.stringify(token) (RN AsyncStorage on web is backed by localStorage). Cleaned up users / user_sessions / self_defense_acks after the run via /tmp/cleanup_session.py.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "To auth a UI test on web: insert {users, user_sessions} in mongo (db sanctus_db) and set localStorage 'sanctus_session_token' to JSON.stringify(<token>) then reload. Note frontend env var is EXPO_PUBLIC_BACKEND_URL not EXPO_BACKEND_URL. SafeAreaView from react-native-safe-area-context is in use (correct, not the deprecated RN one). 'shadow*' style deprecation warnings are emitted by RN-web — non-blocking but main agent may want to migrate to boxShadow at some point.",
+  "rca_of_issue": "n/a — no bugs found in the Phase 4 self-defense entry-point / navigation flows."
+}

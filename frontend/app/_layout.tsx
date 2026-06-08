@@ -1,8 +1,22 @@
-import { Stack } from "expo-router";
+import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
+import { StatusBar } from "expo-status-bar";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import {
+  useFonts as useCormorant,
+  CormorantGaramond_600SemiBold,
+  CormorantGaramond_700Bold,
+} from "@expo-google-fonts/cormorant-garamond";
+import {
+  Lora_400Regular,
+  Lora_400Regular_Italic,
+  Lora_700Bold,
+} from "@expo-google-fonts/lora";
+import { Inter_500Medium, Inter_600SemiBold } from "@expo-google-fonts/inter";
 
 import { useIconFonts } from "@/src/hooks/use-icon-fonts";
+import { AuthProvider, useAuth } from "@/src/auth-context";
 
 // Keep the native splash visible from cold start until icon fonts register.
 // Required because @expo/vector-icons' componentDidMount fallback fires
@@ -10,18 +24,54 @@ import { useIconFonts } from "@/src/hooks/use-icon-fonts";
 // the family is registered — which throws on Android Expo Go.
 SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
-  const [loaded, error] = useIconFonts();
+function RootGate() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+  const segments = useSegments();
 
   useEffect(() => {
-    if (loaded || error) {
-      SplashScreen.hideAsync();
+    if (loading) return;
+    const inTabs = segments[0] === "(tabs)";
+    const onLogin = segments[0] === "login";
+    if (!user && !onLogin) {
+      router.replace("/login");
+    } else if (user && (onLogin || segments.length === 0)) {
+      router.replace("/(tabs)");
+    } else if (user && !inTabs && !onLogin) {
+      // any other deep-link without tabs stays as-is
     }
-  }, [loaded, error]);
-
-  // If the CDN is unreachable we fall through on error rather than wedging
-  // the app — icons will tofu, but the app still boots.
-  if (!loaded && !error) return null;
+  }, [user, loading, segments, router]);
 
   return <Stack screenOptions={{ headerShown: false }} />;
+}
+
+export default function RootLayout() {
+  const [iconsLoaded, iconsError] = useIconFonts();
+  const [fontsLoaded] = useCormorant({
+    CormorantGaramond_600SemiBold,
+    CormorantGaramond_700Bold,
+    Lora_400Regular,
+    Lora_400Regular_Italic,
+    Lora_700Bold,
+    Inter_500Medium,
+    Inter_600SemiBold,
+  });
+
+  useEffect(() => {
+    if ((iconsLoaded || iconsError) && fontsLoaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [iconsLoaded, iconsError, fontsLoaded]);
+
+  if (!fontsLoaded) return null;
+  if (!iconsLoaded && !iconsError) return null;
+
+  return (
+    <SafeAreaProvider>
+      <StatusBar style="dark" />
+      <AuthProvider>
+        <RootGate />
+      </AuthProvider>
+    </SafeAreaProvider>
+  );
 }

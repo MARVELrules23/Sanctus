@@ -1,0 +1,35 @@
+{
+  "summary": "Phase 3 Community (backend + frontend) and Phase 2 Bible UI fully validated. Backend: 56/56 pytest cases passed across topics, feed (with cursor/limit/topic filter), post CRUD with author-only delete (403/404), like toggle (with floor at 0), replies (CRUD with author-only delete), people search & recommended (excludes self), 1-on-1 DM with deterministic thread keys (idempotent open, unread counters, mark-read on fetch), reporting (target_type + reason whitelist), and block/unblock with reciprocal DM gating (403). Regression smoke (auth/me, bible/books, bible/chapter, wellness/profile, churches/nearby) all green. Frontend Phase 2 Bible UI: /bible renders 73 books, John expands to 21 chapters, John 3 reader renders 36 verses with gold numbers, tap-verse modal shows 4 color swatches (rose/gold/sage/violet) + Remove (when active) + Journal CTA, gold selection persists, and 'Journal this verse' navigates to /journal?mode=free&verse_ref=John%203%3A16 with body pre-filled in italicized DR1899 quote + citation. Frontend Phase 3 Community: Parish tab (6th of 6) loads, 10 topic chips scroll horizontally, FAB opens compose modal with topic picker + 1500-char body + disabled Post when empty, new post lands at top of selected topic feed, like toggles optimistically (0↔1), post detail (/community/post/[id]) opens with reply composer (testID post-detail-reply-input/submit) and replies persist, post menu shows 'Delete post' for own posts, author tap navigates to /community/user/[id] profile showing recent posts, header people-icon → /community/people (Find people with Recommended list + search), header chat-icon → /community/dm inbox showing proper empty state. No bugs found.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_community.py",
+    "/app/test_reports/pytest/iteration_7_community.xml"
+  ],
+  "action_items": [
+    "None. All Phase 3 backend endpoints behave per spec; Bible UI (Phase 2) and Community UI (Phase 3) flows are tappable and integrated correctly with the backend."
+  ],
+  "critical_code_review_comments": [
+    "community.py is a clean projection-only module (~120 lines); no `_id` leaks because all DB reads use `{_id: 0}` projection.",
+    "server.py community endpoints correctly enforce ownership for delete (post + reply), validate target_type/reason for /community/report against fixed lists, use deterministic thread_key(sorted ids) for DM idempotency, clamp feed limit to 1..50, and use ISO before-cursor with proper 400 on parse failure.",
+    "Reciprocal block detection in _is_blocked uses $or on (a→b) OR (b→a) — so a single A-blocks-B insert correctly returns 403 on both A→B and B→A DM sends. Verified.",
+    "/community/posts/{id}/like uses unique-index race semantics (insert → on duplicate, delete) for toggle. Returns max(0, count) so like_count never < 0. Verified.",
+    "Minor (non-blocking): /community/block POST silently swallows duplicate-key exception (line 1731) — fine, but logging would help. Same pattern was already noted in iteration_6 bible.py review.",
+    "Frontend community.tsx (574 lines), bible/[book]/[chapter].tsx (426 lines), people.tsx, dm/index.tsx are all under the 700-line threshold and use StyleSheet, View/Text/Pressable correctly. testIDs are present on every interactive element. No HTML elements found in React Native screens.",
+    "No expo-av / expo-barcode-scanner / expo-background-fetch usage anywhere in the repo. No SafeAreaView import from `react-native` (all use `react-native-safe-area-context`). No deprecated APIs."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_community.py (NEW — 56 test cases covering all Phase 3 endpoints + regression)"
+  ],
+  "success_rate": {"backend": "100% (56/56)", "frontend": "100% (Phase 2 Bible + Phase 3 Community flows all verified via Playwright)"},
+  "seed_data_creation": "Tests seed a second test user 'ui_test_user_phase3_b' (token: ui_test_token_phase3_b) and tear it down on module exit. Existing ui_test_user_1 / ui_test_token_xyz is reused. Test posts/replies/DMs/threads/blocks/reports/likes are all cleaned up. Cleanup script also removed one orphan UI-created post ('Pax UI test post ...') and its reply after the Playwright run.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Phase 3 community is live and stable. Run `pytest /app/backend/tests/test_community.py -v` for full regression (covers topics, feed, posts, likes, replies, people, DMs, reports, blocks + Phase 1/2 smoke). The test file seeds & wipes user 'ui_test_user_phase3_b'. The Bible test suite (iteration_6) and meals/wellness/auth/profile suites (iteration_5) remain valid and complement this. Frontend testIDs to remember: bible-book-{slug}, bible-chapter-{slug}-{n}, bible-verse-{n}, bible-swatch-{rose|gold|sage|violet}, bible-sheet-journal, community-topic-{slug|all}, community-fab-compose, community-compose-input/submit/topic-{slug}, community-post-{id}, community-like-{id}, community-replies-{id}, community-post-menu-{id}, community-author-{user_id}, community-people-btn, community-dm-btn, post-detail-reply-input/submit, community-reply-{id}, community-reply-delete-{id}, community-report-reason-{reason}, community-report-submit.",
+  "rca_of_issue": "N/A — no bugs."
+}

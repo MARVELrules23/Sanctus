@@ -5,7 +5,7 @@ import uuid
 import logging
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
-from typing import Optional, List
+from typing import Any, Dict, List, Optional
 
 import httpx
 from fastapi import FastAPI, APIRouter, Depends, HTTPException, Header, Query, Request
@@ -22,6 +22,7 @@ from usccb import fetch_readings, usccb_url_for
 from churches import nearby_churches, enrich_with_masstimes, search_churches
 from prayers import EXAMEN_PROMPTS, EXAMINATION_SECTIONS
 import bible as bible_svc
+import community as community_svc
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
@@ -141,6 +142,22 @@ async def ensure_indexes():
         [("user_id", 1), ("book_slug", 1), ("chapter", 1), ("verse", 1)], unique=True,
     )
     await db.bible_highlights.create_index([("user_id", 1), ("updated_at", -1)])
+    # Community indexes
+    await db.community_posts.create_index("post_id", unique=True)
+    await db.community_posts.create_index([("topic", 1), ("created_at", -1)])
+    await db.community_posts.create_index([("created_at", -1)])
+    await db.community_posts.create_index([("author_id", 1), ("created_at", -1)])
+    await db.community_post_likes.create_index([("post_id", 1), ("user_id", 1)], unique=True)
+    await db.community_post_likes.create_index("user_id")
+    await db.community_replies.create_index("reply_id", unique=True)
+    await db.community_replies.create_index([("post_id", 1), ("created_at", 1)])
+    await db.community_dm_threads.create_index("thread_id", unique=True)
+    await db.community_dm_threads.create_index("member_ids")
+    await db.community_dm_threads.create_index([("member_ids", 1), ("last_message_at", -1)])
+    await db.community_dm_messages.create_index("message_id", unique=True)
+    await db.community_dm_messages.create_index([("thread_id", 1), ("created_at", 1)])
+    await db.community_reports.create_index([("reporter_id", 1), ("created_at", -1)])
+    await db.community_blocks.create_index([("user_id", 1), ("blocked_id", 1)], unique=True)
 
 
 async def get_current_user(authorization: Optional[str] = Header(None)) -> User:
@@ -1254,6 +1271,471 @@ async def bible_my_highlights(user: User = Depends(get_current_user),
 @api.get("/")
 async def root():
     return {"app": "Sanctus", "status": "ok"}
+
+
+# =====================================================================
+# COMMUNITY — Phase 3: global parish feed, topical rooms, 1-on-1 DMs
+# =====================================================================
+
+class CommunityPostRequest(BaseModel):
+    body: str
+    topic: Optional[str] = None  # None => Global parish feed
+    image: Optional[str] = None  # base64 data URI (optional)
+
+
+class CommunityReplyRequest(BaseModel):
+    body: str
+
+
+class CommunityDMStartRequest(BaseModel):
+    user_id: str
+
+
+class CommunityDMSendRequest(BaseModel):
+    body: str
+
+
+class CommunityReportRequest(BaseModel):
+    target_type: str  # "post" | "reply" | "user" | "message"
+    target_id: str
+    reason: str
+    detail: Optional[str] = None
+
+
+async def _users_by_id(user_ids: List[str]) -> Dict[str, Dict[str, Any]]:
+    if not user_ids:
+        return {}
+    cursor = db.users.find({"user_id": {"$in": list(set(user_ids))}}, {"_id": 0})
+    out: Dict[str, Dict[str, Any]] = {}
+    async for u in cursor:
+        out[u["user_id"]] = u
+    return out
+
+
+def _validate_topic(topic: Optional[str]) -> Optional[str]:
+    if topic in (None, "", "all", "parish"):
+        return None
+    if topic not in community_svc.TOPIC_SLUGS:
+        raise HTTPException(status_code=400, detail="Unknown topic")
+    return topic
+
+
+async def _is_blocked(user_a: str, user_b: str) -> bool:
+    doc = await db.community_blocks.find_one({
+        "$or": [
+            {"user_id": user_a, "blocked_id": user_b},
+            {"user_id": user_b, "blocked_id": user_a},
+        ]
+    })
+    return doc is not None
+
+
+# ---- Topics ----
+@api.get("/community/topics")
+async def community_topics(_: User = Depends(get_current_user)):
+    return {"items": community_svc.TOPICS, "report_reasons": community_svc.REPORT_REASONS}
+
+
+# ---- Feed ----
+@api.get("/community/feed")
+async def community_feed(
+    topic: Optional[str] = None,
+    limit: int = 30,
+    before: Optional[str] = None,  # ISO datetime cursor
+    user: User = Depends(get_current_user),
+):
+    t = _validate_topic(topic)
+    q: Dict[str, Any] = {}
+    if t is None:
+        # Global feed includes ALL posts regardless of topic.
+        pass
+    else:
+        q["topic"] = t
+    if before:
+        try:
+            q["created_at"] = {"$lt": datetime.fromisoformat(before.replace("Z", "+00:00"))}
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid 'before' cursor")
+    q.setdefault("hidden", {"$ne": True})
+
+    limit = max(1, min(limit, 50))
+    cursor = db.community_posts.find(q, {"_id": 0}).sort("created_at", -1).limit(limit)
+    posts = await cursor.to_list(length=limit)
+
+    author_ids = [p["author_id"] for p in posts]
+    authors = await _users_by_id(author_ids)
+
+    post_ids = [p["post_id"] for p in posts]
+    liked_set = set()
+    if post_ids:
+        async for d in db.community_post_likes.find(
+            {"post_id": {"$in": post_ids}, "user_id": user.user_id}, {"_id": 0, "post_id": 1}
+        ):
+            liked_set.add(d["post_id"])
+
+    items = [
+        community_svc.post_public(p, authors.get(p["author_id"]),
+                                  liked_by_me=(p["post_id"] in liked_set))
+        for p in posts
+    ]
+    next_cursor = community_svc.iso(posts[-1]["created_at"]) if len(posts) == limit else None
+    return {"items": items, "next_cursor": next_cursor, "topic": t}
+
+
+@api.post("/community/posts")
+async def community_create_post(payload: CommunityPostRequest,
+                                user: User = Depends(get_current_user)):
+    body = community_svc.clean_body(payload.body, community_svc.MAX_POST_LEN)
+    if not body:
+        raise HTTPException(status_code=400, detail="Post body cannot be empty")
+    t = _validate_topic(payload.topic)
+    # Tag with today's liturgical color for a Catholic-themed badge
+    try:
+        today_iso = date.today().isoformat()
+        lit = get_liturgical_day(today_iso)
+        lit_color = lit.get("color")
+        lit_season = lit.get("season")
+    except Exception:
+        lit_color = None
+        lit_season = None
+
+    post_id = f"post_{uuid.uuid4().hex[:14]}"
+    doc = {
+        "post_id": post_id,
+        "author_id": user.user_id,
+        "body": body,
+        "topic": t,
+        "image": (payload.image or None),
+        "liturgical_color": lit_color,
+        "liturgical_season": lit_season,
+        "created_at": community_svc.now_utc(),
+        "like_count": 0,
+        "reply_count": 0,
+        "hidden": False,
+        "is_pinned": False,
+    }
+    await db.community_posts.insert_one(doc)
+    return community_svc.post_public(doc, {"user_id": user.user_id, "name": user.name, "picture": user.picture})
+
+
+@api.get("/community/posts/{post_id}")
+async def community_get_post(post_id: str, user: User = Depends(get_current_user)):
+    p = await db.community_posts.find_one({"post_id": post_id}, {"_id": 0})
+    if not p or p.get("hidden"):
+        raise HTTPException(status_code=404, detail="Post not found")
+    author = await db.users.find_one({"user_id": p["author_id"]}, {"_id": 0})
+    liked = await db.community_post_likes.find_one(
+        {"post_id": post_id, "user_id": user.user_id}, {"_id": 0}
+    )
+    return community_svc.post_public(p, author, liked_by_me=bool(liked))
+
+
+@api.delete("/community/posts/{post_id}")
+async def community_delete_post(post_id: str, user: User = Depends(get_current_user)):
+    p = await db.community_posts.find_one({"post_id": post_id}, {"_id": 0})
+    if not p:
+        raise HTTPException(status_code=404, detail="Post not found")
+    if p["author_id"] != user.user_id:
+        raise HTTPException(status_code=403, detail="Only the author can delete this post")
+    await db.community_posts.delete_one({"post_id": post_id})
+    await db.community_post_likes.delete_many({"post_id": post_id})
+    await db.community_replies.delete_many({"post_id": post_id})
+    return {"ok": True}
+
+
+@api.post("/community/posts/{post_id}/like")
+async def community_like(post_id: str, user: User = Depends(get_current_user)):
+    p = await db.community_posts.find_one({"post_id": post_id}, {"_id": 0})
+    if not p or p.get("hidden"):
+        raise HTTPException(status_code=404, detail="Post not found")
+    try:
+        await db.community_post_likes.insert_one({
+            "post_id": post_id,
+            "user_id": user.user_id,
+            "created_at": community_svc.now_utc(),
+        })
+        await db.community_posts.update_one({"post_id": post_id}, {"$inc": {"like_count": 1}})
+        liked = True
+    except Exception:
+        await db.community_post_likes.delete_one({"post_id": post_id, "user_id": user.user_id})
+        await db.community_posts.update_one({"post_id": post_id}, {"$inc": {"like_count": -1}})
+        liked = False
+    doc = await db.community_posts.find_one({"post_id": post_id}, {"_id": 0, "like_count": 1})
+    return {"liked": liked, "like_count": max(0, int(doc.get("like_count") or 0))}
+
+
+# ---- Replies ----
+@api.get("/community/posts/{post_id}/replies")
+async def community_replies(post_id: str, user: User = Depends(get_current_user)):
+    p = await db.community_posts.find_one({"post_id": post_id}, {"_id": 0, "post_id": 1, "hidden": 1})
+    if not p or p.get("hidden"):
+        raise HTTPException(status_code=404, detail="Post not found")
+    cursor = db.community_replies.find({"post_id": post_id, "hidden": {"$ne": True}}, {"_id": 0}).sort("created_at", 1)
+    replies = await cursor.to_list(length=500)
+    authors = await _users_by_id([r["author_id"] for r in replies])
+    return {"items": [community_svc.reply_public(r, authors.get(r["author_id"])) for r in replies]}
+
+
+@api.post("/community/posts/{post_id}/replies")
+async def community_create_reply(post_id: str, payload: CommunityReplyRequest,
+                                 user: User = Depends(get_current_user)):
+    p = await db.community_posts.find_one({"post_id": post_id}, {"_id": 0, "post_id": 1, "hidden": 1})
+    if not p or p.get("hidden"):
+        raise HTTPException(status_code=404, detail="Post not found")
+    body = community_svc.clean_body(payload.body, community_svc.MAX_REPLY_LEN)
+    if not body:
+        raise HTTPException(status_code=400, detail="Reply cannot be empty")
+    reply_id = f"rep_{uuid.uuid4().hex[:14]}"
+    doc = {
+        "reply_id": reply_id,
+        "post_id": post_id,
+        "author_id": user.user_id,
+        "body": body,
+        "created_at": community_svc.now_utc(),
+        "hidden": False,
+    }
+    await db.community_replies.insert_one(doc)
+    await db.community_posts.update_one({"post_id": post_id}, {"$inc": {"reply_count": 1}})
+    return community_svc.reply_public(doc, {"user_id": user.user_id, "name": user.name, "picture": user.picture})
+
+
+@api.delete("/community/replies/{reply_id}")
+async def community_delete_reply(reply_id: str, user: User = Depends(get_current_user)):
+    r = await db.community_replies.find_one({"reply_id": reply_id}, {"_id": 0})
+    if not r:
+        raise HTTPException(status_code=404, detail="Reply not found")
+    if r["author_id"] != user.user_id:
+        raise HTTPException(status_code=403, detail="Only the author can delete this reply")
+    await db.community_replies.delete_one({"reply_id": reply_id})
+    await db.community_posts.update_one({"post_id": r["post_id"]}, {"$inc": {"reply_count": -1}})
+    return {"ok": True}
+
+
+# ---- People search & recommendations ----
+@api.get("/community/users/search")
+async def community_users_search(q: str = "",
+                                 limit: int = 20,
+                                 user: User = Depends(get_current_user)):
+    q = (q or "").strip()
+    if len(q) < 1:
+        return {"items": []}
+    limit = max(1, min(limit, 30))
+    # Case-insensitive prefix-ish match on name or email
+    import re
+    pattern = re.compile(re.escape(q), re.IGNORECASE)
+    cursor = db.users.find(
+        {"$and": [
+            {"user_id": {"$ne": user.user_id}},
+            {"$or": [{"name": {"$regex": pattern}}, {"email": {"$regex": pattern}}]},
+        ]},
+        {"_id": 0},
+    ).limit(limit)
+    users = await cursor.to_list(length=limit)
+    return {"items": [community_svc.public_user(u) for u in users]}
+
+
+@api.get("/community/users/recommended")
+async def community_users_recommended(limit: int = 12,
+                                      user: User = Depends(get_current_user)):
+    """Recommend recently active community members (excluding self)."""
+    limit = max(1, min(limit, 30))
+    # 1) Users who recently posted (engaged community)
+    pipeline = [
+        {"$match": {"author_id": {"$ne": user.user_id}}},
+        {"$sort": {"created_at": -1}},
+        {"$group": {"_id": "$author_id", "last_active": {"$first": "$created_at"}}},
+        {"$sort": {"last_active": -1}},
+        {"$limit": limit * 2},
+    ]
+    rec_ids: List[str] = []
+    async for d in db.community_posts.aggregate(pipeline):
+        if d.get("_id"):
+            rec_ids.append(d["_id"])
+    # 2) Fill with newest users overall if not enough recommendations
+    if len(rec_ids) < limit:
+        cur = db.users.find(
+            {"user_id": {"$nin": rec_ids + [user.user_id]}}, {"_id": 0, "user_id": 1}
+        ).sort("created_at", -1).limit(limit - len(rec_ids))
+        async for d in cur:
+            rec_ids.append(d["user_id"])
+    rec_ids = rec_ids[:limit]
+    users = await _users_by_id(rec_ids)
+    items = [community_svc.public_user(users[uid]) for uid in rec_ids if uid in users]
+    return {"items": items}
+
+
+@api.get("/community/users/{user_id}")
+async def community_user_profile(user_id: str, user: User = Depends(get_current_user)):
+    u = await db.users.find_one({"user_id": user_id}, {"_id": 0})
+    if not u:
+        raise HTTPException(status_code=404, detail="User not found")
+    # Recent posts by this user
+    cur = db.community_posts.find(
+        {"author_id": user_id, "hidden": {"$ne": True}}, {"_id": 0}
+    ).sort("created_at", -1).limit(20)
+    posts = await cur.to_list(length=20)
+    post_ids = [p["post_id"] for p in posts]
+    liked_set = set()
+    if post_ids:
+        async for d in db.community_post_likes.find(
+            {"post_id": {"$in": post_ids}, "user_id": user.user_id}, {"_id": 0, "post_id": 1}
+        ):
+            liked_set.add(d["post_id"])
+    return {
+        "user": community_svc.public_user(u),
+        "posts": [community_svc.post_public(p, u, liked_by_me=(p["post_id"] in liked_set)) for p in posts],
+        "is_self": user_id == user.user_id,
+    }
+
+
+# ---- Direct Messages (1-on-1) ----
+@api.get("/community/dm/threads")
+async def dm_threads(user: User = Depends(get_current_user)):
+    cur = db.community_dm_threads.find(
+        {"member_ids": user.user_id}, {"_id": 0}
+    ).sort("last_message_at", -1)
+    threads = await cur.to_list(length=200)
+    # Resolve other member
+    other_ids: List[str] = []
+    for t in threads:
+        for m in t.get("member_ids", []):
+            if m != user.user_id:
+                other_ids.append(m)
+    others = await _users_by_id(other_ids)
+
+    items: List[Dict[str, Any]] = []
+    for t in threads:
+        other_id = next((m for m in t.get("member_ids", []) if m != user.user_id), None)
+        # Compute unread count: messages from other after my last_read_at
+        my_reads = t.get("reads", {}) or {}
+        last_read_at = my_reads.get(user.user_id)
+        unread_q: Dict[str, Any] = {"thread_id": t["thread_id"], "sender_id": {"$ne": user.user_id}}
+        if last_read_at:
+            unread_q["created_at"] = {"$gt": last_read_at}
+        unread = await db.community_dm_messages.count_documents(unread_q)
+        items.append(community_svc.thread_public(t, others.get(other_id) if other_id else None, unread=unread))
+    return {"items": items}
+
+
+@api.post("/community/dm/threads")
+async def dm_start_thread(payload: CommunityDMStartRequest,
+                          user: User = Depends(get_current_user)):
+    if payload.user_id == user.user_id:
+        raise HTTPException(status_code=400, detail="Cannot message yourself")
+    other = await db.users.find_one({"user_id": payload.user_id}, {"_id": 0})
+    if not other:
+        raise HTTPException(status_code=404, detail="User not found")
+    tid = community_svc.thread_key(user.user_id, payload.user_id)
+    existing = await db.community_dm_threads.find_one({"thread_id": tid}, {"_id": 0})
+    if existing:
+        return community_svc.thread_public(existing, other)
+    doc = {
+        "thread_id": tid,
+        "member_ids": [user.user_id, payload.user_id],
+        "created_at": community_svc.now_utc(),
+        "last_message_at": community_svc.now_utc(),
+        "last_message": None,
+        "reads": {},
+    }
+    await db.community_dm_threads.insert_one(doc)
+    return community_svc.thread_public(doc, other)
+
+
+@api.get("/community/dm/threads/{thread_id}/messages")
+async def dm_messages(thread_id: str, user: User = Depends(get_current_user)):
+    t = await db.community_dm_threads.find_one({"thread_id": thread_id}, {"_id": 0})
+    if not t or user.user_id not in (t.get("member_ids") or []):
+        raise HTTPException(status_code=404, detail="Thread not found")
+    cur = db.community_dm_messages.find({"thread_id": thread_id}, {"_id": 0}).sort("created_at", 1)
+    msgs = await cur.to_list(length=2000)
+    # Mark thread as read by me
+    await db.community_dm_threads.update_one(
+        {"thread_id": thread_id},
+        {"$set": {f"reads.{user.user_id}": community_svc.now_utc()}},
+    )
+    other_id = next((m for m in t.get("member_ids", []) if m != user.user_id), None)
+    other = await db.users.find_one({"user_id": other_id}, {"_id": 0}) if other_id else None
+    return {
+        "thread": community_svc.thread_public(t, other),
+        "messages": [community_svc.message_public(m) for m in msgs],
+    }
+
+
+@api.post("/community/dm/threads/{thread_id}/messages")
+async def dm_send_message(thread_id: str, payload: CommunityDMSendRequest,
+                          user: User = Depends(get_current_user)):
+    t = await db.community_dm_threads.find_one({"thread_id": thread_id}, {"_id": 0})
+    if not t or user.user_id not in (t.get("member_ids") or []):
+        raise HTTPException(status_code=404, detail="Thread not found")
+    body = community_svc.clean_body(payload.body, community_svc.MAX_DM_LEN)
+    if not body:
+        raise HTTPException(status_code=400, detail="Message cannot be empty")
+    other_id = next((m for m in t.get("member_ids", []) if m != user.user_id), None)
+    if other_id and await _is_blocked(user.user_id, other_id):
+        raise HTTPException(status_code=403, detail="Messaging is blocked between these users")
+    msg_id = f"msg_{uuid.uuid4().hex[:14]}"
+    now = community_svc.now_utc()
+    doc = {
+        "message_id": msg_id,
+        "thread_id": thread_id,
+        "sender_id": user.user_id,
+        "body": body,
+        "created_at": now,
+    }
+    await db.community_dm_messages.insert_one(doc)
+    preview = body if len(body) <= 80 else body[:77] + "…"
+    await db.community_dm_threads.update_one(
+        {"thread_id": thread_id},
+        {"$set": {
+            "last_message": preview,
+            "last_message_at": now,
+            f"reads.{user.user_id}": now,
+        }},
+    )
+    return community_svc.message_public(doc)
+
+
+# ---- Reporting & Blocking ----
+@api.post("/community/report")
+async def community_report(payload: CommunityReportRequest,
+                           user: User = Depends(get_current_user)):
+    if payload.target_type not in ("post", "reply", "user", "message"):
+        raise HTTPException(status_code=400, detail="Invalid target_type")
+    if not payload.reason or payload.reason not in community_svc.REPORT_REASONS:
+        raise HTTPException(status_code=400, detail="Invalid reason")
+    report_id = f"rep_{uuid.uuid4().hex[:12]}"
+    await db.community_reports.insert_one({
+        "report_id": report_id,
+        "reporter_id": user.user_id,
+        "target_type": payload.target_type,
+        "target_id": payload.target_id,
+        "reason": payload.reason,
+        "detail": (payload.detail or "").strip()[:500],
+        "created_at": community_svc.now_utc(),
+        "resolved": False,
+    })
+    return {"ok": True, "report_id": report_id}
+
+
+@api.post("/community/block/{user_id}")
+async def community_block(user_id: str, user: User = Depends(get_current_user)):
+    if user_id == user.user_id:
+        raise HTTPException(status_code=400, detail="Cannot block yourself")
+    try:
+        await db.community_blocks.insert_one({
+            "user_id": user.user_id,
+            "blocked_id": user_id,
+            "created_at": community_svc.now_utc(),
+        })
+    except Exception:
+        pass
+    return {"ok": True}
+
+
+@api.delete("/community/block/{user_id}")
+async def community_unblock(user_id: str, user: User = Depends(get_current_user)):
+    await db.community_blocks.delete_one({"user_id": user.user_id, "blocked_id": user_id})
+    return {"ok": True}
 
 
 app.include_router(api)

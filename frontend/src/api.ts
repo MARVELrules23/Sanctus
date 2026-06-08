@@ -256,3 +256,60 @@ export type ChurchItem = {
   notes?: string;
   saved_at?: string | null;
 };
+
+// ---- Community types ----
+export type CommunityTopic = { slug: string | null; label: string; icon: string };
+export type CommunityUserPublic = { user_id: string; name: string; picture: string | null | undefined };
+
+export type CommunityPost = {
+  post_id: string;
+  author: CommunityUserPublic;
+  body: string;
+  topic: string | null;
+  liturgical_color?: string | null;
+  liturgical_season?: string | null;
+  created_at: string;
+  like_count: number;
+  reply_count: number;
+  liked_by_me: boolean;
+  image?: string | null;
+  is_pinned?: boolean;
+};
+
+export type CommunityReply = {
+  reply_id: string;
+  post_id: string;
+  author: CommunityUserPublic;
+  body: string;
+  created_at: string;
+};
+
+export type CommunityFeed = {
+  items: CommunityPost[];
+  next_cursor: string | null;
+  topic: string | null;
+};
+
+export type CommunityDMThread = {
+  thread_id: string;
+  other: CommunityUserPublic | null;
+  last_message: string | null;
+  last_message_at: string | null;
+  unread: number;
+};
+
+export type CommunityDMMessage = {
+  message_id: string;
+  thread_id: string;
+  sender_id: string;
+  body: string;
+  created_at: string;
+};
+
+export const REPORT_REASONS_FALLBACK = [
+  "Inappropriate content",
+  "Harassment or hateful speech",
+  "Spam or misleading",
+  "Doctrinal error / scandal",
+  "Other",
+];

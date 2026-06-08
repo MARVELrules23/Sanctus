@@ -158,4 +158,31 @@ main_agent_2026-06-08: "Implemented the latest batch of features. Tab bar now: T
 
   Please test all of: new backend routes (auth required, scoping per-user), and frontend flows for Wellness tab, Churches screen permission flow + save/unsave, Journal mode switching + structured save + mark confessed, Calendar journal-linked notes."
 
+
+main_agent_phase2_2026-06-08: "Phase 2 (Catholic Bible — Douay-Rheims Challoner) shipped. Backend: new `/app/backend/bible.py` service with the full 73-book Catholic canon (slug + DR-Challoner names + modern abbrs + sections ot/deutero/nt + chapter counts), live text fetched from api.getbible.net 'douayrheims' translation on first read and cached per-chapter in `bible_books` Mongo collection (async lock prevents duplicate fetches). New endpoints: GET /api/bible/books, GET /api/bible/chapter/{slug}/{ch} (includes user highlights), POST/DELETE /api/bible/highlight, GET /api/bible/highlights. Highlight palette restricted to {rose, gold, sage, violet}. Frontend: /bible (book index, search, expand → chapter grid), /bible/[book]/[chapter] (verse reader with gold verse numbers, parchment-tone highlight backgrounds, modal sheet with 4 swatches + remove + 'Journal this verse' deep-link, prev/next chapter pager), Today screen gains a Bible quick tile, Journal screen accepts ?verse_ref + ?verse_text params and pre-fills body with an italicized quote + citation, app/_layout already provides Stack so new screens nest cleanly. Backend tests: 32/32 new Phase-2 tests pass; regressions intact. Verified end-to-end via screenshot harness — book list / chapter open / highlight rose+gold / journal deep-link all green."
+
 main_agent_phase1_2026-06-08: "Phase 1 shipped. Added (1) PUT /api/auth/me to update display name + profile picture (data URI / URL / clear). (2) `goal_mode` parameter on POST /api/meals/generate and POST /api/workouts/generate ('liturgical' | 'goals'); when 'goals', wellness profile (weight/height/target_weight/goal_type/activity_level) is injected into the AI prompt and the system message is augmented to weight macros/intensity toward the user's goals while still honoring abstinence/fasts. Frontend: new /edit-profile screen (avatar picker via expo-image-picker w/ full permission flow, name input + validation, live AuthContext update on save), Edit pencil added to Profile user card, new GoalModeToggle pill rendered on Meals and Workouts headers (persisted in AsyncStorage; 'My goals' shown disabled until wellness profile exists — tapping it routes to Wellness tab). Backend testing complete: 24/24 new Phase-1 tests pass, regression suite 117/118. Verified end-to-end via screenshot harness — name save, image upload via picker, toggle switching, and AI generation with both modes all work."
+
+main_agent_phase3_2026-06-08: "Phase 3 (Community) shipped. NEW BACKEND ENDPOINTS (all require auth, all scoped to current user, all prefixed `/api`):
+  - GET  /api/community/topics — returns predefined topic rooms + report reasons
+  - GET  /api/community/feed?topic=&before=&limit= — paginated global parish feed or filtered by topic slug (cursor on `created_at` ISO)
+  - POST /api/community/posts {body, topic?, image?} — create post, auto-tagged with today's liturgical color & season
+  - GET  /api/community/posts/{post_id} — single post detail
+  - DELETE /api/community/posts/{post_id} — author-only delete
+  - POST /api/community/posts/{post_id}/like — toggle like; returns {liked, like_count}
+  - GET  /api/community/posts/{post_id}/replies — list replies
+  - POST /api/community/posts/{post_id}/replies {body} — add reply
+  - DELETE /api/community/replies/{reply_id} — author-only delete
+  - GET  /api/community/users/search?q=&limit= — case-insensitive search on name/email
+  - GET  /api/community/users/recommended — recently-active posters, fallback to newest users
+  - GET  /api/community/users/{user_id} — public profile + recent posts
+  - GET  /api/community/dm/threads — inbox with unread counts
+  - POST /api/community/dm/threads {user_id} — open/start 1-on-1 thread (deterministic thread_id from sorted user IDs)
+  - GET  /api/community/dm/threads/{thread_id}/messages — fetch + mark as read
+  - POST /api/community/dm/threads/{thread_id}/messages {body} — send message
+  - POST /api/community/report {target_type, target_id, reason, detail?} — report content/users; reasons validated against fixed list
+  - POST /api/community/block/{user_id} — block; blocked pair cannot DM
+  - DELETE /api/community/block/{user_id} — unblock
+New MongoDB collections (indexes created on startup): community_posts, community_post_likes, community_replies, community_dm_threads, community_dm_messages, community_reports, community_blocks.
+FRONTEND: new tab `Parish` (6 tabs now) at /app/frontend/app/(tabs)/community.tsx — feed with horizontal topic chips, FAB compose modal with topic picker, optimistic likes, action menu (delete-own / report-others / DM-author), liturgical color rail on each post card. Sub-screens at /app/frontend/app/community/{post/[id].tsx, people.tsx, dm/index.tsx, dm/[thread_id].tsx, user/[id].tsx}. People screen has debounced search + recommendations. DM thread polls every 5s for new messages and uses optimistic send. Profile screen shows author's recent posts. Report modal lists fixed reasons + optional 500-char detail. Avatar component (`/app/frontend/src/components/Avatar.tsx`) and timeAgo util (`/app/frontend/src/utils/time-ago.ts`) added.
+NEEDS TESTING: backend endpoints (auth, scoping, pagination, like-toggle, thread creation, report validation), and frontend flows (feed→compose→post, topic filtering, post detail→reply, people search & recommend, DM inbox→thread→send/receive, profile, report flow)."

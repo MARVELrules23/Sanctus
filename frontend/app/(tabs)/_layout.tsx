@@ -65,6 +65,16 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="community"
+        options={{
+          title: "Parish",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="people-outline" color={color} size={size} />
+          ),
+          tabBarTestID: "tab-community",
+        }}
+      />
+      <Tabs.Screen
         name="calendar"
         options={{
           href: null,

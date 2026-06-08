@@ -424,7 +424,7 @@ async def generate_workout(payload: GenerateWorkoutRequest, user: User = Depends
         "date": payload.date,
         "liturgical": lit,
         "plan": plan,
-        "goal_mode": payload.goal_mode or "liturgical",
+        "goal_mode": "goals" if use_goals else "liturgical",
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.workouts.update_one(

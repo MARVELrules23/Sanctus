@@ -113,6 +113,7 @@ export default function TabsLayout() {
         name="community"
         options={{
           title: "Parish",
+          tabBarLabel: "Parish",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="people-outline" color={color} size={size} />
           ),
@@ -124,6 +125,7 @@ export default function TabsLayout() {
         name="calendar"
         options={{
           href: null,
+          tabBarButton: () => null,
         }}
       />
       <Tabs.Screen

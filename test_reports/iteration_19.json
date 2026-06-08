@@ -1,0 +1,99 @@
+{
+  "summary": "Re-validation of Sanctuary fixes from iteration 18. Both reported fixes VERIFIED. (1) useKeepAwake web-safe wrapper at /app/frontend/src/utils/keep-awake.ts works — zero red-screen overlays, only 1 unrelated postMessage pageerror from YouTube iframe. (2) Custom tabBarButton wrapper at /app/frontend/app/(tabs)/_layout.tsx successfully surfaces data-testid AND id for all 7 tabs (tab-today, tab-meals, tab-workouts, tab-wellness, tab-sanctuary, tab-community, tab-profile) on Expo Web DOM — all clickable via Playwright. Meditation flow PASS: deep-link → all 14 testIDs present (breathing-guide, rotating-quote, sanctuary-audio-card, sanctuary-audio-toggle, meditation-back, 4 filter chips, 5 timer chips) → meditation-timer-5 click made meditation-timer-pill visible reading '4:59' → meditation-timer-clear works → meditation-back returns to /sanctuary hub. Study flow PASS: all 7 inspected testIDs present (study-back/clock/cycle/start-focus/3 filter chips) → study-start-focus initiates 25:00 focus countdown → study-skip-phase opens study-phase-done overlay → study-phase-done-close advances correctly. Pomodoro logic VERIFIED: ran 4 sequential focus→break cycles, breaks 1/2/3 = 5:00 (read as 4:59 after 1s tick), break 4 = 15:00 (read as 14:59 after 1s tick) — confirming the every-4th long-break. study-cycle text correctly increments 'Pomodoro 1/4' → 2/4 → 3/4 → 4/4. Backend smoke 25/25 PASS in 22s on test_sanctus_backend.py (Health, Liturgical, AuthUnauth, AuthenticatedFlow, AIGeneration, MealWorkoutRetrieval, Logout). NEW REGRESSIONS introduced by the tabBarButton rewrite: (a) hidden 'calendar' route now renders as an 8th tab (label 'calendar', no testID, x=341 in bottom bar) — `href: null` alone no longer hides it once sibling tabs use a custom tabBarButton; (b) the 'community' tab DOM label reads 'Community' (truncated 'Com...') instead of the configured title 'Parish' — the custom tabBarButton receives the route name fallback rather than `options.title`.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "(tabs) _layout calendar route",
+        "issue": "Hidden 'calendar' route now appears as an 8th tab in the bottom bar (label 'calendar', truncated to 'cale...' on 390px). Setting only `href: null` no longer hides the tab once sibling tabs use a custom `tabBarButton`. Fix: also add `tabBarButton: () => null` to the calendar Tabs.Screen, OR `tabBarItemStyle: { display: 'none' }`. Reference: /app/frontend/app/(tabs)/_layout.tsx:123-128",
+        "testID": "(none — no testID on the leaked tab)",
+        "priority": "HIGH"
+      },
+      {
+        "component": "(tabs) _layout community tab label",
+        "issue": "Community tab DOM label reads 'Community' (from route name) instead of the configured title 'Parish'. The custom `tabBarButton` wrapper's `children` prop is being rendered with the route-name fallback because `options.title` is not auto-mapped to the label when `tabBarButton` is provided. Fix: add explicit `tabBarLabel: 'Parish'` to the community Tabs.Screen options. Reference: /app/frontend/app/(tabs)/_layout.tsx:112-122",
+        "testID": "tab-community",
+        "priority": "MEDIUM"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "(tabs) bottom bar",
+        "issues": [
+          "With the leaked 'calendar' tab there are now 8 tabs on 390px, compressing each to ~49px width. 'Sanctuary' truncates to 'Sanc...', 'Wellness' to 'Well...', 'Workouts' to 'Wor...', 'Community' to 'Com...', 'calendar' to 'cale...'. Touch targets remain ≥44px but label legibility drops further. Hiding the calendar tab restores 7 tabs at ~55px wide."
+        ]
+      }
+    ],
+    "react_native_issues": [
+      {
+        "component": "SanctuaryAudio (YouTube iframe path)",
+        "issue": "Single pageerror captured during the run: 'Cannot read properties of undefined (reading postMessage)'. Originates from react-native-youtube-iframe's web bridge when the iframe is unmounted before its postMessage queue drains. Does not block any flow but should be try/catch'd inside the SanctuaryAudio cleanup effect. Reference: /app/frontend/src/components/SanctuaryAudio.tsx (YoutubeBackedPlayer cleanup)"
+        }
+    ]
+  },
+  "verified_flows": {
+    "backend_smoke": {
+      "test_sanctus_backend.py": "25/25 PASS in 22.00s"
+    },
+    "web_dom_tab_testids": {
+      "tab-today": "data-testid + id both present",
+      "tab-meals": "data-testid + id both present",
+      "tab-workouts": "data-testid + id both present",
+      "tab-wellness": "data-testid + id both present",
+      "tab-sanctuary": "data-testid + id both present",
+      "tab-community": "data-testid + id both present (label wrong though, see ui_bugs)",
+      "tab-profile": "data-testid + id both present",
+      "tab-tap-navigation": "All 7 testIDs clickable via Playwright; routed to expected URLs (/, /meals, /workouts, /wellness, /sanctuary, /community, /profile)"
+    },
+    "sanctuary_meditation": {
+      "deep_link": "/sanctuary/meditation loads cleanly, no red-screen / wake-lock error",
+      "testIDs_present": "breathing-guide, rotating-quote, sanctuary-audio-card, sanctuary-audio-toggle, meditation-back, meditation-filter-{all,piano,harp,chant}, meditation-timer-{5,10,15,20,30} — all 14 ✓",
+      "meditation-timer-5 → timer-pill": "PASS, pill reads '4:59' 1s after tap",
+      "meditation-timer-clear": "PASS, clears the pill",
+      "meditation-back": "PASS, returns to /sanctuary hub with both cards present"
+    },
+    "sanctuary_study": {
+      "deep_link": "/sanctuary/study loads cleanly",
+      "testIDs_present": "study-back, study-clock, study-cycle, study-start-focus, study-filter-{all,lofi,piano} — all 7 ✓",
+      "initial_state": "study-cycle='Pomodoro 0 / 4', study-clock='25:00'",
+      "study-start-focus": "PASS — reveals study-skip-phase and study-stop",
+      "pomodoro_cycle_progression": "Cycle 1 break=4:59 (5min), Cycle 2 break=4:59 (5min), Cycle 3 break=4:59 (5min), Cycle 4 break=14:59 (15min long break ✓)",
+      "study-phase-done modal": "Appears after every skipPhase, study-phase-done-close advances correctly",
+      "study-back": "PASS — returns to /sanctuary hub"
+    },
+    "no_regression_other_tabs": "tab-meals/workouts/wellness/community/profile/today all navigate via testID click; no red screens"
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_sanctus_backend.py (re-used, unchanged)",
+    "/app/test_reports/pytest/iteration_19_smoke.xml (NEW)",
+    "/app/test_reports/iteration_19.json (NEW — this report)"
+  ],
+  "action_items": [
+    "[HIGH] Hide the calendar tab properly: add `tabBarButton: () => null` (and optionally `tabBarItemStyle: { display: 'none' }`) to the calendar Tabs.Screen in /app/frontend/app/(tabs)/_layout.tsx — `href: null` alone no longer suppresses the slot when other tabs use a custom tabBarButton. Without this fix the bar shows 8 tabs and exposes a clickable 'calendar' label that users cannot meaningfully interact with.",
+    "[MEDIUM] Set `tabBarLabel: 'Parish'` explicitly on the community Tabs.Screen so the configured title surfaces in the bar; current rendering shows 'Community' (route-name fallback).",
+    "[LOW] Wrap the YoutubeBackedPlayer's web cleanup in try/catch (or check for player ref before calling postMessage) to silence the single 'Cannot read properties of undefined (reading postMessage)' pageerror observed on unmount of /sanctuary screens that had hovered a YouTube track."
+  ],
+  "critical_code_review_comments": [
+    "/app/frontend/src/utils/keep-awake.ts — correct platform gate; the eslint-disable for rules-of-hooks is intentional and safe because `Platform.OS` is a build-time constant in production (RN web bundles never reach the expoUseKeepAwake call). Clean fix.",
+    "/app/frontend/app/(tabs)/_layout.tsx:18-37 — `makeTabButton` correctly forwards testID and id, but the wrapper does not propagate `options.tabBarLabel` / `options.title` to the rendered Pressable children. The visible label comes from the `children` prop given by React Navigation, and in expo-router that fallback uses the route name when a custom tabBarButton is supplied without an explicit `tabBarLabel`. Hence the 'Community' regression.",
+    "/app/frontend/app/(tabs)/_layout.tsx:123-128 — `href: null` works for the default tabBarButton but with the custom wrapper applied to siblings, React Navigation still creates a Pressable slot for the route; the calendar Tabs.Screen needs an explicit suppress (`tabBarButton: () => null`).",
+    "Pomodoro long-break math at /app/frontend/app/sanctuary/study.tsx:109-120 — `(cyclesDone + 1) % 4 === 0` correctly triggers long break on every 4th focus phase. Verified live."
+  ],
+  "updated_files": [
+    "/app/test_reports/iteration_19.json (NEW)",
+    "/app/test_reports/pytest/iteration_19_smoke.xml (NEW)"
+  ],
+  "success_rate": {
+    "backend": "100% (25/25 in test_sanctus_backend.py)",
+    "frontend": "~85% — both fixes from iteration 18 verified end-to-end (useKeepAwake web crash, tab testIDs on DOM); meditation + study flows fully exercised; Pomodoro long-break math correct. 2 new regressions in the tab bar wrapper (calendar tab leaked, community label wrong) but neither blocks the Sanctuary acceptance criteria."
+  },
+  "seed_data_creation": "Re-used existing TEST_FE_ITER11_TOKEN seed (no new collections/docs). localStorage key 'sanctus_session_token' set on each fresh page load.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Iteration 18 fixes for useKeepAwake on web and tab testIDs are confirmed working. The Sanctuary feature is now fully verifiable end-to-end via deep links OR tab-sanctuary testID click. The two new regressions to fix are localized to /app/frontend/app/(tabs)/_layout.tsx — calendar route slot leak and community label fallback. After fix, re-verify by (1) counting bottom-bar buttons (must be 7, not 8), and (2) reading tab-community's textContent (must contain 'Parish'). No need to re-run the meditation/study flows — they passed cleanly. Use page.evaluate to seed localStorage.setItem('sanctus_session_token', JSON.stringify('TEST_FE_ITER11_TOKEN')) before first nav.",
+  "rca_of_issue": "Tab regressions RCA: React Navigation's bottom-tabs library treats `tabBarButton` as a complete replacement for the default tab slot — when supplied, neither the default 'render nothing for href:null' branch nor the 'render label from options.title' branch is taken. So (a) the calendar Tabs.Screen, which has `href: null` but NO `tabBarButton`, still gets the *default* slot (which now renders an outlined button reading the route name 'calendar' since href:null only nulls the link but not the slot in this version), and (b) the community Tabs.Screen, which DOES have a custom tabBarButton, receives a `children` prop that defaults to the route name when no explicit `tabBarLabel` is set. Both are documented edge cases of the React Navigation v6/v7 bottom-tabs API when mixing default and custom tab buttons in the same tablist. The fix is two one-line additions to _layout.tsx as listed in action_items."
+}

@@ -1,0 +1,109 @@
+{
+  "summary": "Tested the new Sanctuary feature (Meditation + Study sub-screens) on Expo web mobile viewport (390x844) and ran a backend smoke regression. Backend: 16/16 pytest in test_sanctus_backend.py (Health, Liturgical, AuthUnauth, AuthenticatedFlow) pass — no regression from the Sanctuary addition (which is frontend-only). Frontend Sanctuary hub renders correctly with both cards (sanctuary-meditation-card, sanctuary-study-card) — deep-link /sanctuary works and tapping the Meditation card navigates to /sanctuary/meditation where breathing-guide, rotating-quote, sanctuary-audio-card, meditation-back, all 4 filter chips (all/piano/harp/chant) and all 5 timer chips (5/10/15/20/30) are present. CRITICAL ISSUE: useKeepAwake() from expo-keep-awake throws an uncaught 'Wake Lock permission request denied' error on Expo Web — this is fired on mount of both meditation.tsx (line 47) and study.tsx (line 43). The dev red-screen overlay then blocks subsequent interactions (timer-pill never showed after meditation-timer-5 click, back navigation didn't return to hub). Needs to be guarded behind Platform.OS !== 'web' or wrapped in try/catch. SECOND ISSUE: tabBarTestID set on the tab bar buttons (tab-sanctuary, tab-today, etc.) does NOT propagate as data-testid on the rendered DOM on Expo Web — none of the 7 tab-* testIDs were found via querySelectorAll('[data-testid]'). This blocks reliable tab-tap automation; recommend using a custom tabBarButton with testID or upgrading to a newer expo-router build that wires testID through. THIRD: tab density — at 390px, the 'Sanctuary' label is truncated to 'Sanct…' on the bar, but the icon + ellipsis are still distinguishable. On a smaller phone (340px) labels may collapse further. INTERMITTENT: Initial Metro bundle hit 'Unable to resolve react-native-web-webview' once (likely a stale start), but the package is present in node_modules and yarn.lock, and after restart the web bundle compiled and the Sanctuary tab loaded. Worth verifying with a clean restart for native builds.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "Meditation / Study screens",
+        "issue": "Uncaught error 'Wake Lock permission request denied' fired by useKeepAwake() on Expo Web. Shows as a red-screen dev overlay that blocks taps (verified that the meditation-timer-pill never rendered after meditation-timer-5 was clicked, and back navigation from meditation didn't return to hub). Guard the hook behind Platform.OS !== 'web' or wrap in try/catch. Reference: /app/frontend/app/sanctuary/meditation.tsx:47 and /app/frontend/app/sanctuary/study.tsx:43",
+        "testID": "breathing-guide, sanctuary-audio-card",
+        "priority": "HIGH"
+      },
+      {
+        "component": "Tab bar (Expo Router)",
+        "issue": "tabBarTestID='tab-sanctuary' (and tab-today/-meals/-workouts/-wellness/-community/-profile) does NOT render as a data-testid attribute on the rendered DOM on Expo Web. document.querySelectorAll('[data-testid]') returns 0 tab entries. Tab-tap selectors used by future automation will fail. Recommend a custom tabBarButton component that forwards testID, or move tab tests to native-only. Reference: /app/frontend/app/(tabs)/_layout.tsx:36,46,54,64,74,84,100",
+        "testID": "tab-sanctuary",
+        "priority": "MEDIUM"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "Meditation timer start",
+        "issue": "Tapping meditation-timer-5 should make meditation-timer-pill visible (timerMin set + secondsLeft > 0 + playing=true). After the click the pill was not visible, likely because the Wake Lock error overlay intercepted the click. Needs re-verification after the wake-lock fix.",
+        "affected_testIDs": ["meditation-timer-5", "meditation-timer-pill", "sanctuary-audio-toggle"]
+      }
+    ],
+    "design_issues": [
+      {
+        "screen": "(tabs) bottom bar",
+        "issues": [
+          "7 tabs on 390px viewport — 'Sanctuary' label truncates to 'Sanct…' and 'Wellness' to 'Welln…'. Still readable with icons but on smaller phones (≤340px) tapping precision may suffer. Consider reducing tabBarLabelStyle.fontSize from 11 to 10 or using shorter labels (e.g. 'Calm' / 'Pray') for the new tab."
+        ]
+      }
+    ],
+    "react_native_issues": [
+      {
+        "component": "expo-keep-awake (useKeepAwake)",
+        "issue": "Throws 'Wake Lock permission request denied' as an uncaught error on Expo Web when the Wake Lock API is unavailable / denied. Should be guarded behind Platform.OS !== 'web' or replaced with a try/catch wrapper. Reference: /app/frontend/app/sanctuary/meditation.tsx:47 and /app/frontend/app/sanctuary/study.tsx:43"
+      },
+      {
+        "component": "react-native-youtube-iframe + react-native-web-webview",
+        "issue": "Metro initially failed to resolve react-native-web-webview during the first bundle attempt after the Sanctuary feature was added (seen in /var/log/supervisor/expo.err.log). Recovers after expo restart, but the WebView shim is a known fragile peer dep on web. If similar resolution errors recur, consider lazy-loading SanctuaryAudio's YouTube path (dynamic require) or platform-gating react-native-youtube-iframe behind a Platform.OS check."
+      }
+    ]
+  },
+  "verified_flows": {
+    "backend_smoke": {
+      "GET /api/": "200 {app:Sanctus,status:ok} — PASS",
+      "GET /api/liturgical/day (6 dates)": "All PASS (Friday OT, Good Friday, Easter, Christmas, Ash Wednesday, invalid date 400)",
+      "GET /api/liturgical/month": "PASS (April 2026 Lent→Easter; invalid month 400)",
+      "AuthUnauth": "401 on /auth/me, /preferences, /meals without token — PASS",
+      "AuthenticatedFlow": "/auth/me, /preferences (default + update + persistence) — PASS"
+    },
+    "sanctuary_hub": {
+      "Deep link /sanctuary": "200, both cards render",
+      "sanctuary-meditation-card present": true,
+      "sanctuary-study-card present": true,
+      "Tap meditation-card navigates to /sanctuary/meditation": "PASS"
+    },
+    "sanctuary_meditation": {
+      "breathing-guide": true,
+      "rotating-quote": true,
+      "sanctuary-audio-card": true,
+      "meditation-back": true,
+      "meditation-filter-{all,piano,harp,chant}": "all 4 present",
+      "meditation-timer-{5,10,15,20,30}": "all 5 present",
+      "sanctuary-audio-toggle": true,
+      "meditation-track switch (chant filter → Regina Caeli)": "track selectable",
+      "meditation-timer-pill after start": "NOT VISIBLE — blocked by wake-lock error overlay",
+      "back-to-hub after meditation": "FAILED — error overlay still present"
+    },
+    "sanctuary_study": "NOT VERIFIED — could not navigate past the wake-lock error overlay after the meditation back-button failure. Re-verify once useKeepAwake is fixed for web."
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_sanctus_backend.py (re-used)",
+    "/app/test_reports/pytest/iteration_18_smoke.xml",
+    "/app/test_reports/iteration_18.json"
+  ],
+  "action_items": [
+    "[HIGH] Guard useKeepAwake() behind Platform.OS !== 'web' in both /app/frontend/app/sanctuary/meditation.tsx:47 and /app/frontend/app/sanctuary/study.tsx:43. Without the guard, every web user gets an Uncaught 'Wake Lock permission request denied' error that crashes the route and blocks all interactions (timer-pill, audio toggle, back navigation).",
+    "[MEDIUM] tabBarTestID does not surface as data-testid on Expo Web — replace with a custom tabBarButton that sets testID on the underlying Pressable, or expose tab-* testIDs another way. This affects automated regression for the tab bar.",
+    "[LOW] Consider trimming bottom-tab labels (e.g. 'Sanct' or 'Calm') or reducing fontSize so 'Sanctuary' and 'Wellness' don't ellipsize on 390px.",
+    "[LOW] Re-verify the YouTube iframe path on /sanctuary/study after the wake-lock fix is in. The Metro bundler emitted a one-time 'Unable to resolve react-native-web-webview' error during startup that recovered after expo restart — worth a clean reproduction."
+  ],
+  "critical_code_review_comments": [
+    "/app/frontend/app/sanctuary/meditation.tsx:47 — useKeepAwake() must be platform-gated; otherwise web users see a dev-mode red-screen and prod users get an unhandled promise rejection.",
+    "/app/frontend/app/sanctuary/study.tsx:43 — same useKeepAwake() issue.",
+    "/app/frontend/src/components/SanctuaryAudio.tsx:85 — useAudioPlayer is called unconditionally even when the track is a YouTube source; on YouTube tracks the player object will be a no-op but the hook still runs. Consider gating the hook inside the Mp3BackedPlayer component (already the case) — but verify with React rules-of-hooks that switching between mp3/youtube tracks doesn't change hook order. Currently the parent renders a different sub-component per kind (YoutubeBackedPlayer vs Mp3BackedPlayer), which is safe.",
+    "/app/frontend/src/components/SanctuaryAudio.tsx:103 — the didJustFinish effect calls player.seekTo(0) inside the same effect that flips onPlayPauseChange(false). If the parent's setPlaying(false) re-renders before seekTo completes, this works fine; just noting that seekTo on a player that just finished is racy with autoplay re-entry. Not a blocker.",
+    "/app/frontend/app/(tabs)/_layout.tsx — 7 visible tabs on a 390px screen is at the upper limit of usable density. Sanctuary label visibly truncates. Acceptable for MVP, would revisit with a More menu if more tabs land.",
+    "/app/frontend/src/utils/sanctuary-tracks.ts:46–95 — Internet Archive MP3 URLs are unverified at test time (no curl-style smoke). If CORS blocks them on web, audio will be silent on the web preview but still work on native — this is called out in the request and acceptable.",
+    "/app/frontend/src/components/RotatingQuote.tsx:35 — shuffled(SANCTUARY_QUOTES) runs once on mount via useMemo with []; intentional and correct (avoids re-shuffle on every render)."
+  ],
+  "updated_files": [
+    "/app/test_reports/iteration_18.json (NEW — this report)",
+    "/app/test_reports/pytest/iteration_18_smoke.xml (NEW — backend smoke regression result)"
+  ],
+  "success_rate": {
+    "backend": "100% (16/16 smoke tests pass in 0.91s)",
+    "frontend": "Sanctuary hub + Meditation static render PASS; interactive timer/audio NOT VERIFIED due to wake-lock error overlay; Study screen NOT VERIFIED for the same reason. Treat as ~40% of the Sanctuary acceptance criteria covered."
+  },
+  "seed_data_creation": "Re-used ui_test_user_1 / TEST_FE_ITER11_TOKEN via /app/backend/tests/setup_iter11_auth.py. No new collections/docs created for this feature.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "After the main agent guards useKeepAwake on web (Platform.OS !== 'web' early-return inside the hook caller in meditation.tsx and study.tsx), re-run the full Sanctuary UI script. Use deep links to /sanctuary, /sanctuary/meditation, /sanctuary/study because tabBarTestID does not surface as data-testid on Expo Web. Seed the session token with: localStorage.setItem('sanctus_session_token', JSON.stringify('TEST_FE_ITER11_TOKEN')) BEFORE navigating. The 4-7-8 breathing orb starts animating only when the audio is playing (playing=true). The rotating-quote rotates every 25s (fade 1.2s) — for an automated test, mock or just check first render. The 5-min timer test should: click meditation-timer-5 → wait 1.5s → assert meditation-timer-pill visible and shows a time near '4:5x' or '5:00'. Audio CORS may 4xx the Internet Archive MP3s on web; this is noted and not a regression. For Study, ensure 1+ iframe is in the DOM after entering the screen.",
+  "rca_of_issue": "Wake Lock error: useKeepAwake() from expo-keep-awake calls navigator.wakeLock.request('screen') on web. Most browsers reject this without a user-activation gesture immediately after mount, and expo-keep-awake does not catch the rejection — it bubbles up as an uncaught error, which React's dev error boundary surfaces as a red overlay. Fix is straightforward: import {Platform} from 'react-native' and only call useKeepAwake() when Platform.OS !== 'web', or wrap the underlying activate call in try/catch."
+}

@@ -1,0 +1,34 @@
+{
+  "summary": "Backend-only retest after adding GET /api/churches/search. Full pytest suite: 94/94 PASS (9 new search tests + 85 carried over). New TestChurchesSearch class verifies: (1) missing/empty q -> 422 (FastAPI Query min_length=1), (2) auth required -> 401 without bearer, (3) lat>90 -> 400, lng<-180 -> 400, (4) q='Saint Mary' near Philadelphia (40.0387,-75.2207) -> 200 with items[] carrying church_id, name, lat, lng, distance_km (float), address, is_starred, mass_times, confession_times, and zero road-only leakage, (5) q='Old Saint Joseph' near Philadelphia -> no result whose name+address looks like a plain street/avenue without religious keywords (validates server-side category=amenity/type=place_of_worship + name/keyword filter in churches.py::search_churches), (6) search without lat/lng -> distance_km is None for every item, (7) saving a returned church_id via POST /api/churches/save and re-running the same search returns is_starred=true on the matching osm id (annotation pipeline at server.py:1052-1057 works), (8) radius_m bounds enforced (Query ge=1000 le=80000 -> 422 outside). Regressions: /api/churches/nearby, /api/churches/save, /api/churches/saved, /api/churches/saved/{id} all still pass; all readings/journal/meals/workouts/wellness/auth/liturgical tests still pass. Nominatim live calls used; tests added ~1.2s sleep between consecutive queries to be polite (total <8 Nominatim hits per run).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_new_features.py (TestChurchesSearch class added at lines 432-560)",
+    "/app/test_reports/pytest/iteration_4_results.xml"
+  ],
+  "action_items": [
+    "No action items — feature works end-to-end on the backend. Main agent can ship the search bar UI; the API contract (items[] with church_id, name, lat, lng, distance_km|null, address, is_starred, mass_times[], confession_times[]) is verified."
+  ],
+  "critical_code_review_comments": [
+    "churches.py:174-313 — search_churches() filters via Nominatim category/type before applying a Catholic-keyword filter; for results that don't match any keyword but came from the 'Catholic church <q>' prefixed query, the filter still rejects them unless the display_name contains 'catholic'. This is fine for tested cities but may miss obscure parishes whose Nominatim display_name lacks the word 'catholic'. Acceptable trade-off for now.",
+    "churches.py:201-220 — Nominatim called twice (prefixed + bare) sequentially. Consider asyncio.gather to halve latency.",
+    "server.py:1036-1060 — /churches/search radius_m default is 60_000 (60km) with ge=1000 le=80000 — values outside the band yield FastAPI's standard 422, NOT the custom 400 used for lat/lng bounds. Inconsistency in error-code semantics across the same endpoint (lat/lng manual check returns 400, radius via Query validator returns 422). Consider unifying."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_new_features.py — appended TestChurchesSearch (9 tests, ~150 lines)"
+  ],
+  "success_rate": {"backend": "100% (94/94)", "frontend": "n/a — backend-only request"},
+  "seed_data_creation": "Reuses existing seeded_user (test_user_1 / test_token_abc) and second_user (test_user_2 / test_token_xyz_2). is_starred test pre-deletes user_churches for primary user, saves a real Nominatim result, asserts annotation, then cleans up. No new permanent seed data.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Backend URL: defaults to localhost:8001 in conftest (EXPO_PUBLIC_BACKEND_URL is in frontend/.env not backend/.env, but pytest hits the local FastAPI directly). Auth uses Bearer test_token_abc against user_sessions docs. /api/churches/search uses live Nominatim — please keep query volume low (current suite makes ~7 hits with 1.2s spacing). Search test for is_starred annotation pins an OSM id from a 'Saint Patrick Cathedral' lookup in NYC; if Nominatim ever returns empty, the test pytest.skips rather than fails. Search radius bounds: 1000 <= radius_m <= 80000 (out-of-range yields 422 via FastAPI Query validator).",
+  "rca_of_issue": "n/a — no bugs found this iteration."
+}

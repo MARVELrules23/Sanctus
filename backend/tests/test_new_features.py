@@ -429,6 +429,166 @@ class TestChurches:
         assert anon_client.get(f"{base_url}/api/churches/saved").status_code == 401
 
 
+# ---------- Churches search (Nominatim-backed) ----------
+# NOTE: Live Nominatim is rate-limited. We keep these tests modest (<10 queries
+# total) and add small delays between calls to be polite.
+import time as _time  # noqa: E402
+
+
+class TestChurchesSearch:
+    def test_empty_q_returns_422(self, auth_client, base_url):
+        # Missing q entirely
+        r = auth_client.get(f"{base_url}/api/churches/search")
+        assert r.status_code == 422, r.text
+        # q present but empty string also fails min_length=1
+        r2 = auth_client.get(f"{base_url}/api/churches/search", params={"q": ""})
+        assert r2.status_code == 422, r2.text
+
+    def test_search_unauth(self, anon_client, base_url):
+        r = anon_client.get(f"{base_url}/api/churches/search",
+                            params={"q": "Saint Mary"})
+        assert r.status_code == 401
+
+    def test_invalid_lat(self, auth_client, base_url):
+        r = auth_client.get(f"{base_url}/api/churches/search",
+                            params={"q": "Saint Mary", "lat": 200, "lng": 0})
+        assert r.status_code == 400
+
+    def test_invalid_lng(self, auth_client, base_url):
+        r = auth_client.get(f"{base_url}/api/churches/search",
+                            params={"q": "Saint Mary", "lat": 0, "lng": -500})
+        assert r.status_code == 400
+
+    def test_search_with_coords_returns_only_places_of_worship(
+        self, auth_client, base_url
+    ):
+        _time.sleep(1.2)  # polite delay between Nominatim hits
+        r = auth_client.get(
+            f"{base_url}/api/churches/search",
+            params={"q": "Saint Mary", "lat": 40.0387, "lng": -75.2207},
+            timeout=30,
+        )
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert "items" in body and "count" in body and "query" in body
+        assert body["query"] == "Saint Mary"
+        items = body["items"]
+        assert isinstance(items, list)
+        # Verify item shape and that distance_km is computed when coords provided
+        for c in items[:5]:
+            for k in (
+                "church_id", "name", "lat", "lng", "distance_km", "address",
+                "is_starred", "mass_times", "confession_times",
+            ):
+                assert k in c, f"missing {k} in {c}"
+            assert isinstance(c["lat"], (int, float))
+            assert isinstance(c["lng"], (int, float))
+            assert c["distance_km"] is None or isinstance(c["distance_km"], (int, float))
+            # name must not be a road/street (heuristic)
+            assert "road" not in c["name"].lower() or "catholic" in c["name"].lower()
+
+    def test_search_no_unrelated_roads(self, auth_client, base_url):
+        """Searching for 'Old Saint Joseph' must not surface 'Cathedral St'
+        roads or other non-religious points of interest."""
+        _time.sleep(1.2)
+        r = auth_client.get(
+            f"{base_url}/api/churches/search",
+            params={"q": "Old Saint Joseph", "lat": 40.0387, "lng": -75.2207},
+            timeout=30,
+        )
+        assert r.status_code == 200, r.text
+        body = r.json()
+        items = body["items"]
+        # No item should look like a road / street / suburb / residential area
+        for c in items:
+            haystack = f"{c.get('name','')} {c.get('address','')}".lower()
+            # An OSM "highway/residential" road would typically have a name
+            # like "Cathedral Street" without religious markers. Our server-
+            # side filter must reject those.
+            forbidden_road_only = (
+                ("street" in haystack or "avenue" in haystack or "boulevard" in haystack)
+                and not any(
+                    kw in haystack
+                    for kw in (
+                        "catholic", "church", "parish", "cathedral",
+                        "basilica", "saint", "st.", "st ", "our lady",
+                        "shrine", "chapel",
+                    )
+                )
+            )
+            assert not forbidden_road_only, f"road-like result leaked: {c}"
+
+    def test_search_without_coords_distance_is_null(self, auth_client, base_url):
+        _time.sleep(1.2)
+        r = auth_client.get(
+            f"{base_url}/api/churches/search",
+            params={"q": "Saint Patrick Cathedral"},
+            timeout=30,
+        )
+        assert r.status_code == 200, r.text
+        body = r.json()
+        items = body["items"]
+        # Without coords, all items must have distance_km=None
+        for c in items:
+            assert c["distance_km"] is None, (
+                f"expected distance_km=None when no coords, got {c['distance_km']}"
+            )
+
+    def test_search_is_starred_annotation(self, auth_client, base_url, mongo_db, seeded_user):
+        """If a user has saved a church (POST /api/churches/save), subsequent
+        search results for that osm id should come back with is_starred=true."""
+        # Pre-save a known osm id then search broadly
+        mongo_db.user_churches.delete_many({"user_id": seeded_user["user_id"]})
+        _time.sleep(1.2)
+        # First, get a real search result we can pin against
+        r0 = auth_client.get(
+            f"{base_url}/api/churches/search",
+            params={"q": "Saint Patrick Cathedral", "lat": 40.7589, "lng": -73.9851},
+            timeout=30,
+        )
+        assert r0.status_code == 200, r0.text
+        items0 = r0.json()["items"]
+        if not items0:
+            pytest.skip("Nominatim returned no results — cannot verify is_starred annotation")
+        pick = items0[0]
+        save_payload = {
+            "church_id": pick["church_id"],
+            "name": pick["name"],
+            "lat": pick["lat"],
+            "lng": pick["lng"],
+            "address": pick.get("address", ""),
+        }
+        s = auth_client.post(f"{base_url}/api/churches/save", json=save_payload)
+        assert s.status_code == 200, s.text
+        # Re-run same search; the matching church_id should now be is_starred=True
+        _time.sleep(1.2)
+        r1 = auth_client.get(
+            f"{base_url}/api/churches/search",
+            params={"q": "Saint Patrick Cathedral", "lat": 40.7589, "lng": -73.9851},
+            timeout=30,
+        )
+        assert r1.status_code == 200
+        items1 = r1.json()["items"]
+        match = next((c for c in items1 if c["church_id"] == pick["church_id"]), None)
+        assert match is not None, "previously-saved church not found in re-search"
+        assert match["is_starred"] is True
+        # Cleanup
+        auth_client.delete(f"{base_url}/api/churches/saved/{pick['church_id']}")
+
+    def test_search_radius_param_accepts_bounds(self, auth_client, base_url):
+        """radius_m=999 < 1000 lower bound should 422; radius_m=80000 ok."""
+        r_low = auth_client.get(
+            f"{base_url}/api/churches/search",
+            params={"q": "Saint", "radius_m": 500},
+        )
+        assert r_low.status_code == 422, r_low.text
+        r_high = auth_client.get(
+            f"{base_url}/api/churches/search",
+            params={"q": "Saint", "radius_m": 100000},
+        )
+        assert r_high.status_code == 422, r_high.text
+
+
 # ---------- Regression smoke ----------
 class TestRegressionSmoke:
     def test_root(self, anon_client, base_url):

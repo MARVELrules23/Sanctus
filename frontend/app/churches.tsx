@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -9,6 +9,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -35,6 +36,13 @@ export default function ChurchesScreen() {
   const [saved, setSaved] = useState<ChurchItem[]>([]);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Search state
+  const [query, setQuery] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<ChurchItem[] | null>(null);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const searchSeq = useRef(0);
 
   const loadSaved = useCallback(async () => {
     setLoadingSaved(true);
@@ -185,6 +193,70 @@ export default function ChurchesScreen() {
     void Linking.openSettings().catch(() => Alert.alert("Unable to open settings"));
   };
 
+  const runSearch = useCallback(
+    async (text: string) => {
+      const q = text.trim();
+      if (!q) {
+        setSearchResults(null);
+        setSearchError(null);
+        return;
+      }
+      const seq = ++searchSeq.current;
+      setSearching(true);
+      setSearchError(null);
+      try {
+        const params = new URLSearchParams({ q });
+        if (coords) {
+          params.set("lat", String(coords.lat));
+          params.set("lng", String(coords.lng));
+        }
+        const res = await api<{ items: ChurchItem[]; count: number }>(
+          `/churches/search?${params.toString()}`,
+        );
+        if (seq !== searchSeq.current) return;
+        // Annotate is_starred from current saved list as a fallback (backend
+        // already does this, but saved tab may have churches not in this list).
+        const savedIds = new Set(saved.map((s) => s.church_id));
+        const items = (res.items || []).map((c) => ({
+          ...c,
+          is_starred: c.is_starred || savedIds.has(c.church_id),
+        }));
+        setSearchResults(items);
+      } catch (e: unknown) {
+        if (seq !== searchSeq.current) return;
+        const msg = e instanceof Error ? e.message : "";
+        setSearchError(msg || "Search failed. Try a different name.");
+        setSearchResults([]);
+      } finally {
+        if (seq === searchSeq.current) setSearching(false);
+      }
+    },
+    [coords, saved],
+  );
+
+  // Debounce live search as the user types.
+  useEffect(() => {
+    if (tab !== "nearby") return;
+    const text = query.trim();
+    if (!text) {
+      setSearchResults(null);
+      return;
+    }
+    if (text.length < 3) return;
+    const t = setTimeout(() => {
+      void runSearch(text);
+    }, 450);
+    return () => clearTimeout(t);
+  }, [query, tab, runSearch]);
+
+  const clearSearch = () => {
+    setQuery("");
+    setSearchResults(null);
+    setSearchError(null);
+    searchSeq.current += 1;
+    setSearching(false);
+  };
+
   return (
     <SafeAreaView style={styles.safe} edges={["top", "bottom"]} testID="churches-screen">
       <Stack.Screen options={{ headerShown: false }} />
@@ -217,6 +289,35 @@ export default function ChurchesScreen() {
         </Pressable>
       </View>
 
+      {tab === "nearby" && (
+        <View style={styles.searchRow} testID="churches-search-row">
+          <Ionicons name="search-outline" size={18} color={colors.textMuted} />
+          <TextInput
+            testID="churches-search-input"
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Search by parish name…"
+            placeholderTextColor={colors.textMuted}
+            returnKeyType="search"
+            autoCorrect={false}
+            autoCapitalize="words"
+            onSubmitEditing={() => runSearch(query)}
+            style={styles.searchInput}
+          />
+          {searching ? (
+            <ActivityIndicator color={colors.gold} />
+          ) : query.length > 0 ? (
+            <Pressable
+              testID="churches-search-clear"
+              onPress={clearSearch}
+              hitSlop={10}
+            >
+              <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+            </Pressable>
+          ) : null}
+        </View>
+      )}
+
       <ScrollView
         contentContainerStyle={styles.scroll}
         refreshControl={
@@ -224,7 +325,35 @@ export default function ChurchesScreen() {
         }
       >
         {tab === "nearby" ? (
-          permStatus !== "granted" ? (
+          searchResults !== null ? (
+            // SEARCH MODE
+            <>
+              <View style={styles.searchHeader}>
+                <Text style={styles.searchHeaderText}>
+                  {searchResults.length > 0
+                    ? `${searchResults.length} result${searchResults.length === 1 ? "" : "s"} for "${query}"`
+                    : `No results for "${query}"`}
+                </Text>
+              </View>
+              {searchError ? <Text style={styles.errorText}>{searchError}</Text> : null}
+              {searchResults.length === 0 && !searching ? (
+                <Text style={styles.empty}>
+                  Try a shorter name, the patron saint, or a nearby town.
+                </Text>
+              ) : (
+                searchResults.map((c) => (
+                  <ChurchCard
+                    key={c.church_id}
+                    c={c}
+                    onStar={() => toggleStar(c)}
+                    onMaps={() => openMaps(c)}
+                    onWeb={() => openWebsite(c.website)}
+                    onCall={() => dial(c.phone)}
+                  />
+                ))
+              )}
+            </>
+          ) : permStatus !== "granted" ? (
             <View style={styles.card} testID="churches-permission-card">
               <Ionicons name="navigate-circle-outline" size={36} color={colors.gold} />
               <Text style={styles.cardTitle}>Find churches near you</Text>
@@ -432,6 +561,35 @@ const styles = StyleSheet.create({
   segmentActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   segmentText: { fontFamily: fonts.uiSemi, color: colors.textSecondary, fontSize: 14 },
   segmentTextActive: { color: colors.gold },
+  searchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: Platform.OS === "ios" ? 10 : 6,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    borderRadius: radius.round,
+  },
+  searchInput: {
+    flex: 1,
+    fontFamily: fonts.bodyRegular,
+    fontSize: 15,
+    color: colors.textPrimary,
+    paddingVertical: 0,
+  },
+  searchHeader: {
+    paddingBottom: spacing.sm,
+  },
+  searchHeaderText: {
+    fontFamily: fonts.uiSemi,
+    fontSize: 12,
+    color: colors.textMuted,
+    letterSpacing: 0.6,
+  },
   scroll: { padding: spacing.lg },
   card: {
     backgroundColor: colors.surface,

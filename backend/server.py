@@ -19,7 +19,7 @@ from emergentintegrations.llm.chat import LlmChat, UserMessage
 
 from liturgical import get_liturgical_day
 from usccb import fetch_readings, usccb_url_for
-from churches import nearby_churches, enrich_with_masstimes
+from churches import nearby_churches, enrich_with_masstimes, search_churches
 from prayers import EXAMEN_PROMPTS, EXAMINATION_SECTIONS
 
 ROOT_DIR = Path(__file__).parent
@@ -1031,6 +1031,33 @@ async def churches_nearby(
     for c in churches:
         c["is_starred"] = c["church_id"] in starred_ids
     return {"items": churches, "count": len(churches)}
+
+
+@api.get("/churches/search")
+async def churches_search(
+    user: User = Depends(get_current_user),
+    q: str = Query(..., min_length=1, max_length=120),
+    lat: Optional[float] = Query(None),
+    lng: Optional[float] = Query(None),
+    radius_m: int = Query(60_000, ge=1_000, le=80_000),
+    enrich: bool = Query(False),
+):
+    if lat is not None and not (-90 <= lat <= 90):
+        raise HTTPException(status_code=400, detail="invalid lat")
+    if lng is not None and not (-180 <= lng <= 180):
+        raise HTTPException(status_code=400, detail="invalid lng")
+    churches = await search_churches(q, lat=lat, lng=lng, radius_m=radius_m)
+    if enrich and churches:
+        churches = await enrich_with_masstimes(churches)
+    starred_ids = {
+        d["church_id"]
+        async for d in db.user_churches.find({"user_id": user.user_id}, {"church_id": 1, "_id": 0})
+    }
+    for c in churches:
+        c["is_starred"] = c["church_id"] in starred_ids
+        c.setdefault("mass_times", [])
+        c.setdefault("confession_times", [])
+    return {"items": churches, "count": len(churches), "query": q}
 
 
 def _user_church_doc(d: dict) -> dict:

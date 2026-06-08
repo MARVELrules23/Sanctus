@@ -171,6 +171,148 @@ async def nearby_churches(
     return []
 
 
+async def search_churches(
+    query: str,
+    lat: Optional[float] = None,
+    lng: Optional[float] = None,
+    radius_m: int = 60_000,
+    limit: int = 30,
+) -> list[dict]:
+    """Search Catholic churches by name.
+
+    If ``lat``/``lng`` are provided, we first search via Overpass within
+    ``radius_m`` of the user (default 60km — broader than the auto-detected
+    list) so the result keeps OSM tags (website, opening_hours, etc.) and we
+    can compute a real distance. If Overpass returns nothing, we fall back to
+    Nominatim search (OSM's geocoder) which can find places by name globally;
+    those results don't have OSM tags, but we still return name + coords.
+    """
+    q = (query or "").strip()
+    if not q:
+        return []
+
+    safe_q = re.sub(r"[^a-zA-Z0-9'\s\-\.]", " ", q).strip()
+    if not safe_q:
+        return []
+
+    # PRIMARY: Nominatim text search — much faster and better at fuzzy
+    # name matches. We bound it to a viewbox around the user (~165km) when
+    # coords are available so we don't surface results in other states.
+    async def _nominatim(q_text: str) -> list[dict]:
+        try:
+            p: dict[str, str] = {
+                "q": q_text,
+                "format": "jsonv2",
+                "addressdetails": "1",
+                "limit": str(limit),
+            }
+            if lat is not None and lng is not None:
+                p["viewbox"] = f"{lng - 1.5},{lat + 1.5},{lng + 1.5},{lat - 1.5}"
+                p["bounded"] = "1"
+            async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as c:
+                rr = await c.get(
+                    "https://nominatim.openstreetmap.org/search",
+                    params=p,
+                    headers={"User-Agent": USER_AGENT, "Accept": "application/json"},
+                )
+            return rr.json() if rr.status_code == 200 else []
+        except Exception as e:  # noqa: BLE001
+            logger.warning("nominatim %r failed: %s", q_text, e)
+            return []
+
+    # Try two queries: first with explicit "Catholic church" prefix to bias
+    # towards parishes; then a bare query in case the user typed the full
+    # parish name. Merge & de-dup by osm id.
+    seen_ids: set[str] = set()
+    nominatim_results: list[dict] = []
+    for query_text in (f"Catholic church {safe_q}", safe_q):
+        for el in await _nominatim(query_text):
+            key = f"{el.get('osm_type','?')}/{el.get('osm_id','?')}"
+            if key in seen_ids:
+                continue
+            seen_ids.add(key)
+            nominatim_results.append(el)
+        if len(nominatim_results) >= limit:
+            break
+
+    churches: list[dict] = []
+    for el in nominatim_results or []:
+        try:
+            r_lat = float(el.get("lat"))
+            r_lng = float(el.get("lon"))
+        except (TypeError, ValueError):
+            continue
+        # Filter to actual places of worship / Catholic-ish points of
+        # interest. Exclude roads, suburbs, etc. Nominatim's "category" is the
+        # OSM key (e.g. "amenity", "highway", "place") and "type" the value
+        # (e.g. "place_of_worship", "residential", "suburb").
+        category = (el.get("category") or "").lower()
+        ntype = (el.get("type") or "").lower()
+        is_pow = (
+            (category == "amenity" and ntype == "place_of_worship")
+            or (category == "building" and ntype in {"church", "chapel", "cathedral", "basilica"})
+            or (category == "historic" and ntype in {"church", "chapel", "monastery"})
+            or (category == "tourism" and ntype in {"attraction", "place_of_worship"})
+        )
+        if not is_pow:
+            continue
+        name = (el.get("name") or el.get("display_name") or "").split(",")[0].strip()
+        if not name:
+            continue
+        # Loose Catholic filter: name keyword or category hint.
+        haystack = (
+            f"{name} {el.get('display_name','')} {ntype}"
+        ).lower()
+        if "catholic" not in haystack and not any(
+            kw in haystack for kw in (
+                "cathedral", "basilica", "parish", "our lady", "st.", "saint",
+                "shrine", "rosary", "blessed", "assumption", "immaculate",
+            )
+        ):
+            # Some Catholic churches don't include any of these markers in
+            # the name; still accept if Nominatim returned them under the
+            # explicit Catholic query path.
+            if "catholic" not in (el.get("display_name") or "").lower():
+                continue
+        dist = None
+        if lat is not None and lng is not None:
+            dist = round(_haversine_km(lat, lng, r_lat, r_lng), 2)
+        addr_parts = el.get("address") or {}
+        address = ", ".join(
+            [
+                p
+                for p in [
+                    addr_parts.get("road"),
+                    addr_parts.get("suburb"),
+                    addr_parts.get("city") or addr_parts.get("town") or addr_parts.get("village"),
+                    addr_parts.get("state"),
+                    addr_parts.get("country"),
+                ]
+                if p
+            ]
+        )
+        osm_type = el.get("osm_type") or "node"
+        osm_id = el.get("osm_id") or hashlib.sha1(f"{name}{r_lat}{r_lng}".encode()).hexdigest()[:10]
+        churches.append(
+            {
+                "church_id": f"osm:{osm_type}/{osm_id}",
+                "name": name,
+                "lat": r_lat,
+                "lng": r_lng,
+                "distance_km": dist,
+                "address": address,
+                "denomination": "catholic",
+                "website": "",
+                "phone": "",
+                "mass_times_raw": "",
+                "opening_hours": "",
+            }
+        )
+    if lat is not None and lng is not None:
+        churches.sort(key=lambda x: (x["distance_km"] if x["distance_km"] is not None else 1e9))
+    return churches[:limit]
+
+
 # ---------- best-effort masstimes.org enrichment ----------
 
 _TIME_LINE_RE = re.compile(

@@ -74,6 +74,16 @@ export type User = {
   picture?: string | null;
 };
 
+export type GoalMode = "liturgical" | "goals";
+
+export async function updateMe(patch: { name?: string; picture?: string | null }): Promise<User> {
+  // Backend accepts empty string to clear picture; pass through null as empty.
+  const body: Record<string, string> = {};
+  if (patch.name !== undefined) body.name = patch.name;
+  if (patch.picture !== undefined) body.picture = patch.picture ?? "";
+  return await api<User>("/auth/me", { method: "PUT", body });
+}
+
 export type MealPlan = {
   breakfast: { name: string; description: string; ingredients: string[]; prep_minutes: number };
   lunch: { name: string; description: string; ingredients: string[]; prep_minutes: number };

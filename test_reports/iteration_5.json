@@ -1,0 +1,40 @@
+{
+  "summary": "Phase 1 backend additions tested. New file /app/backend/tests/test_phase1_profile_goals.py contains 24 tests, ALL PASS: (a) PUT /api/auth/me — 10 cases covering name update happy path, empty/whitespace/oversize-length rejection (400), data-URI picture acceptance, picture='' clearing to null, https URL acceptance, invalid string rejection (400), >2.8MB picture rejection (413), and missing-bearer 401. (b) POST /api/meals/generate — 5 cases: goal_mode='liturgical' echoed, goal_mode='goals' WITHOUT a wellness profile succeeds (200), default mode resolves to 'liturgical', goal_mode='goals' WITH PUT /api/wellness/profile (weight=80, height=180, target=75, lose, moderate) succeeds with full plan+reflection shape, invalid date -> 400. (c) POST /api/workouts/generate — 3 cases mirroring meals (liturgical, goals+profile, default). (d) Regression smoke: GET /api/auth/me, GET /api/churches/nearby, GET /api/churches/search?q=Holy+Name, GET /api/wellness/profile, POST /api/wellness/log, POST /api/journal — all 200. Full test suite (118 tests) ran with 117 passing; the lone failure was TestChurches::test_nearby_valid which timed out (30s on Overpass) — confirmed flaky (passes in isolation in 3s) and unrelated to Phase 1.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_phase1_profile_goals.py",
+    "/app/test_reports/pytest/iteration_5_phase1.xml",
+    "/app/test_reports/pytest/iteration_5_full.xml"
+  ],
+  "action_items": [
+    "No Phase 1 action items — all 24 new endpoints/behaviors verified.",
+    "Optional: bump Overpass HTTP timeout (currently causes intermittent 30s read-timeouts in /api/churches/nearby under load) or implement a short retry — unrelated to Phase 1 but appeared once during the full run."
+  ],
+  "critical_code_review_comments": [
+    "server.py:209-229 (PUT /auth/me) — Validation order looks correct: name trimmed-and-length-checked, picture must be http(s) or data:image/ scheme, and ~2.8MB cap maps to 413. Note: empty body (`{}`) returns the existing user untouched with 200 — reasonable, but could be surfaced explicitly if frontend depends on it.",
+    "server.py:222 — data-URI cap is 2_800_000 chars (~2MB after base64 overhead) which matches the spec's 'too large' case at 3M chars. Good.",
+    "server.py:217-220 — `pic.startswith('data:image/')` only allows IMAGE data URIs (good), but doesn't validate the base64 payload itself; a malformed data URI like 'data:image/png;base64,@@@' would pass schema check and land in Mongo. Low priority — frontend always emits real base64.",
+    "server.py:325/386 — `use_goals = (payload.goal_mode or 'liturgical').lower() == 'goals'` means any value other than 'goals' (e.g. 'liturgicaL', 'random') silently degrades to liturgical mode without 422. Consider an enum/Literal for stricter input.",
+    "server.py:367/427 — goal_mode echoed back as the raw payload string (`payload.goal_mode or 'liturgical'`) rather than the normalized lowercase one used internally. If frontend sends 'Goals' it would be stored capitalized while plan content was generated as liturgical. Mismatched echo could confuse downstream code. Suggest storing the normalized value.",
+    "server.py:140-156 — get_current_user correctly raises 401 for missing/invalid/expired token and 401 (not 404) when user row deleted but session lingers — good.",
+    "Files at /app/backend/server.py is 1207 lines; per /app/code_review_guidelines >700 should be split into focused modules. Consider extracting auth/, meals/, workouts/, wellness/, journal/, churches/ routers."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_phase1_profile_goals.py (new — 24 tests across 4 classes)"
+  ],
+  "success_rate": {"backend": "100% (24/24 Phase 1; 117/118 overall, 1 flaky Overpass timeout)", "frontend": "n/a — backend-only request"},
+  "seed_data_creation": "Reused conftest.seeded_user (test_user_1 / test_token_abc). New TestPhase1Regressions::test_wellness_log_post and test_journal_create both clean up their own rows (weight_log + journal) by entry_id. Module-scope cleanup_phase1_data fixture wipes meals/workouts/wellness for test_user_1 before & after the goal_mode classes. The name field is restored to 'Test User' inside test_update_name_success so test order does not matter for downstream tests in test_sanctus_backend.py.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Backend tests now use shared fixtures from /app/backend/tests/conftest.py (auth_client, anon_client, mongo_db, seeded_user). When adding new tests, drop them into existing files or follow the pattern of test_phase1_profile_goals.py (no local seeding boilerplate needed). Live AI calls take ~10-15s each — keep meal/workout generate tests timeout>=60s. /api/churches/nearby flaky-timed-out once (30s) under high concurrency; rerun in isolation if it fails. The seeded user's name is mutated to 'NewName' temporarily by TestUpdateMe::test_update_name_success but restored to 'Test User' at the start of that same test, so order independence holds.",
+  "rca_of_issue": "n/a — no Phase 1 bugs found. (One flaky test in /api/churches/nearby reproduced once and passed in isolation; not a Phase 1 issue, likely external Overpass API latency spike during the burst of meal/workout AI calls earlier in the same pytest run.)"
+}

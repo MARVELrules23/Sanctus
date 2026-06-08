@@ -11,7 +11,8 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Find Catholic churches near you"
+        "NSLocationWhenInUseUsageDescription": "Find Catholic churches near you",
+        "NSPhotoLibraryUsageDescription": "Choose a profile picture from your photos"
       }
     },
     "android": {
@@ -20,7 +21,7 @@
         "backgroundColor": "#000"
       },
       "edgeToEdgeEnabled": true,
-      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"]
+      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION", "READ_MEDIA_IMAGES"]
     },
     "web": {
       "bundler": "metro",

@@ -61,10 +61,12 @@ class PreferencesPayload(BaseModel):
 
 class GenerateMealRequest(BaseModel):
     date: str  # YYYY-MM-DD
+    goal_mode: Optional[str] = "liturgical"  # liturgical | goals
 
 
 class GenerateWorkoutRequest(BaseModel):
     date: str
+    goal_mode: Optional[str] = "liturgical"
 
 
 class MealItem(BaseModel):
@@ -103,12 +105,19 @@ class SuggestMealSlotRequest(BaseModel):
     date: str
     slot: str  # breakfast | lunch | dinner
     hint: Optional[str] = None
+    goal_mode: Optional[str] = "liturgical"
 
 
 class SuggestExerciseRequest(BaseModel):
     date: str
     focus: Optional[str] = None
     hint: Optional[str] = None
+    goal_mode: Optional[str] = "liturgical"
+
+
+class UpdateMeRequest(BaseModel):
+    name: Optional[str] = None
+    picture: Optional[str] = None  # base64 data URI or http(s) URL; empty string clears
 
 
 # ---------- Auth helpers ----------
@@ -195,6 +204,29 @@ async def auth_session(payload: SessionExchangeRequest):
 @api.get("/auth/me")
 async def auth_me(user: User = Depends(get_current_user)):
     return user
+
+
+@api.put("/auth/me")
+async def update_me(payload: UpdateMeRequest, user: User = Depends(get_current_user)):
+    update: dict = {}
+    if payload.name is not None:
+        name = payload.name.strip()
+        if not (1 <= len(name) <= 60):
+            raise HTTPException(status_code=400, detail="name must be 1-60 chars")
+        update["name"] = name
+    if payload.picture is not None:
+        pic = payload.picture.strip()
+        # Accept empty string (clear), http(s) URL, or data URI under ~2MB.
+        if pic and not (pic.startswith("http://") or pic.startswith("https://") or pic.startswith("data:image/")):
+            raise HTTPException(status_code=400, detail="picture must be a URL or data URI")
+        if pic.startswith("data:image/") and len(pic) > 2_800_000:
+            raise HTTPException(status_code=413, detail="picture too large (max ~2MB)")
+        update["picture"] = pic or None
+    if not update:
+        return user
+    await db.users.update_one({"user_id": user.user_id}, {"$set": update})
+    fresh = await db.users.find_one({"user_id": user.user_id}, {"_id": 0})
+    return User(**fresh)
 
 
 @api.post("/auth/logout")
@@ -290,6 +322,11 @@ async def generate_meal(payload: GenerateMealRequest, user: User = Depends(get_c
         raise HTTPException(status_code=400, detail="date must be YYYY-MM-DD")
     lit = get_liturgical_day(d)
     prefs = await db.preferences.find_one({"user_id": user.user_id}, {"_id": 0}) or PreferencesPayload().model_dump()
+    use_goals = (payload.goal_mode or "liturgical").lower() == "goals"
+    wellness_brief = ""
+    if use_goals:
+        wprofile = await db.wellness.find_one({"user_id": user.user_id}, {"_id": 0})
+        wellness_brief = _wellness_brief(wprofile or {})
 
     system = (
         "You are a thoughtful Catholic nutrition coach. You craft a single day's meal plan that "
@@ -297,13 +334,20 @@ async def generate_meal(payload: GenerateMealRequest, user: User = Depends(get_c
         "joyful, festive meals on solemnities and feast days, and simple, contemplative meals on penitential days. "
         "Always return strictly valid JSON. No prose outside JSON."
     )
+    if use_goals:
+        system += (
+            " The user has shared personal wellness goals: tune portion sizes, macros and ingredient choices "
+            "toward their goal (lose / maintain / gain) and activity level. Still honor abstinence and fasts — "
+            "those are non-negotiable. Mention the goal subtly in the reflection."
+        )
     abstinence_note = "Today is a day of ABSTINENCE from meat — propose only fish, vegetarian, or seafood meals." if lit["is_abstinence"] else ""
     fast_note = "Today is a day of FAST — propose lighter, smaller meals." if lit["is_fast"] else ""
     feast_note = f"Today is the {lit['feast']} ({lit['rank']}) — propose a festive meal in joyful tradition." if lit.get("feast") and lit["rank"] in ("solemnity", "feast") else ""
+    goals_note = f"PERSONAL GOALS: {wellness_brief}." if (use_goals and wellness_brief) else ""
 
     user_prompt = (
         f"Date: {lit['date']} | Season: {lit['season']} | Liturgical color: {lit['color']}.\n"
-        f"{abstinence_note}\n{fast_note}\n{feast_note}\n"
+        f"{abstinence_note}\n{fast_note}\n{feast_note}\n{goals_note}\n"
         f"User preferences: dietary={prefs.get('dietary')}, allergies={prefs.get('allergies') or 'none'}.\n"
         "Return JSON shaped exactly like:\n"
         "{\n"
@@ -313,13 +357,14 @@ async def generate_meal(payload: GenerateMealRequest, user: User = Depends(get_c
         "  \"reflection\": str  // 1-2 sentence Catholic reflection tying the meal to the day\n"
         "}"
     )
-    plan = await _chat_json(system, user_prompt, session_id=f"meals-{user.user_id}-{payload.date}")
+    plan = await _chat_json(system, user_prompt, session_id=f"meals-{user.user_id}-{payload.date}-{payload.goal_mode}")
 
     doc = {
         "user_id": user.user_id,
         "date": payload.date,
         "liturgical": lit,
         "plan": plan,
+        "goal_mode": payload.goal_mode or "liturgical",
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.meals.update_one(
@@ -338,6 +383,11 @@ async def generate_workout(payload: GenerateWorkoutRequest, user: User = Depends
         raise HTTPException(status_code=400, detail="date must be YYYY-MM-DD")
     lit = get_liturgical_day(d)
     prefs = await db.preferences.find_one({"user_id": user.user_id}, {"_id": 0}) or PreferencesPayload().model_dump()
+    use_goals = (payload.goal_mode or "liturgical").lower() == "goals"
+    wellness_brief = ""
+    if use_goals:
+        wprofile = await db.wellness.find_one({"user_id": user.user_id}, {"_id": 0})
+        wellness_brief = _wellness_brief(wprofile or {})
 
     system = (
         "You are a Catholic fitness coach who pairs physical training with the liturgical season. "
@@ -346,9 +396,16 @@ async def generate_workout(payload: GenerateWorkoutRequest, user: User = Depends
         "Sundays are days of rest — propose only gentle movement (a walk, stretching) and a longer prayer focus. "
         "Always return strictly valid JSON. No prose outside JSON."
     )
+    if use_goals:
+        system += (
+            " The user has shared personal training goals: tune intensity, volume and duration toward their "
+            "goal_type and activity_level. Sundays still get a gentle session. Tie the encouragement to the goal."
+        )
+    goals_note = f"PERSONAL GOALS: {wellness_brief}." if (use_goals and wellness_brief) else ""
     user_prompt = (
         f"Date: {lit['date']} | Day of week: {d.strftime('%A')} | Season: {lit['season']} | "
         f"Feast: {lit.get('feast') or 'none'}.\n"
+        f"{goals_note}\n"
         f"User: fitness_level={prefs.get('fitness_level')}, goal={prefs.get('fitness_goal')}.\n"
         "Return JSON shaped exactly like:\n"
         "{\n"
@@ -361,12 +418,13 @@ async def generate_workout(payload: GenerateWorkoutRequest, user: User = Depends
         "  \"reflection\": str  // 1-2 sentences tying physical effort to the liturgical season\n"
         "}"
     )
-    plan = await _chat_json(system, user_prompt, session_id=f"workout-{user.user_id}-{payload.date}")
+    plan = await _chat_json(system, user_prompt, session_id=f"workout-{user.user_id}-{payload.date}-{payload.goal_mode}")
     doc = {
         "user_id": user.user_id,
         "date": payload.date,
         "liturgical": lit,
         "plan": plan,
+        "goal_mode": payload.goal_mode or "liturgical",
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.workouts.update_one(

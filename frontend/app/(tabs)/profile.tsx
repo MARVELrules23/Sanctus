@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 
 import { api } from "@/src/api";
 import { useAuth } from "@/src/auth-context";
@@ -30,6 +31,7 @@ const LEVEL_OPTIONS = ["beginner", "intermediate", "advanced"];
 
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
+  const router = useRouter();
   const [prefs, setPrefs] = useState<Prefs | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -90,6 +92,15 @@ export default function ProfileScreen() {
             <Text style={styles.userName}>{user?.name ?? "Faithful soul"}</Text>
             <Text style={styles.userEmail}>{user?.email}</Text>
           </View>
+          <Pressable
+            testID="profile-edit-button"
+            onPress={() => router.push("/edit-profile")}
+            hitSlop={10}
+            style={({ pressed }) => [styles.editBtn, pressed && styles.pressed]}
+            accessibilityLabel="Edit profile"
+          >
+            <Ionicons name="pencil" size={16} color={colors.primary} />
+          </Pressable>
         </View>
 
         <Ornament />
@@ -217,6 +228,14 @@ const styles = StyleSheet.create({
   avatarInitial: { fontFamily: fonts.headingBold, color: colors.gold, fontSize: 24 },
   userName: { fontFamily: fonts.headingSemi, fontSize: 20, color: colors.textPrimary },
   userEmail: { fontFamily: fonts.bodyRegular, fontSize: 13, color: colors.textSecondary, marginTop: 2 },
+  editBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.borderSoft,
+  },
   section: {
     fontFamily: fonts.headingBold,
     fontSize: 22,

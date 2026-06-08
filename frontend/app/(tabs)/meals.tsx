@@ -9,13 +9,15 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 
-import { api, DayDoc, LiturgicalDay, MealPlan } from "@/src/api";
+import { api, DayDoc, GoalMode, LiturgicalDay, MealPlan } from "@/src/api";
 import LiturgicalBadge from "@/src/components/LiturgicalBadge";
 import Ornament from "@/src/components/Ornament";
+import GoalModeToggle from "@/src/components/GoalModeToggle";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 import { addDaysISO, parseISO, startOfWeekISO, todayISO } from "@/src/date-utils";
+import { loadGoalMode, saveGoalMode } from "@/src/utils/goal-mode";
 
 const DOW_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -27,8 +29,35 @@ export default function MealsScreen() {
   const [lit, setLit] = useState<LiturgicalDay | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [goalMode, setGoalMode] = useState<GoalMode>("liturgical");
+  const [hasWellness, setHasWellness] = useState(false);
 
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDaysISO(weekStart, i)), [weekStart]);
+
+  // Load persisted goal_mode once.
+  useEffect(() => {
+    (async () => setGoalMode(await loadGoalMode()))();
+  }, []);
+
+  // Re-check wellness profile every time the tab is focused so the toggle stays accurate.
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      (async () => {
+        try {
+          const w = await api<{ weight_kg?: number; height_cm?: number; goal_type?: string }>(
+            "/wellness/profile",
+          );
+          if (active) setHasWellness(!!(w?.weight_kg || w?.target_weight_kg || w?.goal_type));
+        } catch {
+          if (active) setHasWellness(false);
+        }
+      })();
+      return () => {
+        active = false;
+      };
+    }, []),
+  );
 
   const loadWeek = useCallback(async () => {
     const res = await api<Record<string, DayDoc<MealPlan> | null>>(`/meals/week?start=${weekStart}`);
@@ -71,13 +100,21 @@ export default function MealsScreen() {
   const generate = async () => {
     setGenerating(true);
     try {
-      const res = await api<DayDoc<MealPlan>>("/meals/generate", { method: "POST", body: { date: selected } });
+      const res = await api<DayDoc<MealPlan>>("/meals/generate", {
+        method: "POST",
+        body: { date: selected, goal_mode: goalMode },
+      });
       setMeals((m) => ({ ...m, [selected]: res }));
     } catch (e) {
       console.warn("meals gen failed", e);
     } finally {
       setGenerating(false);
     }
+  };
+
+  const onGoalModeChange = (m: GoalMode) => {
+    setGoalMode(m);
+    void saveGoalMode(m);
   };
 
   const current = meals[selected];
@@ -122,6 +159,15 @@ export default function MealsScreen() {
             );
           })}
         </ScrollView>
+        <View style={styles.toggleWrap}>
+          <GoalModeToggle
+            testID="meals-goal-toggle"
+            value={goalMode}
+            onChange={onGoalModeChange}
+            goalsDisabled={!hasWellness}
+            onGoalsDisabledPress={() => router.push("/(tabs)/wellness")}
+          />
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll}>
@@ -266,6 +312,7 @@ const styles = StyleSheet.create({
   },
   weekLabel: { fontFamily: fonts.uiSemi, color: colors.textPrimary, fontSize: 14 },
   chipsRow: { gap: spacing.sm, paddingVertical: spacing.sm, paddingRight: spacing.sm },
+  toggleWrap: { alignItems: "center", paddingBottom: spacing.sm },
   chip: {
     width: 52,
     height: 64,

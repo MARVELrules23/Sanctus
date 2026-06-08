@@ -11,12 +11,14 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 
-import { api, DayDoc, LiturgicalDay, WorkoutPlan } from "@/src/api";
+import { api, DayDoc, GoalMode, LiturgicalDay, WorkoutPlan } from "@/src/api";
 import LiturgicalBadge from "@/src/components/LiturgicalBadge";
+import GoalModeToggle from "@/src/components/GoalModeToggle";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 import { addDaysISO, parseISO, startOfWeekISO, todayISO } from "@/src/date-utils";
+import { loadGoalMode, saveGoalMode } from "@/src/utils/goal-mode";
 
 const HERO_IMAGE =
   "https://images.unsplash.com/photo-1758520704946-74b96f67ded3?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2MzR8MHwxfHNlYXJjaHwzfHxvdXRkb29yJTIwd29ya291dCUyMG5hdHVyZSUyMGZpdG5lc3N8ZW58MHx8fHwxNzgwODg4OTA4fDA&ixlib=rb-4.1.0&q=85";
@@ -31,8 +33,33 @@ export default function WorkoutsScreen() {
   const [lit, setLit] = useState<LiturgicalDay | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [goalMode, setGoalMode] = useState<GoalMode>("liturgical");
+  const [hasWellness, setHasWellness] = useState(false);
 
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDaysISO(weekStart, i)), [weekStart]);
+
+  useEffect(() => {
+    (async () => setGoalMode(await loadGoalMode()))();
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      (async () => {
+        try {
+          const w = await api<{ weight_kg?: number; target_weight_kg?: number; goal_type?: string }>(
+            "/wellness/profile",
+          );
+          if (active) setHasWellness(!!(w?.weight_kg || w?.target_weight_kg || w?.goal_type));
+        } catch {
+          if (active) setHasWellness(false);
+        }
+      })();
+      return () => {
+        active = false;
+      };
+    }, []),
+  );
 
   const load = useCallback(async () => {
     const [w, l] = await Promise.all([
@@ -60,13 +87,21 @@ export default function WorkoutsScreen() {
   const generate = async () => {
     setGenerating(true);
     try {
-      const res = await api<DayDoc<WorkoutPlan>>("/workouts/generate", { method: "POST", body: { date: selected } });
+      const res = await api<DayDoc<WorkoutPlan>>("/workouts/generate", {
+        method: "POST",
+        body: { date: selected, goal_mode: goalMode },
+      });
       setWorkouts((w) => ({ ...w, [selected]: res }));
     } catch (e) {
       console.warn("workout gen failed", e);
     } finally {
       setGenerating(false);
     }
+  };
+
+  const onGoalModeChange = (m: GoalMode) => {
+    setGoalMode(m);
+    void saveGoalMode(m);
   };
 
   const current = workouts[selected];
@@ -107,6 +142,15 @@ export default function WorkoutsScreen() {
             );
           })}
         </ScrollView>
+        <View style={styles.toggleWrap}>
+          <GoalModeToggle
+            testID="workouts-goal-toggle"
+            value={goalMode}
+            onChange={onGoalModeChange}
+            goalsDisabled={!hasWellness}
+            onGoalsDisabledPress={() => router.push("/(tabs)/wellness")}
+          />
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll}>
@@ -258,6 +302,7 @@ const styles = StyleSheet.create({
   weekRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: spacing.md },
   weekLabel: { fontFamily: fonts.uiSemi, color: colors.textPrimary, fontSize: 14 },
   chipsRow: { gap: spacing.sm, paddingVertical: spacing.sm, paddingRight: spacing.sm },
+  toggleWrap: { alignItems: "center", paddingBottom: spacing.sm },
   chip: {
     width: 52,
     height: 70,

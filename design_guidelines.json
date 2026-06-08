@@ -1,0 +1,188 @@
+{
+  "theme": "Light",
+  "archetype": "Traditional & Sacred (Custom)",
+  "colors": {
+    "background": "#FAF9F6",
+    "surface": "#FFFFFF",
+    "surfaceDark": "#1C2841",
+    "primary": "#D4AF37",
+    "primaryDark": "#C5A059",
+    "textPrimary": "#1C1C1E",
+    "textSecondary": "#5C5C60",
+    "border": "#E5E5EA",
+    "liturgical": {
+      "purple": "#5B3475",
+      "red": "#9E1B1B",
+      "rose": "#D47B95",
+      "green": "#2A5A3B",
+      "white": "#F9F6EE",
+      "gold": "#D4AF37",
+      "black": "#1A1A1A"
+    }
+  },
+  "typography": {
+    "fonts": {
+      "heading": "CormorantGaramond",
+      "body": "Lora",
+      "ui": "Inter"
+    },
+    "scale": {
+      "h1": {
+        "fontSize": 36,
+        "fontFamily": "CormorantGaramond_700Bold",
+        "lineHeight": 44,
+        "letterSpacing": 0.5
+      },
+      "h2": {
+        "fontSize": 28,
+        "fontFamily": "CormorantGaramond_600SemiBold",
+        "lineHeight": 34,
+        "letterSpacing": 0.5
+      },
+      "h3": {
+        "fontSize": 22,
+        "fontFamily": "CormorantGaramond_600SemiBold",
+        "lineHeight": 28,
+        "letterSpacing": 0.25
+      },
+      "h4": {
+        "fontSize": 18,
+        "fontFamily": "CormorantGaramond_600SemiBold",
+        "lineHeight": 24
+      },
+      "bodyLarge": {
+        "fontSize": 18,
+        "fontFamily": "Lora_400Regular",
+        "lineHeight": 28
+      },
+      "bodyMedium": {
+        "fontSize": 16,
+        "fontFamily": "Lora_400Regular",
+        "lineHeight": 24
+      },
+      "bodySmall": {
+        "fontSize": 14,
+        "fontFamily": "Lora_400Regular",
+        "lineHeight": 20
+      },
+      "caption": {
+        "fontSize": 12,
+        "fontFamily": "Inter_500Medium",
+        "lineHeight": 16,
+        "letterSpacing": 1
+      }
+    }
+  },
+  "spacing": {
+    "xs": 4,
+    "sm": 8,
+    "md": 16,
+    "lg": 24,
+    "xl": 32,
+    "xxl": 48
+  },
+  "borderRadius": {
+    "sm": 4,
+    "md": 8,
+    "lg": 12,
+    "xl": 16,
+    "round": 9999
+  },
+  "shadows": {
+    "card": {
+      "shadowColor": "#000",
+      "shadowOffset": { "width": 0, "height": 2 },
+      "shadowOpacity": 0.05,
+      "shadowRadius": 8,
+      "elevation": 2
+    },
+    "header": {
+      "shadowColor": "#000",
+      "shadowOffset": { "width": 0, "height": 1 },
+      "shadowOpacity": 0.05,
+      "shadowRadius": 4,
+      "elevation": 1
+    }
+  },
+  "components": {
+    "card": {
+      "backgroundColor": "#FFFFFF",
+      "borderRadius": 12,
+      "padding": 24,
+      "borderWidth": 1,
+      "borderColor": "#F0EBE1"
+    },
+    "buttonPrimary": {
+      "backgroundColor": "#1C2841",
+      "borderRadius": 8,
+      "paddingVertical": 16,
+      "paddingHorizontal": 24,
+      "alignItems": "center",
+      "justifyContent": "center"
+    },
+    "buttonPrimaryText": {
+      "color": "#D4AF37",
+      "fontFamily": "CormorantGaramond_700Bold",
+      "fontSize": 18,
+      "letterSpacing": 1
+    },
+    "liturgicalBadge": {
+      "paddingVertical": 4,
+      "paddingHorizontal": 8,
+      "borderRadius": 4,
+      "alignSelf": "flex-start",
+      "borderWidth": 1
+    }
+  },
+  "screens": {
+    "Home": {
+      "description": "Today's spiritual and physical agenda. Header shows the current date and Liturgical Season with appropriate color tint. Cards for Today's Meal (highlighting fasting rules if any), Today's Workout, and Daily Devotion.",
+      "layout": "ScrollView with generous padding (padding: 24). Cards stacked with marginBottom: 24. Elegant header using Cormorant Garamond."
+    },
+    "Meals": {
+      "description": "Weekly meal planner. Shows 'AI Suggested' meals for the week. Highlights Friday as 'Abstinence' with a subtle fish icon or black/red text. Focus on rustic, simple presentation.",
+      "layout": "Horizontal scroll for days of the week, vertical scroll for meals. Each meal card includes an image and a liturgical context tag."
+    },
+    "Workouts": {
+      "description": "Weekly workout schedule. Themed by season (e.g., Lenten discipline, Easter joy). Includes prayer intentions for each workout.",
+      "layout": "List view of workouts. Use nature/fitness images. Each workout card has a 'Start with Prayer' button."
+    },
+    "Calendar": {
+      "description": "Monthly liturgical calendar. Color-coded dots or background tints for seasons/feast days. Tap a day to see saints and readings.",
+      "layout": "Grid-based calendar view. Bottom half of screen displays details for the selected day in an elegant, parchment-styled modal or card."
+    },
+    "Profile": {
+      "description": "User settings, Google Auth state, dietary preferences, and fitness goals.",
+      "layout": "Standard list layout with grouped settings. Button for 'Sign in with Google'."
+    }
+  },
+  "images": {
+    "food": {
+      "rustic_bread": "https://images.unsplash.com/photo-1602031940462-be4b7b37854f?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODF8MHwxfHNlYXJjaHwzfHxoZWFsdGh5JTIwcnVzdGljJTIwZm9vZCUyMGJyZWFkJTIwZmlzaHxlbnwwfHx8fDE3ODA4ODg5MDl8MA&ixlib=rb-4.1.0&q=85",
+      "sardines_toast": "https://images.pexels.com/photos/5602717/pexels-photo-5602717.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "anchovy_toast": "https://images.pexels.com/photos/6399821/pexels-photo-6399821.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
+    },
+    "fitness": {
+      "stretching_forest": "https://images.unsplash.com/photo-1758520704946-74b96f67ded3?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2MzR8MHwxfHNlYXJjaHwzfHxvdXRkb29yJTIwd29ya291dCUyMG5hdHVyZSUyMGZpdG5lc3N8ZW58MHx8fHwxNzgwODg4OTA4fDA&ixlib=rb-4.1.0&q=85",
+      "yoga_park": "https://images.unsplash.com/photo-1758274539089-8b2bd10eee92?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2MzR8MHwxfHNlYXJjaHwyfHxvdXRkb29yJTIwd29ya291dCUyMG5hdHVyZSUyMGZpdG5lc3N8ZW58MHx8fHwxNzgwODg4OTA4fDA&ixlib=rb-4.1.0&q=85",
+      "outdoor_plank": "https://images.pexels.com/photos/12199357/pexels-photo-12199357.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
+    },
+    "religious": {
+      "stained_glass_1": "https://images.unsplash.com/photo-1632230997264-b2bfc65cb8b4?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NTJ8MHwxfHNlYXJjaHwxfHxzdGFpbmVkJTIwZ2xhc3MlMjBjaHVyY2glMjB3aW5kb3d8ZW58MHx8fHwxNzgwODg4OTA4fDA&ixlib=rb-4.1.0&q=85",
+      "stained_glass_2": "https://images.pexels.com/photos/33878402/pexels-photo-33878402.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "candle_dark": "https://images.pexels.com/photos/5475164/pexels-photo-5475164.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
+    }
+  },
+  "instructions_to_main_agent": [
+    "Use ONLY Expo standard components (View, Text, ScrollView) and StyleSheet.create(). Do not use Tailwind CSS.",
+    "Install and use @expo-google-fonts/cormorant-garamond, @expo-google-fonts/lora, and @expo-google-fonts/inter.",
+    "Ensure react-native-safe-area-context is used for the main container to handle notches.",
+    "Use @expo/vector-icons (Ionicons or MaterialCommunityIcons) for tab bar and UI icons.",
+    "All interactive elements MUST have a data-testid for testing (e.g. data-testid='start-workout-button').",
+    "Avoid typical bright modern SaaS colors. Keep the UI feeling like an illuminated manuscript: parchment background (#FAF9F6), dark sapphire (#1C2841) for primary actions, gold (#D4AF37) accents.",
+    "Use the specific liturgical colors provided for badges and calendar highlights.",
+    "Apply generous padding (24px) for breathing room, and use the card shadow styles provided for subtle depth.",
+    "In the Tab navigation, use 5 tabs: Home, Meals, Workouts, Calendar, Profile.",
+    "Do not use placeholders for images; use the provided Unsplash/Pexels URLs in the images section."
+  ]
+}

@@ -65,11 +65,13 @@ class PreferencesPayload(BaseModel):
 class GenerateMealRequest(BaseModel):
     date: str  # YYYY-MM-DD
     goal_mode: Optional[str] = "liturgical"  # liturgical | goals
+    user_note: Optional[str] = None  # free-text suggestion to the AI
 
 
 class GenerateWorkoutRequest(BaseModel):
     date: str
     goal_mode: Optional[str] = "liturgical"
+    user_note: Optional[str] = None  # free-text suggestion to the AI
 
 
 class MealItem(BaseModel):
@@ -377,11 +379,17 @@ async def generate_meal(payload: GenerateMealRequest, user: User = Depends(get_c
     fast_note = "Today is a day of FAST — propose lighter, smaller meals." if lit["is_fast"] else ""
     feast_note = f"Today is the {lit['feast']} ({lit['rank']}) — propose a festive meal in joyful tradition." if lit.get("feast") and lit["rank"] in ("solemnity", "feast") else ""
     goals_note = f"PERSONAL GOALS: {wellness_brief}." if (use_goals and wellness_brief) else ""
+    note_clean = (payload.user_note or "").strip()[:600]
+    note_block = (
+        "\nADDITIONAL USER REQUEST (treat as a strong preference, not an override of "
+        "abstinence/fast rules): \"" + note_clean + "\""
+    ) if note_clean else ""
 
     user_prompt = (
         f"Date: {lit['date']} | Season: {lit['season']} | Liturgical color: {lit['color']}.\n"
         f"{abstinence_note}\n{fast_note}\n{feast_note}\n{goals_note}\n"
-        f"User preferences: dietary={prefs.get('dietary')}, allergies={prefs.get('allergies') or 'none'}.\n"
+        f"User preferences: dietary={prefs.get('dietary')}, allergies={prefs.get('allergies') or 'none'}."
+        f"{note_block}\n"
         "Return JSON shaped exactly like:\n"
         "{\n"
         "  \"breakfast\": {\"name\": str, \"description\": str, \"ingredients\": [str], \"prep_minutes\": int},\n"
@@ -390,7 +398,8 @@ async def generate_meal(payload: GenerateMealRequest, user: User = Depends(get_c
         "  \"reflection\": str  // 1-2 sentence Catholic reflection tying the meal to the day\n"
         "}"
     )
-    plan = await _chat_json(system, user_prompt, session_id=f"meals-{user.user_id}-{payload.date}-{payload.goal_mode}")
+    note_hash = hashlib.sha1(note_clean.encode("utf-8")).hexdigest()[:8] if note_clean else "none"
+    plan = await _chat_json(system, user_prompt, session_id=f"meals-{user.user_id}-{payload.date}-{payload.goal_mode}-{note_hash}")
 
     doc = {
         "user_id": user.user_id,

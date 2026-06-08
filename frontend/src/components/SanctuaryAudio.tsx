@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -141,21 +141,26 @@ function YoutubeBackedPlayer({
   onPlayPauseChange: (p: boolean) => void;
   variant: "card" | "compact";
 }) {
-  // We always render the iframe (small, but visible). When `playing` is true,
-  // the iframe API drives playback.
-  const [ready, setReady] = useState(false);
-  const lastTrackRef = useRef<string>(track.id);
+  // We always render the iframe. The `play` prop drives playback through the
+  // iframe API. We do NOT gate the play button on the YouTube "ready" event —
+  // mobile WebViews drop that callback often enough that users get a stuck
+  // spinner. Letting the toggle always be tappable means if the iframe isn't
+  // ready yet, the next state update from `play={playing}` simply takes
+  // effect the moment it is.
+  const [hadError, setHadError] = useState(false);
 
-  // If the track id changes (different YouTube video), reset readiness.
+  // If the track id changes (different YouTube video), clear any prior error
+  // so the new video gets a fresh chance.
   useEffect(() => {
-    if (lastTrackRef.current !== track.id) {
-      lastTrackRef.current = track.id;
-      setReady(false);
-    }
+    setHadError(false);
   }, [track.id]);
 
   const onChangeState = React.useCallback(
     (event: string) => {
+      // YouTube iframe events: "unstarted", "ended", "playing", "paused",
+      // "buffering", "video cued". We only sync the lifted state on real
+      // start/stop transitions — "buffering" is transient and shouldn't
+      // toggle the parent's playing flag.
       if (event === "paused" || event === "ended") {
         onPlayPauseChange(false);
       } else if (event === "playing") {
@@ -165,27 +170,50 @@ function YoutubeBackedPlayer({
     [onPlayPauseChange],
   );
 
+  const onError = React.useCallback((err: string) => {
+    console.warn("[SanctuaryAudio youtube] error", err);
+    setHadError(true);
+  }, []);
+
   return (
     <View>
       <PlayerChrome
         track={track}
         playing={playing}
-        loading={!ready}
+        loading={false}
         onToggle={() => onPlayPauseChange(!playing)}
         variant={variant}
       />
       <View style={styles.youtubeFrame}>
         <YoutubePlayer
-          height={180}
-          width={300}
+          height={200}
+          width={320}
           videoId={videoId}
           play={playing}
-          onReady={() => setReady(true)}
           onChangeState={onChangeState}
-          webViewProps={{ allowsInlineMediaPlayback: true }}
-          initialPlayerParams={{ controls: true, modestbranding: true }}
+          onError={onError}
+          webViewProps={{
+            allowsInlineMediaPlayback: true,
+            mediaPlaybackRequiresUserAction: false,
+            javaScriptEnabled: true,
+            domStorageEnabled: true,
+          }}
+          initialPlayerParams={{
+            controls: true,
+            modestbranding: true,
+            playsinline: true,
+            rel: false,
+          }}
         />
       </View>
+      {hadError ? (
+        <View style={styles.errorHint}>
+          <Ionicons name="information-circle-outline" size={14} color={colors.textMuted} />
+          <Text style={styles.errorHintText}>
+            If playback didn&apos;t start, tap the YouTube player above directly.
+          </Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -314,6 +342,20 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     overflow: "hidden",
     alignItems: "center",
+  },
+  errorHint: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.sm,
+  },
+  errorHintText: {
+    flex: 1,
+    fontFamily: fonts.bodyItalic,
+    fontSize: 11,
+    color: colors.textMuted,
+    lineHeight: 16,
   },
   pressed: { opacity: 0.7 },
 });

@@ -1,0 +1,59 @@
+{
+  "summary": "Timezone bug fix on Sanctus Calendar tab verified across America/New_York (UTC-4), America/Los_Angeles (UTC-7), and Asia/Tokyo (UTC+9) using Chrome DevTools Protocol Emulation.setTimezoneOverride. For every emulated TZ, tapping the tile for 8/12/15/22/30 in June 2026 produced an exact match in the detail header — most importantly 'Friday, June 12' (no longer 'Thursday, June 11'). Home tab long-date header also correctly tracks emulated local 'today' (NY/LA → Monday, June 8; Tokyo → Tuesday, June 9 since UTC+9 has already crossed midnight). 15/15 calendar checkpoints PASS, 3/3 home-tab checkpoints PASS. Fix is correct.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "verified_flows": {
+    "calendar_tz_NewYork": {
+      "2026-06-08": "Monday, June 8 (PASS)",
+      "2026-06-12": "Friday, June 12 (PASS — was 'Thursday, June 11' before fix)",
+      "2026-06-15": "Monday, June 15 (PASS)",
+      "2026-06-22": "Monday, June 22 (PASS)",
+      "2026-06-30": "Tuesday, June 30 (PASS)"
+    },
+    "calendar_tz_LosAngeles": {
+      "2026-06-08": "Monday, June 8 (PASS)",
+      "2026-06-12": "Friday, June 12 (PASS)",
+      "2026-06-15": "Monday, June 15 (PASS)",
+      "2026-06-22": "Monday, June 22 (PASS)",
+      "2026-06-30": "Tuesday, June 30 (PASS)"
+    },
+    "calendar_tz_Tokyo": {
+      "2026-06-08": "Monday, June 8 (PASS)",
+      "2026-06-12": "Friday, June 12 (PASS)",
+      "2026-06-15": "Monday, June 15 (PASS)",
+      "2026-06-22": "Monday, June 22 (PASS)",
+      "2026-06-30": "Tuesday, June 30 (PASS)"
+    },
+    "home_tab_long_date_header": {
+      "NewYork": "Monday, June 8 (matches local today)",
+      "LosAngeles": "Monday, June 8 (matches local today)",
+      "Tokyo": "Tuesday, June 9 (matches local today, correctly ahead of UTC)"
+    }
+  },
+  "test_report_links": [
+    "/app/test_reports/iteration_15.json"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "date-utils.ts parseISO uses `new Date(y, m-1, d)` constructor — correct for local-time parsing of YYYY-MM-DD strings. Both fixed call sites (calendar.tsx:177 formatLongFromISO(sel.date), index.tsx:39 parseISO(dateStr) in pickDevotion, index.tsx:119 formatLongFromISO(date)) route through this helper. No remaining `new Date(<iso-date-only-string>)` usages spotted in tabs.",
+    "Suggestion (non-blocking): add a unit test in /app/frontend/__tests__ for parseISO + formatLongFromISO under Node `--tz=America/New_York` to lock in the contract."
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "n/a (frontend-only request)",
+    "frontend": "100% (15/15 calendar tile checks across 3 timezones + 3/3 home tab long-date checks)"
+  },
+  "seed_data_creation": "Reused ui_test_user_1 / TEST_FE_ITER11_TOKEN seeded via /app/backend/tests/setup_iter11_auth.py.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "To emulate timezone in Playwright when only `page` is exposed (no context-creation hook), use CDP: `client = await page.context.new_cdp_session(page); await client.send('Emulation.setTimezoneOverride', {'timezoneId': 'America/New_York'})`. Reset with empty string. Token seeding for ui_test_user_1: `localStorage.setItem('sanctus_session_token', JSON.stringify('TEST_FE_ITER11_TOKEN'))` before navigating to a tab route.",
+  "rca_of_issue": "ROOT CAUSE (now fixed): `new Date('YYYY-MM-DD')` is parsed by JS as UTC midnight per ECMA-262 §21.4.3.2, then `toLocaleDateString()` rendered it in the user's local TZ, shifting the displayed weekday/day backwards for negative-offset zones. FIX: switched to `formatLongFromISO`/`parseISO` from /app/frontend/src/date-utils.ts which construct dates with `new Date(y, m-1, d)` — the multi-arg constructor uses local time, so '2026-06-12' always renders as Friday, June 12 regardless of browser TZ. VERIFIED across UTC-7, UTC-4, and UTC+9."
+}

@@ -7,7 +7,7 @@ import { useRouter } from "expo-router";
 import { api, JournalEntry, LiturgicalDay } from "@/src/api";
 import LiturgicalBadge from "@/src/components/LiturgicalBadge";
 import { colorForLiturgical, colors, fonts, radius, shadow, spacing } from "@/src/theme";
-import { monthName, todayISO } from "@/src/date-utils";
+import { formatLongFromISO, monthName, todayISO } from "@/src/date-utils";
 
 const DOW_HEAD = ["S", "M", "T", "W", "T", "F", "S"];
 
@@ -174,11 +174,7 @@ export default function CalendarScreen() {
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.detailDate}>
-                      {new Date(sel.date).toLocaleDateString(undefined, {
-                        weekday: "long",
-                        month: "long",
-                        day: "numeric",
-                      })}
+                      {formatLongFromISO(sel.date)}
                     </Text>
                     <Text style={styles.detailSeason}>{sel.season}</Text>
                   </View>

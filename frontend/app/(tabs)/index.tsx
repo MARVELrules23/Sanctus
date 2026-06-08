@@ -18,7 +18,7 @@ import DailyPracticeCard from "@/src/components/DailyPracticeCard";
 import LiturgicalBadge from "@/src/components/LiturgicalBadge";
 import Ornament from "@/src/components/Ornament";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
-import { formatLong, todayISO } from "@/src/date-utils";
+import { formatLongFromISO, parseISO, todayISO } from "@/src/date-utils";
 
 const DEVOTIONS = [
   {
@@ -36,7 +36,7 @@ const DEVOTIONS = [
 ];
 
 function pickDevotion(dateStr: string) {
-  const d = new Date(dateStr);
+  const d = parseISO(dateStr);
   return DEVOTIONS[d.getDate() % DEVOTIONS.length];
 }
 
@@ -116,7 +116,7 @@ export default function TodayScreen() {
   };
 
   const devotion = pickDevotion(date);
-  const longDate = formatLong(new Date(date));
+  const longDate = formatLongFromISO(date);
   const firstName = user?.name?.split(" ")[0] ?? "friend";
 
   if (loading) {

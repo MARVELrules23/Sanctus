@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Optional, List
 
 import httpx
-from fastapi import FastAPI, APIRouter, Depends, HTTPException, Header, Request
+from fastapi import FastAPI, APIRouter, Depends, HTTPException, Header, Query, Request
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -591,8 +591,19 @@ async def daily_readings(date: str, user: User = Depends(get_current_user)):
     except ValueError:
         raise HTTPException(status_code=400, detail="date must be YYYY-MM-DD")
     cached = await db.readings.find_one({"date": date}, {"_id": 0})
-    if cached and cached.get("source") == "usccb":
-        return cached
+    if cached and cached.get("source") in {"usccb", "universalis", "ai-fallback"}:
+        # Universalis serves today's date — invalidate cache rollover if the cached
+        # doc was created on a different calendar day than the requested date and
+        # we're now requesting that requested date again.
+        if cached.get("source") == "universalis":
+            try:
+                cached_at = datetime.fromisoformat(str(cached.get("cached_at", "")).replace("Z", "+00:00"))
+                if cached_at.date().isoformat() != date:
+                    cached = None
+            except Exception:  # noqa: BLE001
+                pass
+        if cached:
+            return cached
     lit = get_liturgical_day(d)
     scraped = await fetch_readings(d)
     if scraped:
@@ -737,7 +748,7 @@ async def update_journal(entry_id: str, payload: JournalSaveRequest, user: User 
 async def list_journal(
     user: User = Depends(get_current_user),
     date: Optional[str] = None,
-    limit: int = 50,
+    limit: int = Query(50, ge=1, le=200),
 ):
     """List entries for current user. If `date` given, only entries on that day."""
     query: dict = {"user_id": user.user_id}
@@ -747,7 +758,7 @@ async def list_journal(
         except ValueError:
             raise HTTPException(status_code=400, detail="date must be YYYY-MM-DD")
         query["date"] = date
-    cursor = db.journal.find(query, {"_id": 0}).sort("created_at", -1).limit(max(1, min(limit, 200)))
+    cursor = db.journal.find(query, {"_id": 0}).sort("created_at", -1).limit(limit)
     docs = await cursor.to_list(length=limit)
     return {"items": [_journal_doc(d) for d in docs]}
 

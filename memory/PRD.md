@@ -27,4 +27,14 @@ Order daily life — food, exercise, and prayer — to the rhythm of the Roman C
 - `POST /api/workouts/generate` / `GET /api/workouts?date=` / `GET /api/workouts/week?start=`
 
 ## Design
-Reverent & traditional aesthetic: cream/parchment background, deep stained-glass navy, gold accents, Cormorant Garamond + Lora serifs.
+Reverent & traditional aesthetic: cream/parchment background, deep stained-gl- Catholic-themed daily devotion + Liturgical calendar
+- AI meal planning (Claude Sonnet 4.5) with feast-day-aware ingredients
+- AI workout planning with liturgical themes
+- Weekly meal & workout planner
+- **Live daily Mass readings** (Universalis → USCCB scrape → AI fallback)
+- **Rosary timer** with 20 mysteries, full prayer cycle
+- **Weekly grocery list** with PDF + native share-sheet export
+- **Custom meal/workout plans** — AI-assisted free-form editor
+- **Catholic journal** — write, save, and delete entries with movement-of-the-heart mood tags
+- Google sign-in via Emergent-managed Auth
+- Cream/navy/gold aesthetic, Cormorant Garamond + Lora serifs.

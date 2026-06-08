@@ -1,0 +1,74 @@
+{
+  "summary": "Frontend-only test of the new 'Films & anime' recommendation card (testID='sd-media-card') on the Self-Defense discipline detail screen. Tested boxing, kendo, and bjj end-to-end with TEST_FE_ITER11_TOKEN (ui_test_user_1). ALL checks pass: (1) Card renders BETWEEN sd-patron-card and sd-progress-card and BEFORE the 'Next session' header on every discipline (vertical positions verified — patron < media < progress < 'Next session' header in DOM/layout); (2) Initially collapsed: count badge + sd-media-summary visible ('7 recommendations · 4 with Catholic themes' for boxing, '8 rec · 1 catholic' for kendo, '6 rec · 2 catholic' for bjj); zero sd-media-item-* nodes rendered in collapsed state; (3) Tapping sd-media-toggle expands cleanly — boxing renders 7 items, kendo 8 items, bjj 6 items, each with kind badge (FILM/ANIME/SERIES/DOCUMENTARY), title, year, origin where present, and 'why' description; (4) CATHOLIC badge (sd-media-catholic-{n}) renders on the expected Catholic-flagged works — boxing 4× (Rocky, On the Waterfront, Cinderella Man, Raging Bull), kendo 1× (Silence), bjj 2× (Warrior, Like Water); (5) All expected titles found verbatim in the rendered DOM for each discipline; (6) Footnote 'Watch with discernment — not every work is suitable for every viewer…' (sd-media-footnote) renders at the bottom of the expanded list; (7) Second tap on sd-media-toggle collapses cleanly — items return to 0, summary reappears, footnote disappears. No errors, no red screen, no missing assets. Data file /app/frontend/src/utils/martial-arts-media.ts contents match request spec exactly.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "verified_flows": {
+    "boxing": {
+      "card_visible": true,
+      "order_patron_media_progress": [346, 612, 727],
+      "next_session_header_top": 868,
+      "media_before_next_session": true,
+      "collapsed_summary": "7 recommendations  ·  4 with Catholic themes",
+      "items_when_collapsed": 0,
+      "items_when_expanded": 7,
+      "catholic_badge_count": 4,
+      "expected_titles_all_present": ["Rocky", "On the Waterfront", "Cinderella Man", "Raging Bull", "Hajime no Ippo", "Megalo Box", "Ashita no Joe"],
+      "kind_badges_present": ["FILM", "ANIME"],
+      "footnote_visible_with_discernment": true,
+      "recollapse_clean": true
+    },
+    "kendo": {
+      "card_visible": true,
+      "order_patron_media_progress": [419, 665, 798],
+      "next_session_header_top": 918,
+      "media_before_next_session": true,
+      "collapsed_summary": "8 recommendations  ·  1 with Catholic themes",
+      "items_when_collapsed": 0,
+      "items_when_expanded": 8,
+      "catholic_badge_count": 1,
+      "expected_titles_all_present": ["The Twilight Samurai (Tasogare Seibei)", "Harakiri (Seppuku)", "Seven Samurai", "Silence", "Rurouni Kenshin", "Sword of the Stranger", "Bamboo Blade"],
+      "kind_badges_present": ["FILM", "ANIME"],
+      "footnote_visible_with_discernment": true,
+      "recollapse_clean": true
+    },
+    "bjj": {
+      "card_visible": true,
+      "order_patron_media_progress": [376, 622, 737],
+      "next_session_header_top": 857,
+      "media_before_next_session": true,
+      "collapsed_summary": "6 recommendations  ·  2 with Catholic themes",
+      "items_when_collapsed": 0,
+      "items_when_expanded": 6,
+      "catholic_badge_count": 2,
+      "expected_titles_all_present": ["Redbelt", "Choke", "Warrior", "Like Water", "Grappler Baki", "Kengan Ashura"],
+      "kind_badges_present": ["FILM", "ANIME", "DOCUMENTARY"],
+      "footnote_visible_with_discernment": true,
+      "recollapse_clean": true
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/setup_iter11_auth.py (re-seeded TEST_FE_ITER11_TOKEN / ui_test_user_1)"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Component is clean and well-scoped (~250 lines, single responsibility). All interactive elements have testID. Uses Pressable + accessibilityLabel; touch target (full-width header) is comfortably >44pt.",
+    "Pre-existing repo-wide warning still present (not introduced by this iteration): '\"shadow*\" style props are deprecated. Use \"boxShadow\".' — same as iter11/iter12, no functional impact and unrelated to the new media card.",
+    "Minor cosmetic suggestion (non-blocking, do not act unless desired): in collapsed state, the count badge in the header is visually redundant with the 'N recommendations' sub-summary line — both show the count. Acceptable as-is; mentioning only because it caught the eye during review."
+  ],
+  "updated_files": [
+    "/app/test_reports/iteration_13.json"
+  ],
+  "success_rate": {
+    "backend": "n/a — frontend-only iteration",
+    "frontend": "100% — every checkpoint passes for all 3 sampled disciplines (boxing, kendo, bjj); data file confirms muay_thai, goju_ryu, wrestling lists also conform to spec"
+  },
+  "seed_data_creation": "Re-ran /app/backend/tests/setup_iter11_auth.py to refresh the ui_test_user_1 / TEST_FE_ITER11_TOKEN session (7-day expiry). No new data created.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Films & anime card feature is fully working on boxing / kendo / bjj. The remaining three disciplines (muay_thai, goju_ryu, wrestling) were not exercised in the browser but their data is verified in /app/frontend/src/utils/martial-arts-media.ts and uses the exact same component path (MartialArtsMediaList renders by disciplineId off MARTIAL_ARTS_MEDIA). If any future regression report comes in for those, repeat the same flow: localStorage.setItem('sanctus_session_token', JSON.stringify('TEST_FE_ITER11_TOKEN')), navigate to /self-defense/{discipline}, tap [data-testid=\"sd-media-toggle\"], assert sd-media-item-* count matches MARTIAL_ARTS_MEDIA[discipline].length."
+}

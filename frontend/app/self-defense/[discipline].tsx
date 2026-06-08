@@ -14,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 
 import { api, SDDiscipline, SDPatron, SDProgress, SDSession } from "@/src/api";
+import MartialArtsMediaList from "@/src/components/MartialArtsMediaList";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 import { timeAgo } from "@/src/utils/time-ago";
 
@@ -151,6 +152,13 @@ export default function DisciplineDetailScreen() {
           {patron.why_aligned ? <Text style={styles.patronBody}>{patron.why_aligned}</Text> : null}
           {patron.scripture ? <Text style={styles.patronScripture}>— {patron.scripture}</Text> : null}
         </View>
+
+        {/* Films & anime where the discipline is central */}
+        <MartialArtsMediaList
+          disciplineId={discipline.id}
+          disciplineName={discipline.name}
+          initiallyCollapsed
+        />
 
         {/* Progress */}
         <View style={styles.progressCard} testID="sd-progress-card">

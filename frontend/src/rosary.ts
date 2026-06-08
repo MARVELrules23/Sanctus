@@ -22,6 +22,10 @@ export type MysterySet = {
   title: string;
   color: string;
   mysteries: Mystery[];
+  /** Practical virtue/action to live the mystery set today */
+  good_work_for_today: string;
+  /** Short motto for the day */
+  daily_motto: string;
 };
 
 export const MYSTERY_SETS: Record<MysterySet["key"], MysterySet> = {
@@ -36,6 +40,9 @@ export const MYSTERY_SETS: Record<MysterySet["key"], MysterySet> = {
       { name: "The Presentation", fruit: "Obedience", reflection: "The Holy Family fulfills the Law in the Temple." },
       { name: "Finding in the Temple", fruit: "Piety", reflection: "I must be about my Father's business." },
     ],
+    good_work_for_today:
+      "Visit or serve a family member today — do one quiet errand, write a note, or pray for them by name. Imitate Mary's haste to serve Elizabeth.",
+    daily_motto: "Be it done unto me according to Thy word.",
   },
   sorrowful: {
     key: "sorrowful",
@@ -48,6 +55,9 @@ export const MYSTERY_SETS: Record<MysterySet["key"], MysterySet> = {
       { name: "Carrying of the Cross", fruit: "Patience", reflection: "Take up your cross and follow Me." },
       { name: "Crucifixion and Death", fruit: "Self-Denial", reflection: "It is finished. Greater love hath no man than this." },
     ],
+    good_work_for_today:
+      "Take up one small cross today without complaint — skip a comfort (a meal between meals, a screen, a comfort food) and offer it for someone who is suffering.",
+    daily_motto: "Not my will, but Thine be done.",
   },
   glorious: {
     key: "glorious",
@@ -60,6 +70,9 @@ export const MYSTERY_SETS: Record<MysterySet["key"], MysterySet> = {
       { name: "Assumption of Mary", fruit: "Grace of a Holy Death", reflection: "She is taken up, body and soul, into glory." },
       { name: "Coronation of Mary", fruit: "Devotion to Mary", reflection: "A great sign appeared in heaven: a woman crowned with twelve stars." },
     ],
+    good_work_for_today:
+      "Bring resurrection news to someone today — speak a word of hope to a person heavy with discouragement. Hope is contagious.",
+    daily_motto: "He is risen — He is risen indeed.",
   },
   luminous: {
     key: "luminous",
@@ -72,6 +85,9 @@ export const MYSTERY_SETS: Record<MysterySet["key"], MysterySet> = {
       { name: "The Transfiguration", fruit: "Desire for Holiness", reflection: "His face shone like the sun." },
       { name: "Institution of the Eucharist", fruit: "Eucharistic Love", reflection: "This is My Body, given for you." },
     ],
+    good_work_for_today:
+      "Do whatever He tells you. Pick the one duty you've been putting off — a hard conversation, a long-overdue task — and do it today, for love.",
+    daily_motto: "Do whatever He tells you.",
   },
 };
 

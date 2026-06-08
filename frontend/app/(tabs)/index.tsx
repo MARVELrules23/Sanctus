@@ -165,8 +165,8 @@ export default function TodayScreen() {
           <QuickTile
             testID="quick-rosary"
             icon="flower-outline"
-            label="Rosary"
-            onPress={() => router.push("/rosary")}
+            label="Prayer"
+            onPress={() => router.push("/prayer")}
           />
           <QuickTile
             testID="quick-journal"

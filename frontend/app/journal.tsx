@@ -71,12 +71,14 @@ function composeExaminationBody(sections: ExaminationSection[], answers: Examina
 
 export default function JournalScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ date?: string; entry?: string; mode?: string; verse_ref?: string; verse_text?: string }>();
+  const params = useLocalSearchParams<{ date?: string; entry?: string; mode?: string; verse_ref?: string; verse_text?: string; seed_title?: string; seed_body?: string }>();
   const initialDate = typeof params.date === "string" ? params.date : todayISO();
   const entryId = typeof params.entry === "string" ? params.entry : null;
   const initialMode: JournalKind = ((typeof params.mode === "string" && ["free", "examen", "examination"].includes(params.mode)) ? params.mode : "free") as JournalKind;
   const incomingVerseRef = typeof params.verse_ref === "string" ? params.verse_ref : "";
   const incomingVerseText = typeof params.verse_text === "string" ? params.verse_text : "";
+  const incomingSeedTitle = typeof params.seed_title === "string" ? params.seed_title : "";
+  const incomingSeedBody = typeof params.seed_body === "string" ? params.seed_body : "";
 
   const [date, setDate] = useState(initialDate);
   const [kind, setKind] = useState<JournalKind>(initialMode);
@@ -153,6 +155,17 @@ export default function JournalScreen() {
             return `“${incomingVerseText}”\n— ${incomingVerseRef}\n\n`;
           });
         }
+        // Generic seed (e.g. from a completed self-defense session or chaplet)
+        if (!entryId && (incomingSeedTitle || incomingSeedBody)) {
+          setKind("free");
+          if (incomingSeedTitle) setTitle((prev) => prev || incomingSeedTitle);
+          if (incomingSeedBody) {
+            setBody((prev) => {
+              if (prev.trim()) return prev;
+              return incomingSeedBody;
+            });
+          }
+        }
       } finally {
         if (!c) setLoading(false);
       }
@@ -160,7 +173,7 @@ export default function JournalScreen() {
     return () => {
       c = true;
     };
-  }, [load, loadTemplates, entryId, incomingVerseRef, incomingVerseText]);
+  }, [load, loadTemplates, entryId, incomingVerseRef, incomingVerseText, incomingSeedTitle, incomingSeedBody]);
 
   const computedBody = useMemo(() => {
     if (kind === "examen") return composeExamenBody(examenPrompts, examenAnswers);

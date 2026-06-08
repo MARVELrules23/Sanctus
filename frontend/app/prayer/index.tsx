@@ -1,0 +1,198 @@
+import React, { useMemo } from "react";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Stack, useRouter } from "expo-router";
+
+import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
+import { mysteryForDate, MYSTERY_SETS, MysterySet } from "@/src/rosary";
+import { CHAPLETS, CHAPLET_ORDER } from "@/src/prayers/chaplets";
+import { todayISO } from "@/src/date-utils";
+
+type CardItem = {
+  testID: string;
+  title: string;
+  subtitle: string;
+  meta: string;
+  color: string;
+  icon: string;
+  onPress: () => void;
+  featured?: boolean;
+};
+
+export default function PrayerHubScreen() {
+  const router = useRouter();
+  const today = todayISO();
+
+  const todayMystery: MysterySet = useMemo(() => mysteryForDate(new Date()), []);
+
+  const items: CardItem[] = useMemo(() => {
+    const arr: CardItem[] = [];
+    // Rosary featured first — show today's mystery set
+    arr.push({
+      testID: "prayer-card-rosary",
+      title: "Holy Rosary",
+      subtitle: `Today: ${todayMystery.title}`,
+      meta: "~20 min",
+      color: todayMystery.color,
+      icon: "flower-outline",
+      onPress: () =>
+        router.push({ pathname: "/prayer/[kind]", params: { kind: "rosary", date: today } }),
+      featured: true,
+    });
+    // Chaplets
+    for (const key of CHAPLET_ORDER) {
+      const c = CHAPLETS[key];
+      arr.push({
+        testID: `prayer-card-${key}`,
+        title: c.title,
+        subtitle: c.subtitle,
+        meta: c.duration,
+        color: c.color,
+        icon: c.icon,
+        onPress: () =>
+          router.push({ pathname: "/prayer/[kind]", params: { kind: key } }),
+      });
+    }
+    return arr;
+  }, [router, today, todayMystery]);
+
+  return (
+    <SafeAreaView style={styles.safe} edges={["top"]} testID="prayer-hub-screen">
+      <Stack.Screen options={{ headerShown: false }} />
+      <View style={styles.header}>
+        <Pressable onPress={() => router.back()} hitSlop={12} testID="prayer-hub-back">
+          <Ionicons name="chevron-back" size={26} color={colors.primary} />
+        </Pressable>
+        <Text style={styles.headerTitle}>Prayer</Text>
+        <View style={{ width: 26 }} />
+      </View>
+
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <View style={styles.intro}>
+          <Text style={styles.eyebrow}>ORATIO</Text>
+          <Text style={styles.introTitle}>Anchor the day in prayer.</Text>
+          <Text style={styles.introBody}>
+            Choose the Rosary or a chaplet. Each prayer closes with a small good work — a way to
+            live the grace into your day.
+          </Text>
+        </View>
+
+        {items.map((it) => (
+          <Pressable
+            key={it.testID}
+            testID={it.testID}
+            onPress={it.onPress}
+            style={({ pressed }) => [
+              styles.card,
+              it.featured && styles.cardFeatured,
+              pressed && styles.pressed,
+            ]}
+          >
+            <View style={[styles.iconWrap, { backgroundColor: it.color }]}>
+              <Ionicons name={it.icon as any} size={22} color={"#FAF9F6"} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <View style={styles.titleRow}>
+                <Text style={styles.cardTitle}>{it.title}</Text>
+                {it.featured ? (
+                  <View style={styles.featuredPill}>
+                    <Text style={styles.featuredPillText}>TODAY</Text>
+                  </View>
+                ) : null}
+              </View>
+              <Text style={styles.cardSub}>{it.subtitle}</Text>
+              <Text style={styles.cardMeta}>{it.meta}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+          </Pressable>
+        ))}
+
+        <View style={{ height: spacing.xxl }} />
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.background },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSoft,
+  },
+  headerTitle: {
+    fontFamily: fonts.headingSemi,
+    fontSize: 18,
+    color: colors.textPrimary,
+    flex: 1,
+    textAlign: "center",
+    marginHorizontal: spacing.sm,
+  },
+  scroll: { padding: spacing.lg },
+  intro: { marginBottom: spacing.lg },
+  eyebrow: {
+    fontFamily: fonts.uiSemi,
+    fontSize: 10,
+    letterSpacing: 2.5,
+    color: colors.gold,
+  },
+  introTitle: {
+    fontFamily: fonts.headingBold,
+    fontSize: 26,
+    color: colors.textPrimary,
+    marginTop: 6,
+  },
+  introBody: {
+    fontFamily: fonts.bodyRegular,
+    fontSize: 14,
+    color: colors.textSecondary,
+    lineHeight: 22,
+    marginTop: spacing.sm,
+  },
+  card: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    ...shadow.card,
+  },
+  cardFeatured: {
+    borderColor: colors.gold,
+    borderWidth: 1.5,
+  },
+  iconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  titleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  cardTitle: { fontFamily: fonts.headingSemi, fontSize: 16, color: colors.textPrimary, flexShrink: 1 },
+  cardSub: {
+    fontFamily: fonts.bodyItalic,
+    fontStyle: "italic",
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  cardMeta: { fontFamily: fonts.uiMedium, fontSize: 10, color: colors.gold, marginTop: 4, letterSpacing: 1.4 },
+  featuredPill: {
+    backgroundColor: colors.gold,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: radius.round,
+  },
+  featuredPillText: { fontFamily: fonts.uiSemi, color: colors.primary, fontSize: 9, letterSpacing: 1.2 },
+  pressed: { opacity: 0.7 },
+});

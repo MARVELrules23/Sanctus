@@ -172,11 +172,11 @@ export default function WorkoutsScreen() {
           </Pressable>
           <Pressable
             testID="workouts-rosary-button"
-            onPress={() => router.push("/rosary")}
+            onPress={() => router.push("/prayer")}
             style={({ pressed }) => [styles.actionBtn, pressed && styles.pressed]}
           >
             <Ionicons name="flower-outline" size={14} color={colors.primary} />
-            <Text style={styles.actionBtnText}>Rosary</Text>
+            <Text style={styles.actionBtnText}>Prayer</Text>
           </Pressable>
           <Pressable
             testID="workouts-selfdefense-button"

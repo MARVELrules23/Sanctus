@@ -208,6 +208,12 @@ export default function TodayScreen() {
             label="Examen"
             onPress={() => router.push({ pathname: "/journal", params: { date, mode: "examen" } })}
           />
+          <QuickTile
+            testID="quick-selfdefense"
+            icon="shield-outline"
+            label="Self-Defense"
+            onPress={() => router.push("/self-defense")}
+          />
         </View>
 
         {/* Mass Readings */}

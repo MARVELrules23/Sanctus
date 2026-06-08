@@ -178,6 +178,14 @@ export default function WorkoutsScreen() {
             <Ionicons name="flower-outline" size={14} color={colors.primary} />
             <Text style={styles.actionBtnText}>Rosary</Text>
           </Pressable>
+          <Pressable
+            testID="workouts-selfdefense-button"
+            onPress={() => router.push("/self-defense")}
+            style={({ pressed }) => [styles.actionBtn, pressed && styles.pressed]}
+          >
+            <Ionicons name="shield-outline" size={14} color={colors.primary} />
+            <Text style={styles.actionBtnText}>Self-Defense</Text>
+          </Pressable>
         </View>
 
         {loading ? (

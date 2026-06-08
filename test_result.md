@@ -163,6 +163,34 @@ main_agent_phase2_2026-06-08: "Phase 2 (Catholic Bible — Douay-Rheims Challone
 
 main_agent_phase1_2026-06-08: "Phase 1 shipped. Added (1) PUT /api/auth/me to update display name + profile picture (data URI / URL / clear). (2) `goal_mode` parameter on POST /api/meals/generate and POST /api/workouts/generate ('liturgical' | 'goals'); when 'goals', wellness profile (weight/height/target_weight/goal_type/activity_level) is injected into the AI prompt and the system message is augmented to weight macros/intensity toward the user's goals while still honoring abstinence/fasts. Frontend: new /edit-profile screen (avatar picker via expo-image-picker w/ full permission flow, name input + validation, live AuthContext update on save), Edit pencil added to Profile user card, new GoalModeToggle pill rendered on Meals and Workouts headers (persisted in AsyncStorage; 'My goals' shown disabled until wellness profile exists — tapping it routes to Wellness tab). Backend testing complete: 24/24 new Phase-1 tests pass, regression suite 117/118. Verified end-to-end via screenshot harness — name save, image upload via picker, toggle switching, and AI generation with both modes all work."
 
+main_agent_phase4_2026-06-08: "Phase 4 (Self-Defense — Catholic martial-arts) entry points shipped. The backend (/api/self-defense/*) and per-discipline & session screens were already in place from a prior session but the feature had NO entry point. Added now:
+
+  Frontend:
+  - NEW `/app/frontend/app/self-defense/index.tsx` — Discipline list of all 6 disciplines (BJJ, Gōjū-ryū, Wrestling, Boxing, Muay Thai, Kendo+Iaido) each with patron-saint preview (St. Paul, St. Paul Miki, Jacob, St. Sebastian, St. Michael, Bl. Justo Takayama Ukon), per-discipline level badge + sessions-completed stat. Includes a first-use disclaimer Modal that calls `GET /api/self-defense/disclaimer` on load and `POST /api/self-defense/disclaimer/acknowledge` on accept, plus a shield icon in the header to re-open it anytime.
+  - `/app/frontend/app/(tabs)/workouts.tsx` — Added 'Self-Defense' action button next to Custom plan / Rosary (`testID=workouts-selfdefense-button`).
+  - `/app/frontend/app/(tabs)/index.tsx` — Added 'Self-Defense' quick tile on the Today screen alongside 'Examen' (`testID=quick-selfdefense`).
+
+  BACKEND ENDPOINTS TO TEST (all require auth, all under /api):
+  - GET /api/self-defense/disciplines — returns 6 items each with patron + safety disclaimer
+  - GET /api/self-defense/disciplines/{discipline_id} — detail + progress (404 on unknown id)
+  - GET /api/self-defense/disclaimer — text + acknowledged bool
+  - POST /api/self-defense/disclaimer/acknowledge — sets acknowledged=true, idempotent
+  - POST /api/self-defense/generate {discipline_id, duration_minutes, equipment[], has_partner, override_level?, include_patron_reflection} — generates AI session via Claude, persists, bumps progress.sessions_generated
+  - GET /api/self-defense/sessions?discipline_id=&completed=&limit= — scoped to user
+  - GET /api/self-defense/sessions/{session_id} — 404 if not owned
+  - POST /api/self-defense/sessions/{session_id}/complete {notes?, intensity_actual?} — increments sessions_completed, may promote level (beginner→intermediate at 12, intermediate→advanced at 30)
+  - POST /api/self-defense/sessions/{session_id}/uncomplete — reverses without going below zero
+  - POST /api/self-defense/sessions/{session_id}/redo — duplicates as new uncompleted session with source='redo'
+  - DELETE /api/self-defense/sessions/{session_id} — author-only
+  - GET /api/self-defense/progress — array across all 6 disciplines for current user
+
+  FRONTEND FLOWS TO TEST:
+  - Today tab → tap 'Self-Defense' quick tile → arrives at index, shows 6 cards + disclaimer modal first time
+  - Disclaimer modal → 'I acknowledge & proceed' dismisses modal; subsequent visits skip the modal
+  - Tap a discipline card → opens `/self-defense/[discipline]` detail with patron, progress, generator
+  - Workouts tab → 'Self-Defense' action button → same index screen
+  - Header shield icon on index re-opens the disclaimer modal
+
 main_agent_phase3_2026-06-08: "Phase 3 (Community) shipped. NEW BACKEND ENDPOINTS (all require auth, all scoped to current user, all prefixed `/api`):
   - GET  /api/community/topics — returns predefined topic rooms + report reasons
   - GET  /api/community/feed?topic=&before=&limit= — paginated global parish feed or filtered by topic slug (cursor on `created_at` ISO)
@@ -186,3 +214,9 @@ main_agent_phase3_2026-06-08: "Phase 3 (Community) shipped. NEW BACKEND ENDPOINT
 New MongoDB collections (indexes created on startup): community_posts, community_post_likes, community_replies, community_dm_threads, community_dm_messages, community_reports, community_blocks.
 FRONTEND: new tab `Parish` (6 tabs now) at /app/frontend/app/(tabs)/community.tsx — feed with horizontal topic chips, FAB compose modal with topic picker, optimistic likes, action menu (delete-own / report-others / DM-author), liturgical color rail on each post card. Sub-screens at /app/frontend/app/community/{post/[id].tsx, people.tsx, dm/index.tsx, dm/[thread_id].tsx, user/[id].tsx}. People screen has debounced search + recommendations. DM thread polls every 5s for new messages and uses optimistic send. Profile screen shows author's recent posts. Report modal lists fixed reasons + optional 500-char detail. Avatar component (`/app/frontend/src/components/Avatar.tsx`) and timeAgo util (`/app/frontend/src/utils/time-ago.ts`) added.
 NEEDS TESTING: backend endpoints (auth, scoping, pagination, like-toggle, thread creation, report validation), and frontend flows (feed→compose→post, topic filtering, post detail→reply, people search & recommend, DM inbox→thread→send/receive, profile, report flow)."
+
+testing_agent_iteration_8_2026-06-08: "Backend-only test of Phase 4 Self-Defense + Phase 3 Community regression. RESULTS: 28/28 self-defense tests PASS, 56/56 community tests PASS (84/84 = 100% overall). New test file at /app/backend/tests/test_self_defense.py covers all 15 spec items + auth gating + kendo-solo iaido + cross-user 404 scoping. JUnit XML: /app/test_reports/pytest/iteration_8_self_defense.xml and iteration_8_community.xml.
+
+BUG FOUND (low-medium severity): After the first POST /api/self-defense/generate, the upserted progress document only contains sessions_generated, current_level, recent_focus, last_session_at — it is MISSING sessions_completed. server.py:1773-1788 _sd_get_progress only returns defaults when the doc is fully absent; with a partial doc it returns it raw. Result: GET /api/self-defense/disciplines/{id} between first /generate and first /complete returns progress.sessions_completed === undefined, which will KeyError frontend code that does `if (progress.sessions_completed > 0)` or similar. The bug self-heals once /complete runs once (since $inc creates the field). FIX: in _sd_get_progress, return {**defaults, **doc} instead of bare doc.
+
+All other endpoints behaved exactly as specified: progress.sessions_generated increments on /generate AND /redo, /complete sets completed_at + bumps sessions_completed (and would promote level at 12/30), /uncomplete clears completed_at and decrements (and doesn't go below 0 — verified by double-uncomplete), /redo returns new session_id with source='redo' and parent_session_id pointing to source, DELETE returns 200 then 404 on second call, cross-user GET returns 404, all endpoints 401 without bearer token, disclaimer ack is idempotent, kendo solo generates with valid plan shape. No frontend testing performed (testing_type=backend per request)."

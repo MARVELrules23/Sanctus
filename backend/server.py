@@ -19,6 +19,8 @@ from emergentintegrations.llm.chat import LlmChat, UserMessage
 
 from liturgical import get_liturgical_day
 from usccb import fetch_readings, usccb_url_for
+from churches import nearby_churches, enrich_with_masstimes
+from prayers import EXAMEN_PROMPTS, EXAMINATION_SECTIONS
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
@@ -120,6 +122,10 @@ async def ensure_indexes():
     await db.journal.create_index("entry_id", unique=True)
     await db.journal.create_index([("user_id", 1), ("created_at", -1)])
     await db.journal.create_index([("user_id", 1), ("date", 1)])
+    await db.wellness.create_index("user_id", unique=True)
+    await db.weight_log.create_index([("user_id", 1), ("date", -1)])
+    await db.user_churches.create_index([("user_id", 1), ("church_id", 1)], unique=True)
+    await db.user_churches.create_index([("user_id", 1), ("saved_at", -1)])
 
 
 async def get_current_user(authorization: Optional[str] = Header(None)) -> User:
@@ -685,7 +691,9 @@ class JournalSaveRequest(BaseModel):
     date: str  # YYYY-MM-DD
     title: Optional[str] = ""
     body: str
-    mood: Optional[str] = None  # e.g. grateful, sorrowful, joyful, contrite
+    mood: Optional[str] = None  # grateful / sorrowful / joyful / contrite / hopeful / weary
+    kind: Optional[str] = "free"  # free | examen | examination
+    structured: Optional[dict] = None  # mode-specific structured data
 
 
 def _journal_doc(d: dict) -> dict:
@@ -695,7 +703,10 @@ def _journal_doc(d: dict) -> dict:
         "title": d.get("title", ""),
         "body": d.get("body", ""),
         "mood": d.get("mood"),
+        "kind": d.get("kind", "free"),
+        "structured": d.get("structured"),
         "liturgical": d.get("liturgical"),
+        "confessed_at": d.get("confessed_at"),
         "created_at": d.get("created_at"),
         "updated_at": d.get("updated_at"),
     }
@@ -712,6 +723,7 @@ async def save_journal(payload: JournalSaveRequest, user: User = Depends(get_cur
     lit = get_liturgical_day(d)
     now = datetime.now(timezone.utc).isoformat()
     entry_id = f"jrn_{uuid.uuid4().hex[:12]}"
+    kind = payload.kind if payload.kind in {"free", "examen", "examination"} else "free"
     doc = {
         "entry_id": entry_id,
         "user_id": user.user_id,
@@ -719,6 +731,8 @@ async def save_journal(payload: JournalSaveRequest, user: User = Depends(get_cur
         "title": (payload.title or "").strip(),
         "body": payload.body.strip(),
         "mood": payload.mood,
+        "kind": kind,
+        "structured": payload.structured,
         "liturgical": lit,
         "created_at": now,
         "updated_at": now,
@@ -734,10 +748,13 @@ async def update_journal(entry_id: str, payload: JournalSaveRequest, user: User 
         raise HTTPException(status_code=404, detail="entry not found")
     if not payload.body.strip():
         raise HTTPException(status_code=400, detail="body cannot be empty")
+    kind = payload.kind if payload.kind in {"free", "examen", "examination"} else existing.get("kind", "free")
     update = {
         "title": (payload.title or "").strip(),
         "body": payload.body.strip(),
         "mood": payload.mood,
+        "kind": kind,
+        "structured": payload.structured,
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.journal.update_one({"entry_id": entry_id, "user_id": user.user_id}, {"$set": update})
@@ -776,6 +793,304 @@ async def delete_journal(entry_id: str, user: User = Depends(get_current_user)):
     res = await db.journal.delete_one({"entry_id": entry_id, "user_id": user.user_id})
     if res.deleted_count == 0:
         raise HTTPException(status_code=404, detail="entry not found")
+    return {"ok": True}
+
+
+@api.post("/journal/{entry_id}/confess")
+async def mark_confessed(entry_id: str, user: User = Depends(get_current_user)):
+    """Mark an Examination-of-Conscience entry as confessed today.
+
+    Persists the date of confession on the journal entry. The frontend uses
+    this to visually 'archive' examination entries after the sacrament.
+    """
+    existing = await db.journal.find_one({"entry_id": entry_id, "user_id": user.user_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="entry not found")
+    now = datetime.now(timezone.utc).isoformat()
+    await db.journal.update_one(
+        {"entry_id": entry_id, "user_id": user.user_id},
+        {"$set": {"confessed_at": now, "updated_at": now}},
+    )
+    return _journal_doc({**existing, "confessed_at": now, "updated_at": now})
+
+
+# ---------- Prayer templates ----------
+@api.get("/prayers/examen")
+async def get_examen_template(_: User = Depends(get_current_user)):
+    return {"prompts": EXAMEN_PROMPTS}
+
+
+@api.get("/prayers/examination")
+async def get_examination_template(_: User = Depends(get_current_user)):
+    return {"sections": EXAMINATION_SECTIONS}
+
+
+# ---------- Wellness (weight + goals) ----------
+class WellnessProfilePayload(BaseModel):
+    weight_kg: Optional[float] = None
+    height_cm: Optional[float] = None
+    target_weight_kg: Optional[float] = None
+    target_date: Optional[str] = None  # YYYY-MM-DD
+    goal_type: Optional[str] = None  # lose | maintain | gain
+    activity_level: Optional[str] = None  # sedentary | light | moderate | very_active
+    weekly_rate_kg: Optional[float] = None  # desired weekly change (e.g. 0.5)
+    units: Optional[str] = "metric"  # metric | imperial
+    notes: Optional[str] = None
+
+
+class WeightLogPayload(BaseModel):
+    date: str
+    weight_kg: float
+    note: Optional[str] = None
+
+
+def _wellness_doc(d: dict) -> dict:
+    return {
+        "weight_kg": d.get("weight_kg"),
+        "height_cm": d.get("height_cm"),
+        "target_weight_kg": d.get("target_weight_kg"),
+        "target_date": d.get("target_date"),
+        "goal_type": d.get("goal_type"),
+        "activity_level": d.get("activity_level"),
+        "weekly_rate_kg": d.get("weekly_rate_kg"),
+        "units": d.get("units", "metric"),
+        "notes": d.get("notes"),
+        "updated_at": d.get("updated_at"),
+    }
+
+
+@api.get("/wellness/profile")
+async def get_wellness_profile(user: User = Depends(get_current_user)):
+    doc = await db.wellness.find_one({"user_id": user.user_id}, {"_id": 0})
+    if not doc:
+        return _wellness_doc({})
+    return _wellness_doc(doc)
+
+
+@api.put("/wellness/profile")
+async def update_wellness_profile(
+    payload: WellnessProfilePayload, user: User = Depends(get_current_user)
+):
+    if payload.target_date:
+        try:
+            datetime.strptime(payload.target_date, "%Y-%m-%d")
+        except ValueError:
+            raise HTTPException(status_code=400, detail="target_date must be YYYY-MM-DD")
+    if payload.goal_type and payload.goal_type not in {"lose", "maintain", "gain"}:
+        raise HTTPException(status_code=400, detail="goal_type must be lose, maintain, or gain")
+    if payload.activity_level and payload.activity_level not in {
+        "sedentary", "light", "moderate", "very_active"
+    }:
+        raise HTTPException(status_code=400, detail="invalid activity_level")
+    update = {k: v for k, v in payload.model_dump().items() if v is not None}
+    update["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.wellness.update_one(
+        {"user_id": user.user_id}, {"$set": update, "$setOnInsert": {"user_id": user.user_id}}, upsert=True
+    )
+    doc = await db.wellness.find_one({"user_id": user.user_id}, {"_id": 0})
+    return _wellness_doc(doc or {})
+
+
+@api.post("/wellness/log")
+async def log_weight(payload: WeightLogPayload, user: User = Depends(get_current_user)):
+    try:
+        datetime.strptime(payload.date, "%Y-%m-%d")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="date must be YYYY-MM-DD")
+    if payload.weight_kg <= 0 or payload.weight_kg > 700:
+        raise HTTPException(status_code=400, detail="weight_kg out of range")
+    log_id = f"wl_{uuid.uuid4().hex[:12]}"
+    now = datetime.now(timezone.utc).isoformat()
+    doc = {
+        "log_id": log_id,
+        "user_id": user.user_id,
+        "date": payload.date,
+        "weight_kg": payload.weight_kg,
+        "note": payload.note,
+        "created_at": now,
+    }
+    # Upsert so two logs on same date overwrite (typical weigh-in habit).
+    await db.weight_log.update_one(
+        {"user_id": user.user_id, "date": payload.date},
+        {"$set": doc, "$setOnInsert": {"created_at": now}},
+        upsert=True,
+    )
+    # Mirror latest weight into the wellness profile.
+    await db.wellness.update_one(
+        {"user_id": user.user_id},
+        {"$set": {"weight_kg": payload.weight_kg, "updated_at": now}, "$setOnInsert": {"user_id": user.user_id}},
+        upsert=True,
+    )
+    return {"log_id": log_id, "date": payload.date, "weight_kg": payload.weight_kg}
+
+
+@api.get("/wellness/log")
+async def list_weight_log(
+    user: User = Depends(get_current_user),
+    limit: int = Query(120, ge=1, le=730),
+):
+    cursor = db.weight_log.find({"user_id": user.user_id}, {"_id": 0}).sort("date", -1).limit(limit)
+    docs = await cursor.to_list(length=limit)
+    return {"items": docs}
+
+
+@api.delete("/wellness/log/{log_id}")
+async def delete_weight_log(log_id: str, user: User = Depends(get_current_user)):
+    res = await db.weight_log.delete_one({"log_id": log_id, "user_id": user.user_id})
+    if res.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="log not found")
+    return {"ok": True}
+
+
+def _wellness_brief(profile: dict) -> str:
+    """Compact natural-language string for AI prompts."""
+    if not profile:
+        return ""
+    bits = []
+    if profile.get("weight_kg"):
+        bits.append(f"current weight {profile['weight_kg']:.1f} kg")
+    if profile.get("height_cm"):
+        bits.append(f"height {profile['height_cm']:.0f} cm")
+    if profile.get("target_weight_kg"):
+        bits.append(f"target {profile['target_weight_kg']:.1f} kg")
+    if profile.get("goal_type"):
+        bits.append(f"goal {profile['goal_type']}")
+    if profile.get("activity_level"):
+        bits.append(f"activity {profile['activity_level']}")
+    if profile.get("weekly_rate_kg"):
+        bits.append(f"~{profile['weekly_rate_kg']:.2f} kg/week")
+    if profile.get("target_date"):
+        bits.append(f"by {profile['target_date']}")
+    return "; ".join(bits)
+
+
+@api.post("/wellness/suggest")
+async def wellness_ai_brief(user: User = Depends(get_current_user)):
+    """AI-generated coaching brief: meal + workout focus tailored to the user's goal."""
+    profile = await db.wellness.find_one({"user_id": user.user_id}, {"_id": 0})
+    if not profile or not profile.get("goal_type"):
+        raise HTTPException(status_code=400, detail="set a goal first")
+    brief = _wellness_brief(profile)
+    system = (
+        "You are a Catholic wellness coach. Respond with prudence, encouragement, and the conviction that the "
+        "body is a temple of the Holy Spirit (1 Cor 6:19). Output STRICT JSON only with these keys: "
+        '{"calorie_target": int, "macro_focus": str, "meal_focus": [str, str, str], '
+        '"workout_focus": [str, str, str], "weekly_split": str, "encouragement": str}. '
+        "calorie_target is a rough daily kcal estimate for the user's stats (use Mifflin-St Jeor + activity multiplier + deficit/surplus). "
+        "All strings concise (<= 16 words). Encouragement is a single sentence and may quote a Catholic source."
+    )
+    prompt = f"User stats: {brief}. Suggest meal and workout focus for next 4 weeks."
+    try:
+        data = await _chat_json(system, prompt, session_id=f"wellness-{user.user_id}")
+    except Exception as e:  # noqa: BLE001
+        logger.warning("wellness AI failed: %s", e)
+        raise HTTPException(status_code=502, detail="ai unavailable") from e
+    return {
+        "calorie_target": int(data.get("calorie_target") or 0),
+        "macro_focus": str(data.get("macro_focus") or ""),
+        "meal_focus": data.get("meal_focus") or [],
+        "workout_focus": data.get("workout_focus") or [],
+        "weekly_split": str(data.get("weekly_split") or ""),
+        "encouragement": str(data.get("encouragement") or ""),
+        "based_on": brief,
+    }
+
+
+# ---------- Nearby Catholic churches ----------
+class SaveChurchPayload(BaseModel):
+    church_id: str
+    name: str
+    lat: float
+    lng: float
+    address: Optional[str] = ""
+    website: Optional[str] = ""
+    phone: Optional[str] = ""
+    mass_times: Optional[List[str]] = None
+    confession_times: Optional[List[str]] = None
+    notes: Optional[str] = ""
+
+
+@api.get("/churches/nearby")
+async def churches_nearby(
+    user: User = Depends(get_current_user),
+    lat: float = Query(...),
+    lng: float = Query(...),
+    radius_m: int = Query(8000, ge=500, le=50_000),
+    enrich: bool = Query(True),
+):
+    if not (-90 <= lat <= 90 and -180 <= lng <= 180):
+        raise HTTPException(status_code=400, detail="invalid lat/lng")
+    churches = await nearby_churches(lat, lng, radius_m=radius_m)
+    if enrich and churches:
+        churches = await enrich_with_masstimes(churches)
+    # Annotate which churches the user has starred.
+    starred_ids = {
+        d["church_id"]
+        async for d in db.user_churches.find({"user_id": user.user_id}, {"church_id": 1, "_id": 0})
+    }
+    for c in churches:
+        c["is_starred"] = c["church_id"] in starred_ids
+    return {"items": churches, "count": len(churches)}
+
+
+def _user_church_doc(d: dict) -> dict:
+    return {
+        "church_id": d["church_id"],
+        "name": d.get("name", ""),
+        "lat": d.get("lat"),
+        "lng": d.get("lng"),
+        "address": d.get("address", ""),
+        "website": d.get("website", ""),
+        "phone": d.get("phone", ""),
+        "mass_times": d.get("mass_times") or [],
+        "confession_times": d.get("confession_times") or [],
+        "notes": d.get("notes", ""),
+        "is_starred": True,
+        "saved_at": d.get("saved_at"),
+        "updated_at": d.get("updated_at"),
+    }
+
+
+@api.get("/churches/saved")
+async def list_saved_churches(user: User = Depends(get_current_user)):
+    cursor = db.user_churches.find({"user_id": user.user_id}, {"_id": 0}).sort("saved_at", -1)
+    docs = await cursor.to_list(length=200)
+    return {"items": [_user_church_doc(d) for d in docs]}
+
+
+@api.post("/churches/save")
+async def save_church(payload: SaveChurchPayload, user: User = Depends(get_current_user)):
+    now = datetime.now(timezone.utc).isoformat()
+    doc = {
+        "user_id": user.user_id,
+        "church_id": payload.church_id,
+        "name": payload.name,
+        "lat": payload.lat,
+        "lng": payload.lng,
+        "address": payload.address or "",
+        "website": payload.website or "",
+        "phone": payload.phone or "",
+        "mass_times": payload.mass_times or [],
+        "confession_times": payload.confession_times or [],
+        "notes": payload.notes or "",
+        "updated_at": now,
+    }
+    await db.user_churches.update_one(
+        {"user_id": user.user_id, "church_id": payload.church_id},
+        {"$set": doc, "$setOnInsert": {"saved_at": now}},
+        upsert=True,
+    )
+    saved = await db.user_churches.find_one(
+        {"user_id": user.user_id, "church_id": payload.church_id}, {"_id": 0}
+    )
+    return _user_church_doc(saved or doc)
+
+
+@api.delete("/churches/saved/{church_id:path}")
+async def unsave_church(church_id: str, user: User = Depends(get_current_user)):
+    res = await db.user_churches.delete_one({"user_id": user.user_id, "church_id": church_id})
+    if res.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="church not in saved list")
     return {"ok": True}
 
 

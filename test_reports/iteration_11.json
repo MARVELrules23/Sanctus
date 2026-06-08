@@ -1,0 +1,96 @@
+{
+  "summary": "Frontend-only test of Prayer Hub (Rosary + 6 Chaplets) and Self-Defense follow-up + MovementBreakdown changes. Prayer hub flow: PASS end-to-end (hub renders Rosary + all six chaplets; tap into St. Michael advances bead-by-bead; end-state shows a 'Good work for today' card + 'Journal this' CTA that pushes to /journal with seed_title and seed_body; Sacred Heart end card shows a different, unique good-work string — uniqueness confirmed). Stick-figure removal: PASS (no SilhouetteAnimation imports anywhere; no suspicious silhouette SVGs in either /self-defense/session/[id] or /self-defense/play/[id]; MovementBreakdown card visible in player with sections 'MOVEMENT BREAKDOWN', 'HOW TO PERFORM' (numbered steps), 'CUES', and 'AVOID' rendered correctly per step). Completion + journal-seed: PARTIAL (player reaches sd-player-complete overlay, journal nav from both the player overlay and the completed-session detail page correctly carries seed_title and seed_body URL params with the prefilled discipline-name+date title and bullet-line body from buildSelfDefenseFollowUp). HOWEVER — the 'FOR TOMORROW' card itself is visually broken on BOTH /self-defense/play/[id] AND /self-defense/session/[id] because the components reference field names that do not exist on the FollowUp type returned by buildSelfDefenseFollowUp (src/utils/sd-followup.ts).",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "Self-Defense FOR TOMORROW card (play overlay + session detail)",
+        "issue": "Field-name mismatch with FollowUp type. The card reads followUp.focus, followUp.duration_minutes, followUp.intensity, followUp.discipline_practice — none of which exist. The actual FollowUp shape (sd-followup.ts) is { focus_title, focus_description, duration_min, virtue, motto, journal_title, journal_body }. Live result on screen: focus title row renders empty; meta row shows 'Virtue · Discipline · min ·' (duration empty, no intensity text, trailing dot); 'Discipline practice' heading is shown but the body text under it is blank. Only the virtue value and the italic motto render correctly. Confirmed visually on sd_cd22e760126045 Boxing session after completion (player overlay AND /self-defense/session/sd_cd22e760126045 detail).",
+        "testID": "sd-followup-card (player) / inline 'FOR TOMORROW' block on /self-defense/session/[id]",
+        "priority": "HIGH",
+        "files": [
+          "/app/frontend/app/self-defense/play/[id].tsx lines 475, 482, 484, 487",
+          "/app/frontend/app/self-defense/session/[id].tsx lines 241, 243, 248"
+        ]
+      },
+      {
+        "component": "Self-Defense FOR TOMORROW card on /self-defense/session/[id]",
+        "issue": "Missing data-testid 'sd-followup-card' wrapper (player has it, detail page does not). The detail page has sd-session-journal on the journal button but no testID on the followup card wrapper itself — testing/automation cannot easily target it.",
+        "testID": "sd-followup-card (missing on detail screen)",
+        "priority": "LOW"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "/self-defense/session/[id] (completed) + /self-defense/play/[id] completion overlay",
+        "issues": [
+          "Because of the field-name bug above, the FOR TOMORROW card has dangling separators: 'Virtue · Discipline · min ·' (trailing ' · '). Even after the field-name fix, the meta row's formatting/separator template should be reviewed so empty fields don't leave orphan dots."
+        ]
+      }
+    ],
+    "react_native_issues": []
+  },
+  "verified_flows": {
+    "prayer_hub": {
+      "renders /prayer with rosary card + all 6 chaplet cards (st_michael, immaculate_heart, sacred_heart, st_lucy, st_padre_pio, peter_and_paul)": true,
+      "subtitles and ~min duration meta visible on every card": true,
+      "tap st_michael → /prayer/st_michael → prayer-runner-screen + prayer-step visible (Sign of the Cross intro)": true,
+      "prayer-next advances 'Bead N of 53' progress correctly (st_michael total = 53 steps)": true,
+      "reaching end of st_michael shows prayer-good-work card with 'GOOD WORK FOR TODAY' eyebrow, the Defender good-deed text, and the 'Quis ut Deus?' motto": true,
+      "prayer-journal CTA navigates to /journal?seed_title=Chaplet+of+St.+Michael&seed_body=...&mode=free&date=...": true,
+      "sacred_heart end card shows a DIFFERENT good-work ('Spend ten unhurried minutes today in silent prayer…') — uniqueness per chaplet confirmed": true
+    },
+    "self_defense_silhouette_removal": {
+      "/self-defense hub: no silhouette SVG in DOM, no 'silhouette' substring in body text": true,
+      "/self-defense/session/[id]: no silhouette SVG; loads with Start guided session pressable (sd-start-guided)": true,
+      "/self-defense/play/[id]: MovementBreakdown card (data-testid='movement-breakdown') is visible with eyebrow 'MOVEMENT BREAKDOWN', headline title, 'HOW TO PERFORM' numbered list, 'CUES' bulleted list, and 'AVOID' section": true,
+      "no element with class/file referencing SilhouetteAnimation anywhere": true
+    },
+    "completion_overlay": {
+      "advancing past final step shows sd-player-complete with trophy + 'Session complete'": true,
+      "buttons present: sd-player-journal (primary), sd-player-mark-complete, sd-player-restart": true,
+      "'FOR TOMORROW' eyebrow renders": true,
+      "virtue value renders ('Discipline' for Boxing pool[0])": true,
+      "motto renders in italic quotes": true,
+      "focus title (focus_title), duration_min, and discipline practice (focus_description) DO NOT RENDER — see ui_bugs[0]": false,
+      "tapping sd-player-journal navigates to /journal with seed_title and seed_body URL params correctly populated": true
+    },
+    "completed_session_detail": {
+      "/self-defense/session/{sid} after POST /complete shows 'Completed just now' banner": true,
+      "FOR TOMORROW block + 'Journal this session' (sd-session-journal) CTA visible under banner": true,
+      "Journal CTA navigates to /journal with seed_title='Boxing — <date>' and seed_body containing 'Discipline: Boxing', plan title, focus, duration+intensity, prompts, tomorrow's focus, virtue to grow": true,
+      "Same FOR TOMORROW field-mismatch bug visible here too (focus title blank, duration value blank, practice body blank)": false
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/setup_iter11_auth.py"
+  ],
+  "action_items": [
+    "Fix /app/frontend/app/self-defense/play/[id].tsx lines 475, 482, 484, 487: replace followUp.focus → followUp.focus_title; followUp.duration_minutes → followUp.duration_min; remove followUp.intensity (does not exist on FollowUp) or extend FollowUp shape in /app/frontend/src/utils/sd-followup.ts to include intensity; replace followUp.discipline_practice → followUp.focus_description.",
+    "Apply the same four fixes to /app/frontend/app/self-defense/session/[id].tsx lines 241, 243, 248.",
+    "Decide whether 'intensity' should be derived from session.intensity_actual / session.plan.intensity in sd-followup.ts (recommended — already computed in buildSelfDefenseFollowUp internally as `intensity` for the journal_body, just not exposed on the returned FollowUp). Suggest extending the FollowUp type with an `intensity` field and including it in the returned object so the UI text 'duration + intensity' line populates.",
+    "(Low) Add a data-testid='sd-followup-card' wrapper to the FOR TOMORROW block on /self-defense/session/[id] for parity with the player overlay and easier automation.",
+    "After fix, verify by reloading /self-defense/play/{sid} (advance to completion) AND /self-defense/session/{sid} (already-completed) — both should show focus_title + duration_min + intensity + focus_description fully populated. Re-run /api/self-defense/sessions/{sid}/uncomplete or generate a fresh session to retest the player path."
+  ],
+  "critical_code_review_comments": [
+    "Type mismatch between sd-followup.ts (export type FollowUp = {focus_title, focus_description, duration_min, virtue, motto, journal_title, journal_body}) and the consumers in play/[id].tsx and session/[id].tsx that read focus, duration_minutes, intensity, discipline_practice. TypeScript should be flagging this (followUp.focus etc would be `never`/error under strict mode) — confirm tsconfig strictness; if strict, the build would fail and these references should be unreachable. If non-strict, this is a silent runtime bug.",
+    "prayer/[kind].tsx is well-structured: uses CHAPLETS registry, supports rosary mystery switcher, closes with deterministic Good Work card + Journal CTA. Good test coverage potential — testIDs 'prayer-hub-screen', 'prayer-card-{key}', 'prayer-step', 'prayer-good-work', 'prayer-journal', 'prayer-next', 'prayer-prev', 'prayer-done' all present and working.",
+    "MovementBreakdown.tsx is a clean text-first replacement — no SilhouetteAnimation imports anywhere, confirmed via grep. The component supports rest mode via isRest with testID='movement-breakdown-rest' and the main testID='movement-breakdown'.",
+    "Minor: sd-player play/[id].tsx warns on web with React Native '\"shadow*\" style props are deprecated. Use \"boxShadow\".' — not blocking but worth a sweep.",
+    "Auth: app uses Authorization: Bearer <token> read from local secureStorage key 'sanctus_session_token'. Direct curl with that header works; injecting it via window.localStorage in playwright also works since storage.web.ts wraps localStorage."
+  ],
+  "updated_files": [
+    "/app/backend/tests/setup_iter11_auth.py (new — seeds users + user_sessions for TEST_FE_ITER11_TOKEN / ui_test_user_1)",
+    "/app/test_reports/iteration_11.json"
+  ],
+  "success_rate": {
+    "backend": "n/a — not in scope",
+    "frontend": "~85% — Prayer hub & Self-Defense silhouette removal & Journal seeding fully PASS; FOR TOMORROW card has critical content bug on both player overlay and completed session detail."
+  },
+  "seed_data_creation": "Inserted users + user_sessions row (ui_test_user_1 / TEST_FE_ITER11_TOKEN). Generated a real Claude-backed Boxing self-defense session sd_cd22e760126045 (15-minute, moderate→low intensity, 27 player steps). The session was POSTed /complete during the completion-flow test and is now marked completed in DB.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Re-use TEST_FE_ITER11_TOKEN / ui_test_user_1 by injecting localStorage['sanctus_session_token'] = JSON.stringify('TEST_FE_ITER11_TOKEN') at the app root. Session sd_cd22e760126045 (Boxing) is already marked completed; to retest the player overlay path either POST /api/self-defense/sessions/sd_cd22e760126045/uncomplete or generate a new Boxing session via POST /api/self-defense/generate. Confirm fix by checking that the followup card no longer shows blank focus title, blank duration, missing intensity, or blank practice body.",
+  "rca_of_issue": "Field-name drift between FollowUp type definition in /app/frontend/src/utils/sd-followup.ts and its two consumers. The util returns { focus_title, focus_description, duration_min, virtue, motto, journal_title, journal_body }, but the components read .focus, .duration_minutes, .intensity, .discipline_practice. Result: those four expressions evaluate to undefined and render as empty strings in <Text> nodes, leaving the FOR TOMORROW card visually incomplete (focus title row blank, 'Virtue · Discipline ·  min ·' meta row has empty duration and trailing dots, and the 'Discipline practice' section header is shown above empty body text). Reproduction: 1) Log in as ui_test_user_1, 2) navigate to /self-defense/play/{sid} for any session, 3) tap sd-player-next until sd-player-complete appears; OR 2) navigate to /self-defense/session/{sid} for any completed session. Mitigation: rename the JSX field accesses to match the util's actual keys (focus → focus_title, duration_minutes → duration_min, discipline_practice → focus_description); add an `intensity` field to FollowUp (derived from session.intensity_actual || session.plan.intensity) and return it from buildSelfDefenseFollowUp."
+}

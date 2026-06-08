@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -16,9 +16,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 
-import { api, SDSession } from "@/src/api";
+import { api, SDProgress, SDSession } from "@/src/api";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 import { buildPlayerSteps, findStartIndexFromBlock } from "@/src/utils/sd-player";
+import { buildSelfDefenseFollowUp, FollowUp } from "@/src/utils/sd-followup";
 import { timeAgo } from "@/src/utils/time-ago";
 
 const INTENSITIES: Array<"low" | "medium" | "high"> = ["low", "medium", "high"];
@@ -35,6 +36,7 @@ export default function SDSessionViewerScreen() {
   const [completeNotes, setCompleteNotes] = useState("");
   const [completeIntensity, setCompleteIntensity] = useState<"low" | "medium" | "high" | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [sessionsCompletedBefore, setSessionsCompletedBefore] = useState<number>(0);
 
   const load = useCallback(async () => {
     if (!sessionId) return;
@@ -51,6 +53,47 @@ export default function SDSessionViewerScreen() {
   }, [sessionId, router]);
 
   useFocusEffect(useCallback(() => { void load(); }, [load]));
+
+  // Fetch progress count so the follow-up suggestion rotates per session.
+  useEffect(() => {
+    let cancelled = false;
+    if (!session) return;
+    const run = async () => {
+      try {
+        const detail = await api<{ progress: SDProgress }>(
+          `/self-defense/disciplines/${session.discipline_id}`,
+        );
+        if (cancelled) return;
+        const completed = Math.max(0, detail?.progress?.sessions_completed ?? 0);
+        // If THIS session was already completed it's included in the count,
+        // so subtract 1 to anchor "tomorrow" to this session.
+        const base = session.completed_at ? Math.max(0, completed - 1) : completed;
+        setSessionsCompletedBefore(base);
+      } catch {
+        /* non-fatal */
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [session]);
+
+  const followUp: FollowUp | null = useMemo(() => {
+    if (!session) return null;
+    return buildSelfDefenseFollowUp(session, sessionsCompletedBefore);
+  }, [session, sessionsCompletedBefore]);
+
+  const onJournalSession = useCallback(() => {
+    if (!followUp) return;
+    router.push({
+      pathname: "/journal",
+      params: {
+        seed_title: followUp.journal_title,
+        seed_body: followUp.journal_body,
+      },
+    });
+  }, [followUp, router]);
 
   const onComplete = async () => {
     if (!session) return;
@@ -188,6 +231,33 @@ export default function SDSessionViewerScreen() {
           ) : null}
         </View>
 
+        {/* Follow-up: tomorrow's discipline + journal CTA */}
+        {isCompleted && followUp ? (
+          <View style={styles.followCard} testID="sd-session-followup">
+            <View style={styles.followHeader}>
+              <Ionicons name="ribbon-outline" size={16} color={colors.gold} />
+              <Text style={styles.followEyebrow}>FOR TOMORROW</Text>
+            </View>
+            <Text style={styles.followFocus}>{followUp.focus}</Text>
+            <Text style={styles.followMeta}>
+              Virtue · {followUp.virtue}  ·  {followUp.duration_minutes} min · {followUp.intensity}
+            </Text>
+            <Text style={styles.followMotto}>“{followUp.motto}”</Text>
+            <View style={styles.followPracticeBox}>
+              <Text style={styles.followPracticeLabel}>Discipline practice</Text>
+              <Text style={styles.followPracticeText}>{followUp.discipline_practice}</Text>
+            </View>
+            <Pressable
+              testID="sd-session-journal"
+              onPress={onJournalSession}
+              style={({ pressed }) => [styles.journalBtn, pressed && { opacity: 0.7 }]}
+            >
+              <Ionicons name="create-outline" size={16} color={colors.gold} />
+              <Text style={styles.journalBtnText}>Journal this session</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
         {/* Start guided session CTA */}
         <Pressable
           testID="sd-start-guided"
@@ -197,7 +267,7 @@ export default function SDSessionViewerScreen() {
           <Ionicons name="play-circle" size={22} color={colors.gold} />
           <View style={{ flex: 1 }}>
             <Text style={styles.startBtnTitle}>Start guided session</Text>
-            <Text style={styles.startBtnSub}>Animated coach · voice guide · auto-advance</Text>
+            <Text style={styles.startBtnSub}>Movement breakdown · voice guide · auto-advance</Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color={colors.gold} />
         </Pressable>
@@ -494,6 +564,33 @@ const styles = StyleSheet.create({
   completedBanner: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: spacing.sm, backgroundColor: colors.primary, borderRadius: radius.round, paddingHorizontal: 12, paddingVertical: 6, alignSelf: "flex-start" },
   completedText: { fontFamily: fonts.uiSemi, color: colors.gold, fontSize: 11 },
   completedNotes: { fontFamily: fonts.bodyItalic, fontStyle: "italic", color: colors.textSecondary, fontSize: 13, marginTop: 6 },
+  followCard: {
+    marginBottom: spacing.md,
+    padding: spacing.md,
+    backgroundColor: "rgba(212,175,55,0.08)",
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: "rgba(212,175,55,0.35)",
+  },
+  followHeader: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 },
+  followEyebrow: { fontFamily: fonts.uiSemi, fontSize: 10, letterSpacing: 1.8, color: colors.gold },
+  followFocus: { fontFamily: fonts.headingSemi, fontSize: 16, color: colors.textPrimary, marginTop: 2 },
+  followMeta: { fontFamily: fonts.bodyRegular, fontSize: 12, color: colors.textSecondary, marginTop: 4 },
+  followMotto: { fontFamily: fonts.bodyItalic, fontStyle: "italic", fontSize: 13, color: colors.textPrimary, marginTop: spacing.sm, textAlign: "center" },
+  followPracticeBox: { marginTop: spacing.sm, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: "rgba(212,175,55,0.3)" },
+  followPracticeLabel: { fontFamily: fonts.uiSemi, fontSize: 10, letterSpacing: 1.6, color: colors.gold, marginBottom: 4 },
+  followPracticeText: { fontFamily: fonts.bodyRegular, fontSize: 13, color: colors.textPrimary, lineHeight: 19 },
+  journalBtn: {
+    marginTop: spacing.sm,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: colors.primary,
+    paddingVertical: 10,
+    borderRadius: radius.round,
+  },
+  journalBtnText: { fontFamily: fonts.uiSemi, color: colors.gold, fontSize: 13 },
   reflectionCard: { backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.md, borderWidth: 1, borderColor: colors.borderSoft, ...shadow.card },
   cardHeader: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: spacing.sm },
   cardHeaderText: { fontFamily: fonts.uiSemi, fontSize: 11, letterSpacing: 2, color: colors.gold, flex: 1 },

@@ -17,14 +17,15 @@ import * as Haptics from "expo-haptics";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { api, SDSession } from "@/src/api";
-import SilhouetteAnimation from "@/src/components/SilhouetteAnimation";
+import { api, SDProgress, SDSession } from "@/src/api";
+import MovementBreakdown from "@/src/components/MovementBreakdown";
 import { colors, fonts, radius, spacing } from "@/src/theme";
 import {
   buildPlayerSteps,
   PlayerStep,
   totalDurationSec,
 } from "@/src/utils/sd-player";
+import { buildSelfDefenseFollowUp, FollowUp } from "@/src/utils/sd-followup";
 import {
   loadVoiceEnabled,
   saveVoiceEnabled,
@@ -75,12 +76,16 @@ export default function SelfDefensePlayerScreen() {
   const [completedAll, setCompletedAll] = useState<boolean>(false);
   const [voiceOn, setVoiceOn] = useState<boolean>(true);
   const [loading, setLoading] = useState(true);
+  // Tracks how many sessions for this discipline were completed BEFORE this one.
+  // Used to rotate the follow-up discipline pool deterministically.
+  const [sessionsCompletedBefore, setSessionsCompletedBefore] = useState<number>(0);
+  const [savingCompletion, setSavingCompletion] = useState<boolean>(false);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastSpokenRef = useRef<string>("");
   const lastBeepRef = useRef<number>(-1);
 
-  // Load session + steps
+  // Load session + steps + discipline progress (for follow-up rotation)
   useEffect(() => {
     let cancelled = false;
     const run = async () => {
@@ -99,6 +104,22 @@ export default function SelfDefensePlayerScreen() {
         setIndex(initial);
         setSecondsLeft(built[initial].durationSec);
         setLoading(false);
+        // Fetch how many sessions for this discipline have been completed so we
+        // can rotate the follow-up suggestion. Failure here is non-fatal.
+        try {
+          const detail = await api<{ progress: SDProgress }>(
+            `/self-defense/disciplines/${s.discipline_id}`,
+          );
+          if (!cancelled) {
+            const completed = Math.max(0, detail?.progress?.sessions_completed ?? 0);
+            // If THIS session is already completed, subtract 1 so the "tomorrow"
+            // suggestion stays anchored to this session number.
+            const base = s.completed_at ? Math.max(0, completed - 1) : completed;
+            setSessionsCompletedBefore(base);
+          }
+        } catch {
+          /* non-fatal */
+        }
       } catch (e: any) {
         if (cancelled) return;
         Alert.alert("Couldn't load", e?.message || "Please try again.");
@@ -220,18 +241,51 @@ export default function SelfDefensePlayerScreen() {
     });
   }, [running, steps, index]);
 
-  const onMarkComplete = useCallback(async () => {
-    if (!session) return;
+  const followUp: FollowUp | null = useMemo(() => {
+    if (!session) return null;
+    return buildSelfDefenseFollowUp(session, sessionsCompletedBefore);
+  }, [session, sessionsCompletedBefore]);
+
+  const ensureCompletionSaved = useCallback(async () => {
+    if (!session) return false;
+    if (session.completed_at) return true;
     try {
+      setSavingCompletion(true);
       await api(`/self-defense/sessions/${session.session_id}/complete`, {
         method: "POST",
         body: { notes: "Completed via guided player", intensity_actual: null },
       });
-      router.replace({ pathname: "/self-defense/session/[id]", params: { id: session.session_id } });
+      setSession({ ...session, completed_at: new Date().toISOString() });
+      return true;
     } catch (e: any) {
       Alert.alert("Couldn't save", e?.message || "Please try again.");
+      return false;
+    } finally {
+      setSavingCompletion(false);
     }
-  }, [session, router]);
+  }, [session]);
+
+  const onMarkComplete = useCallback(async () => {
+    if (!session) return;
+    const ok = await ensureCompletionSaved();
+    if (ok) {
+      router.replace({ pathname: "/self-defense/session/[id]", params: { id: session.session_id } });
+    }
+  }, [session, ensureCompletionSaved, router]);
+
+  const onSaveAndJournal = useCallback(async () => {
+    if (!session || !followUp) return;
+    const ok = await ensureCompletionSaved();
+    if (!ok) return;
+    stopSpeaking();
+    router.push({
+      pathname: "/journal",
+      params: {
+        seed_title: followUp.journal_title,
+        seed_body: followUp.journal_body,
+      },
+    });
+  }, [session, followUp, ensureCompletionSaved, router]);
 
   const handleExit = useCallback(() => {
     if (completedAll || !running) {
@@ -321,9 +375,13 @@ export default function SelfDefensePlayerScreen() {
           <Text style={styles.sectionText}>{step.section}</Text>
         </View>
 
-        {/* Animated silhouette */}
-        <View style={styles.silhouetteWrap}>
-          <SilhouetteAnimation mode={step.motion} paused={!running} size={260} />
+        {/* Movement breakdown (replaces silhouette) */}
+        <View style={styles.breakdownWrap}>
+          <MovementBreakdown
+            title={step.title}
+            motion={step.motion}
+            isRest={step.isRest}
+          />
         </View>
 
         {/* Title + detail */}
@@ -398,38 +456,82 @@ export default function SelfDefensePlayerScreen() {
       {/* Completion overlay */}
       {completedAll ? (
         <View style={styles.completeOverlay} pointerEvents="box-none">
-          <View style={styles.completeCard} testID="sd-player-complete">
-            <Ionicons name="trophy-outline" size={36} color={colors.gold} />
-            <Text style={styles.completeTitle}>Session complete</Text>
-            <Text style={styles.completeSub}>
-              Well done. The body has been ordered toward virtue.
-            </Text>
-            <Pressable
-              testID="sd-player-mark-complete"
-              onPress={onMarkComplete}
-              style={({ pressed }) => [styles.completePrimary, pressed && styles.pressed]}
-            >
-              <Ionicons name="checkmark-circle" size={16} color={colors.gold} />
-              <Text style={styles.completePrimaryText}>Mark complete & save</Text>
-            </Pressable>
-            <Pressable
-              testID="sd-player-restart"
-              onPress={() => {
-                setCompletedAll(false);
-                goToIndex(0, true);
-              }}
-              style={({ pressed }) => [styles.completeSecondary, pressed && styles.pressed]}
-            >
-              <Text style={styles.completeSecondaryText}>Restart</Text>
-            </Pressable>
-            <Pressable
-              testID="sd-player-back-to-session"
-              onPress={() => router.back()}
-              style={({ pressed }) => [styles.completeSecondary, pressed && styles.pressed]}
-            >
-              <Text style={styles.completeSecondaryText}>Back to session</Text>
-            </Pressable>
-          </View>
+          <ScrollView
+            style={styles.completeScroll}
+            contentContainerStyle={styles.completeScrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.completeCard} testID="sd-player-complete">
+              <Ionicons name="trophy-outline" size={36} color={colors.gold} />
+              <Text style={styles.completeTitle}>Session complete</Text>
+              <Text style={styles.completeSub}>
+                Well done. The body has been ordered toward virtue.
+              </Text>
+
+              {/* Tomorrow's discipline */}
+              {followUp ? (
+                <View style={styles.followCard} testID="sd-followup-card">
+                  <Text style={styles.followEyebrow}>FOR TOMORROW</Text>
+                  <Text style={styles.followFocus}>{followUp.focus}</Text>
+                  <View style={styles.followRow}>
+                    <Ionicons name="ribbon-outline" size={14} color={colors.gold} />
+                    <Text style={styles.followMeta}>Virtue · {followUp.virtue}</Text>
+                  </View>
+                  <View style={styles.followRow}>
+                    <Ionicons name="time-outline" size={14} color={colors.gold} />
+                    <Text style={styles.followMeta}>{followUp.duration_minutes} min · {followUp.intensity}</Text>
+                  </View>
+                  <Text style={styles.followMotto}>“{followUp.motto}”</Text>
+                  <View style={styles.followPracticeBox}>
+                    <Text style={styles.followPracticeLabel}>Discipline practice</Text>
+                    <Text style={styles.followPracticeText}>{followUp.discipline_practice}</Text>
+                  </View>
+                </View>
+              ) : null}
+
+              <Pressable
+                testID="sd-player-journal"
+                disabled={savingCompletion}
+                onPress={onSaveAndJournal}
+                style={({ pressed }) => [
+                  styles.completePrimary,
+                  pressed && styles.pressed,
+                  savingCompletion && styles.disabled,
+                ]}
+              >
+                <Ionicons name="create-outline" size={16} color={colors.gold} />
+                <Text style={styles.completePrimaryText}>
+                  {savingCompletion ? "Saving…" : "Journal this session"}
+                </Text>
+              </Pressable>
+
+              <Pressable
+                testID="sd-player-mark-complete"
+                disabled={savingCompletion}
+                onPress={onMarkComplete}
+                style={({ pressed }) => [
+                  styles.completeSecondary,
+                  pressed && styles.pressed,
+                  savingCompletion && styles.disabled,
+                ]}
+              >
+                <Text style={styles.completeSecondaryText}>
+                  {session?.completed_at ? "Back to session" : "Mark complete & save"}
+                </Text>
+              </Pressable>
+
+              <Pressable
+                testID="sd-player-restart"
+                onPress={() => {
+                  setCompletedAll(false);
+                  goToIndex(0, true);
+                }}
+                style={({ pressed }) => [styles.completeSecondary, pressed && styles.pressed]}
+              >
+                <Text style={styles.completeSecondaryText}>Restart</Text>
+              </Pressable>
+            </View>
+          </ScrollView>
         </View>
       ) : null}
     </SafeAreaView>
@@ -482,13 +584,8 @@ const styles = StyleSheet.create({
     letterSpacing: 1.6,
   },
   sectionText: { fontFamily: fonts.uiMedium, fontSize: 11, color: colors.textSecondary },
-  silhouetteWrap: {
-    backgroundColor: "rgba(212,175,55,0.06)",
-    borderRadius: radius.lg,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSoft,
+  breakdownWrap: {
+    alignSelf: "stretch",
     marginVertical: spacing.sm,
   },
   stepTitle: {
@@ -647,5 +744,75 @@ const styles = StyleSheet.create({
     fontFamily: fonts.uiMedium,
     fontSize: 13,
     color: colors.textSecondary,
+  },
+  completeScroll: {
+    width: "100%",
+    maxWidth: 460,
+  },
+  completeScrollContent: {
+    alignItems: "center",
+    paddingVertical: spacing.lg,
+  },
+  disabled: { opacity: 0.5 },
+  followCard: {
+    alignSelf: "stretch",
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
+    padding: spacing.md,
+    backgroundColor: "rgba(212,175,55,0.08)",
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: "rgba(212,175,55,0.35)",
+  },
+  followEyebrow: {
+    fontFamily: fonts.uiSemi,
+    fontSize: 10,
+    letterSpacing: 1.8,
+    color: colors.gold,
+    marginBottom: 4,
+  },
+  followFocus: {
+    fontFamily: fonts.headingSemi,
+    fontSize: 16,
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
+  },
+  followRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 4,
+  },
+  followMeta: {
+    fontFamily: fonts.bodyRegular,
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  followMotto: {
+    fontFamily: fonts.bodyItalic,
+    fontStyle: "italic",
+    fontSize: 13,
+    color: colors.textPrimary,
+    textAlign: "center",
+    marginTop: spacing.sm,
+  },
+  followPracticeBox: {
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(212,175,55,0.3)",
+  },
+  followPracticeLabel: {
+    fontFamily: fonts.uiSemi,
+    fontSize: 10,
+    letterSpacing: 1.6,
+    color: colors.gold,
+    marginBottom: 4,
+  },
+  followPracticeText: {
+    fontFamily: fonts.bodyRegular,
+    fontSize: 13,
+    color: colors.textPrimary,
+    lineHeight: 19,
   },
 });

@@ -220,11 +220,12 @@ export function buildSelfDefenseFollowUp(
   });
 
   const journal_title = `${session.discipline_name} — ${today}`;
+  const intensity = session.intensity_actual || session.plan?.intensity || "moderate";
   const journal_body = [
     `Discipline: ${niceDiscipline}`,
     `Session: ${session.plan?.title || ""}`,
     `Focus: ${session.plan?.technique_focus || ""}`,
-    `Duration: ${session.duration_minutes} min · Intensity: ${session.intensity}`,
+    `Duration: ${session.duration_minutes} min · Intensity: ${intensity}`,
     "",
     "How did the body feel?",
     "",

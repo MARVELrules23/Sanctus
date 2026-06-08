@@ -18,6 +18,7 @@ import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-rou
 
 import { api, SDSession } from "@/src/api";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
+import { buildPlayerSteps, findStartIndexFromBlock } from "@/src/utils/sd-player";
 import { timeAgo } from "@/src/utils/time-ago";
 
 const INTENSITIES: Array<"low" | "medium" | "high"> = ["low", "medium", "high"];
@@ -118,6 +119,23 @@ export default function SDSessionViewerScreen() {
     ]);
   };
 
+  const openPlayer = useCallback(
+    (block?: "warmup" | "drill" | "technique" | "live" | "cooldown", itemIndex?: number) => {
+      if (!session) return;
+      let start = 0;
+      if (block) {
+        const steps = buildPlayerSteps(session);
+        const idx = findStartIndexFromBlock(steps, block, itemIndex);
+        if (idx >= 0) start = idx;
+      }
+      router.push({
+        pathname: "/self-defense/play/[id]",
+        params: { id: session.session_id, start: String(start) },
+      });
+    },
+    [session, router],
+  );
+
   if (loading || !session) {
     return (
       <SafeAreaView style={styles.safe}>
@@ -166,9 +184,23 @@ export default function SDSessionViewerScreen() {
             </View>
           ) : null}
           {isCompleted && session.completion_notes ? (
-            <Text style={styles.completedNotes}>"{session.completion_notes}"</Text>
+            <Text style={styles.completedNotes}>&ldquo;{session.completion_notes}&rdquo;</Text>
           ) : null}
         </View>
+
+        {/* Start guided session CTA */}
+        <Pressable
+          testID="sd-start-guided"
+          onPress={() => openPlayer()}
+          style={({ pressed }) => [styles.startBtn, pressed && { opacity: 0.7 }]}
+        >
+          <Ionicons name="play-circle" size={22} color={colors.gold} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.startBtnTitle}>Start guided session</Text>
+            <Text style={styles.startBtnSub}>Animated coach · voice guide · auto-advance</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={colors.gold} />
+        </Pressable>
 
         {/* Patron reflection */}
         {patron?.name && (showReflection || !plan.patron_reflection) && plan.patron_reflection ? (
@@ -196,7 +228,8 @@ export default function SDSessionViewerScreen() {
             {plan.warmup.map((w, i) => (
               <Row key={i} index={i + 1} title={w.name}
                 meta={w.duration_seconds ? `${w.duration_seconds}s` : undefined}
-                notes={w.notes} />
+                notes={w.notes}
+                onPress={() => openPlayer("warmup", i)} />
             ))}
           </Block>
         ) : null}
@@ -207,52 +240,69 @@ export default function SDSessionViewerScreen() {
             {plan.drills.map((d, i) => (
               <Row key={i} index={i + 1} title={d.name}
                 meta={d.sets} notes={d.notes}
-                badge={d.solo_safe === false ? "needs partner" : undefined} />
+                badge={d.solo_safe === false ? "needs partner" : undefined}
+                onPress={() => openPlayer("drill", i)} />
             ))}
           </Block>
         ) : null}
 
         {/* Technique focus */}
         {plan.technique_block ? (
-          <Block title="Technique focus" icon="aperture-outline">
-            <Text style={styles.techniqueName}>{plan.technique_block.name}</Text>
-            {plan.technique_block.key_points && plan.technique_block.key_points.length > 0 ? (
-              <>
-                <Text style={styles.subLabel}>Key points</Text>
-                {plan.technique_block.key_points.map((p, i) => (
-                  <Text key={i} style={styles.bullet}>· {p}</Text>
-                ))}
-              </>
-            ) : null}
-            {plan.technique_block.common_errors && plan.technique_block.common_errors.length > 0 ? (
-              <>
-                <Text style={[styles.subLabel, { color: colors.liturgical.red }]}>Common errors</Text>
-                {plan.technique_block.common_errors.map((p, i) => (
-                  <Text key={i} style={styles.bulletErr}>✗ {p}</Text>
-                ))}
-              </>
-            ) : null}
-            {plan.technique_block.progression_hint ? (
-              <View style={styles.hintBox}>
-                <Ionicons name="arrow-forward" size={12} color={colors.primary} />
-                <Text style={styles.hintText}>{plan.technique_block.progression_hint}</Text>
+          <Pressable
+            testID="sd-technique-block"
+            onPress={() => openPlayer("technique")}
+            style={({ pressed }) => [pressed && { opacity: 0.85 }]}
+          >
+            <Block title="Technique focus" icon="aperture-outline">
+              <View style={styles.techniqueHeaderRow}>
+                <Text style={styles.techniqueName}>{plan.technique_block.name}</Text>
+                <Ionicons name="play-circle-outline" size={20} color={colors.gold} />
               </View>
-            ) : null}
-          </Block>
+              {plan.technique_block.key_points && plan.technique_block.key_points.length > 0 ? (
+                <>
+                  <Text style={styles.subLabel}>Key points</Text>
+                  {plan.technique_block.key_points.map((p, i) => (
+                    <Text key={i} style={styles.bullet}>· {p}</Text>
+                  ))}
+                </>
+              ) : null}
+              {plan.technique_block.common_errors && plan.technique_block.common_errors.length > 0 ? (
+                <>
+                  <Text style={[styles.subLabel, { color: colors.liturgical.red }]}>Common errors</Text>
+                  {plan.technique_block.common_errors.map((p, i) => (
+                    <Text key={i} style={styles.bulletErr}>✗ {p}</Text>
+                  ))}
+                </>
+              ) : null}
+              {plan.technique_block.progression_hint ? (
+                <View style={styles.hintBox}>
+                  <Ionicons name="arrow-forward" size={12} color={colors.primary} />
+                  <Text style={styles.hintText}>{plan.technique_block.progression_hint}</Text>
+                </View>
+              ) : null}
+            </Block>
+          </Pressable>
         ) : null}
 
         {/* Live application */}
         {plan.live_application && plan.live_application.length > 0 ? (
           <Block title="Live application" icon="flash-outline">
             {plan.live_application.map((l, i) => (
-              <View key={i} style={styles.liveRow}>
-                <Text style={styles.liveTitle}>
-                  {l.name}
-                  {l.requires_partner ? " " : ""}
-                  {l.requires_partner ? <Text style={styles.partnerTag}>(partner)</Text> : null}
-                </Text>
+              <Pressable
+                key={i}
+                onPress={() => openPlayer("live", i)}
+                style={({ pressed }) => [styles.liveRow, pressed && { opacity: 0.7 }]}
+              >
+                <View style={styles.liveTitleRow}>
+                  <Text style={styles.liveTitle}>
+                    {l.name}
+                    {l.requires_partner ? " " : ""}
+                    {l.requires_partner ? <Text style={styles.partnerTag}>(partner)</Text> : null}
+                  </Text>
+                  <Ionicons name="play-circle-outline" size={18} color={colors.gold} />
+                </View>
                 <Text style={styles.liveDesc}>{l.description}</Text>
-              </View>
+              </Pressable>
             ))}
           </Block>
         ) : null}
@@ -262,7 +312,8 @@ export default function SDSessionViewerScreen() {
           <Block title="Cool-down" icon="moon-outline">
             {plan.cooldown.map((c, i) => (
               <Row key={i} index={i + 1} title={c.name}
-                meta={c.duration_seconds ? `${c.duration_seconds}s` : undefined} />
+                meta={c.duration_seconds ? `${c.duration_seconds}s` : undefined}
+                onPress={() => openPlayer("cooldown", i)} />
             ))}
           </Block>
         ) : null}
@@ -387,10 +438,10 @@ function Block({ title, icon, children }: { title: string; icon: any; children: 
   );
 }
 
-function Row({ index, title, meta, notes, badge }:
-  { index: number; title: string; meta?: string; notes?: string; badge?: string }) {
-  return (
-    <View style={styles.itemRow}>
+function Row({ index, title, meta, notes, badge, onPress }:
+  { index: number; title: string; meta?: string; notes?: string; badge?: string; onPress?: () => void }) {
+  const inner = (
+    <>
       <View style={styles.itemIndex}>
         <Text style={styles.itemIndexText}>{index}</Text>
       </View>
@@ -404,8 +455,20 @@ function Row({ index, title, meta, notes, badge }:
           </View>
         ) : null}
       </View>
-    </View>
+      {onPress ? <Ionicons name="play-circle-outline" size={20} color={colors.gold} /> : null}
+    </>
   );
+  if (onPress) {
+    return (
+      <Pressable
+        onPress={onPress}
+        style={({ pressed }) => [styles.itemRow, styles.itemRowPressable, pressed && { opacity: 0.7 }]}
+      >
+        {inner}
+      </Pressable>
+    );
+  }
+  return <View style={styles.itemRow}>{inner}</View>;
 }
 
 const styles = StyleSheet.create({
@@ -453,8 +516,22 @@ const styles = StyleSheet.create({
   bulletErr: { fontFamily: fonts.bodyRegular, fontSize: 13, color: colors.liturgical.red, lineHeight: 20, marginLeft: 4 },
   hintBox: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: colors.background, borderRadius: radius.sm, padding: spacing.sm, marginTop: spacing.sm },
   hintText: { fontFamily: fonts.uiSemi, fontSize: 12, color: colors.primary, flex: 1 },
-  liveRow: { marginBottom: spacing.sm },
-  liveTitle: { fontFamily: fonts.uiSemi, fontSize: 14, color: colors.textPrimary },
+  liveRow: { marginBottom: spacing.sm, paddingVertical: 4 },
+  liveTitleRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  liveTitle: { fontFamily: fonts.uiSemi, fontSize: 14, color: colors.textPrimary, flex: 1 },
+  techniqueHeaderRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  startBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    borderRadius: radius.lg,
+    marginBottom: spacing.md,
+  },
+  startBtnTitle: { fontFamily: fonts.uiSemi, color: colors.gold, fontSize: 14 },
+  startBtnSub: { fontFamily: fonts.bodyRegular, color: "rgba(212,175,55,0.75)", fontSize: 11, marginTop: 2 },
   partnerTag: { fontFamily: fonts.uiMedium, fontSize: 11, color: colors.textMuted },
   liveDesc: { fontFamily: fonts.bodyRegular, fontSize: 13, color: colors.textSecondary, lineHeight: 19, marginTop: 2 },
   coachCard: { flexDirection: "row", alignItems: "flex-start", gap: 8, backgroundColor: colors.primary, borderRadius: radius.md, padding: spacing.md, marginTop: spacing.sm },

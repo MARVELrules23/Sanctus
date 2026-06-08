@@ -173,7 +173,7 @@ export default function DisciplineDetailScreen() {
               />
             </View>
           ) : (
-            <Text style={styles.progressMax}>You're at the highest tier — keep refining.</Text>
+            <Text style={styles.progressMax}>You&apos;re at the highest tier — keep refining.</Text>
           )}
           {nextThreshold ? (
             <Text style={styles.progressHint}>

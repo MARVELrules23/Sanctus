@@ -165,6 +165,9 @@ async def ensure_indexes():
     await db.self_defense_sessions.create_index([("user_id", 1), ("generated_at", -1)])
     await db.self_defense_progress.create_index([("user_id", 1), ("discipline_id", 1)], unique=True)
     await db.self_defense_acks.create_index("user_id", unique=True)
+    # Daily-practice indexes
+    await db.daily_practices.create_index([("user_id", 1), ("date", 1)], unique=True)
+    await db.daily_practices.create_index([("user_id", 1), ("date", -1)])
 
 
 async def get_current_user(authorization: Optional[str] = Header(None)) -> User:
@@ -2084,6 +2087,10 @@ def _iso(value: Any) -> Optional[str]:
         return value.isoformat()
     return None
 
+
+from daily_practices import build_router as build_daily_practice_router
+
+api.include_router(build_daily_practice_router(db, get_current_user))
 
 app.include_router(api)
 

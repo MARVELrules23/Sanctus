@@ -1,0 +1,73 @@
+{
+  "summary": "Backend + Frontend testing of new Daily Practice Recommendations feature. 13/13 backend pytest cases PASS (shape, idempotency, 30-day uniqueness rotation, complete with note, post-complete idempotency, undo, history sort+total_pool=85, 401 auth on all 4 endpoints, bad-limit 400). Frontend: card renders correctly between Mass Readings and Journal preview on the (tabs) home; all interactions (expand/collapse, add note, mark complete with note shown in done state, undo back to incomplete, Journal CTA navigating to /journal with seed_title+seed_body URL params and the editor prefilling title='Daily practice — <title>' and body containing 'Reflection:' footer) all PASS. NOTE: had to restart supervisor expo to rebuild the static web export (the pre-existing static bundle at /app/frontend/dist did not include the new DailyPracticeCard component until rebuilt).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "verified_flows": {
+    "backend": {
+      "GET /api/daily-practice?date=...": "200 with full shape {id,category,title,body,why,virtue,intensity,date,completed_at:null,note:null}",
+      "idempotency_same_date": "Same id returned on repeat GET",
+      "30_day_rotation_uniqueness": "30 distinct practice ids across 2026-06-08 → 2026-07-07 for one user (no repeats)",
+      "POST /api/daily-practice/complete": "completed_at populated, note='offered for my brother' persisted",
+      "GET after complete": "Still same id, completed_at and note remain populated",
+      "DELETE /api/daily-practice/complete": "completed_at cleared, note cleared, GET confirms",
+      "GET /api/daily-practice/history?limit=30": "Returns {items:[...], total_pool:85}, sorted newest-date first",
+      "auth_401_on_all_4_endpoints": "GET, POST/complete, DELETE/complete, GET/history all return 401 without Authorization",
+      "GET /api/daily-practice/history?limit=999": "400 (limit > 365)",
+      "GET /api/daily-practice/history?limit=0": "400 (limit < 1)"
+    },
+    "frontend": {
+      "card_visible_in_correct_position": true,
+      "readings_y_276_dp_y_journal_order": "70 < 276 < 535 → readings < daily-practice < journal-preview",
+      "eyebrow_TODAYS_PRACTICE": true,
+      "category_badge_MORTIFICATION": true,
+      "title": "No phone after dinner",
+      "virtue_meta": "Detachment",
+      "intensity_meta": "Light",
+      "expand_reveals_WHY_block": true,
+      "collapse_hides_WHY_block": true,
+      "add_note_reveals_TextInput": true,
+      "mark_complete_shows_done_state_with_green_check_and_time_and_note_quote": true,
+      "undo_button_visible_in_done_state": true,
+      "journal_CTA_navigates_to_journal_with_seed_params": true,
+      "journal_editor_title_prefilled": "Daily practice — No phone after dinner",
+      "journal_editor_body_includes_practice_title_virtue_what_it_asks_why_it_matters_and_Reflection_footer": true,
+      "undo_reverts_to_incomplete_state": true
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_daily_practice.py",
+    "/app/test_reports/pytest/iteration_14_daily_practice.xml"
+  ],
+  "action_items": [
+    "(Optional) The supervisor recipe builds a static export at expo startup (`yarn expo export -p web ... && npx serve`). After any frontend code change, `sudo supervisorctl restart expo` is required for the change to land in the served bundle. This is a pre-existing setup concern, not a regression of this feature.",
+    "(Nit, non-blocking) DailyPracticeCard.tsx line 207-208: testID='daily-practice-done' wraps the entire completed block, so its inner_text contains both 'Completed at ...' and the journal/undo button labels. Consider scoping testID='daily-practice-done' to just the green-check row + note quote for cleaner assertions, with a separate testID for the actions row. Functionally fine as-is."
+  ],
+  "critical_code_review_comments": [
+    "daily_practices.py (957 lines) is borderline — under the 700-line rule, but ~780 of that is the static PRACTICES literal. If it grows further, consider extracting the pool to a JSON/YAML asset.",
+    "Pool currently contains 85 practices (request says ~85 — matches). 30-day rotation test trivially satisfied since pool=85 >> 30; the recent-90-days exclusion logic also correctly prevents repeats within 90 days as confirmed by the test.",
+    "Race-condition handling on insert (try/except with re-read existing) is sound. Unique index (user_id, date) created in start_db (server.py:169).",
+    "Auth dependency Depends(get_current_user) is wired via build_router factory; 401s confirmed on all 4 routes.",
+    "Frontend component DailyPracticeCard.tsx (~496 lines, ~290 logical + styles) is clean, single-responsibility, uses Pressable+testID throughout. No deprecated React Native APIs."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_daily_practice.py (new)",
+    "/app/test_reports/pytest/iteration_14_daily_practice.xml (new)",
+    "/app/test_reports/iteration_14.json (new)"
+  ],
+  "success_rate": {
+    "backend": "100% (13/13 pytest)",
+    "frontend": "100% — every requested checkpoint (card render, position, expand/collapse, add-note, complete with note, done state, undo, journal CTA, prefilled journal editor) passes"
+  },
+  "seed_data_creation": "Backend tests create their own throwaway user (test_dp_user_<uuid>) per module and clean up daily_practices, user_sessions, users on teardown. Frontend test reused ui_test_user_1 / TEST_FE_ITER11_TOKEN via setup_iter11_auth.py.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Daily Practice feature is fully working backend+frontend. Pool size is 85 (PRACTICES list in /app/backend/daily_practices.py). Critical to restart expo (`sudo supervisorctl restart expo`) after frontend changes since it serves a static export. The 30-day uniqueness assertion is the headline test (TestDailyPracticeRotation::test_30_day_unique_rotation in test_daily_practice.py)."
+}

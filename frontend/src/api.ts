@@ -387,3 +387,23 @@ export type SDSession = {
   source: "generated" | "redo";
   parent_session_id: string | null;
 };
+
+// ---- Daily Practice ----
+export type DailyPractice = {
+  id: string;
+  category: string;
+  title: string;
+  body: string;
+  why: string;
+  virtue: string;
+  intensity: "easy" | "moderate" | "hard";
+  date: string | null;
+  completed_at: string | null;
+  note: string | null;
+};
+
+export type DailyPracticeHistory = {
+  items: DailyPractice[];
+  total_pool: number;
+};
+

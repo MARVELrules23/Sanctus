@@ -2,8 +2,9 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 
-import { api, LiturgicalDay } from "@/src/api";
+import { api, JournalEntry, LiturgicalDay } from "@/src/api";
 import LiturgicalBadge from "@/src/components/LiturgicalBadge";
 import { colorForLiturgical, colors, fonts, radius, shadow, spacing } from "@/src/theme";
 import { monthName, todayISO } from "@/src/date-utils";
@@ -11,24 +12,58 @@ import { monthName, todayISO } from "@/src/date-utils";
 const DOW_HEAD = ["S", "M", "T", "W", "T", "F", "S"];
 
 export default function CalendarScreen() {
+  const router = useRouter();
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [days, setDays] = useState<LiturgicalDay[]>([]);
   const [selected, setSelected] = useState<string>(todayISO());
   const [loading, setLoading] = useState(true);
+  const [entries, setEntries] = useState<JournalEntry[]>([]);
+  const [entriesLoading, setEntriesLoading] = useState(false);
+  const [entryDates, setEntryDates] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     const res = await api<{ days: LiturgicalDay[] }>(`/liturgical/month?year=${year}&month=${month}`);
     setDays(res.days);
   }, [year, month]);
 
+  // Load journal entries from a window around the visible month so we can show dots.
+  const loadEntryDates = useCallback(async () => {
+    try {
+      const res = await api<{ items: JournalEntry[] }>(`/journal?limit=200`);
+      const inMonth = (res.items || [])
+        .map((j) => j.date)
+        .filter((d) => {
+          const [y, m] = d.split("-");
+          return Number(y) === year && Number(m) === month;
+        });
+      setEntryDates(new Set(inMonth));
+    } catch (e) {
+      console.warn("entries window failed", e);
+    }
+  }, [year, month]);
+
+  // Load entries for the selected day specifically.
+  const loadEntriesFor = useCallback(async (d: string) => {
+    setEntriesLoading(true);
+    try {
+      const res = await api<{ items: JournalEntry[] }>(`/journal?date=${d}`);
+      setEntries(res.items || []);
+    } catch (e) {
+      console.warn("entries failed", e);
+      setEntries([]);
+    } finally {
+      setEntriesLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     let cancel = false;
     setLoading(true);
     (async () => {
       try {
-        await load();
+        await Promise.all([load(), loadEntryDates()]);
       } finally {
         if (!cancel) setLoading(false);
       }
@@ -36,7 +71,11 @@ export default function CalendarScreen() {
     return () => {
       cancel = true;
     };
-  }, [load]);
+  }, [load, loadEntryDates]);
+
+  useEffect(() => {
+    void loadEntriesFor(selected);
+  }, [selected, loadEntriesFor]);
 
   const grid = useMemo(() => {
     if (!days.length) return [];
@@ -63,6 +102,11 @@ export default function CalendarScreen() {
       setMonth(1);
     } else setMonth(month + 1);
   };
+
+  const newEntry = () =>
+    router.push({ pathname: "/journal", params: { date: selected } });
+  const openEntry = (id: string) =>
+    router.push({ pathname: "/journal", params: { entry: id } });
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]} testID="calendar-screen">
@@ -114,6 +158,9 @@ export default function CalendarScreen() {
                     {cell.feast && cell.rank === "solemnity" && (
                       <Ionicons name="star" size={8} color={colors.gold} style={styles.cellStar} />
                     )}
+                    {entryDates.has(cell.date) && (
+                      <View style={styles.entryDot} testID={`entry-dot-${cell.date}`} />
+                    )}
                   </Pressable>
                 );
               })}
@@ -164,6 +211,58 @@ export default function CalendarScreen() {
                 )}
               </View>
             ) : null}
+
+            {/* Journal entries for selected day */}
+            <View style={styles.journalSection} testID="cal-journal-section">
+              <View style={styles.journalHead}>
+                <Text style={styles.journalTitle}>Journal &amp; notes</Text>
+                <Pressable
+                  testID="cal-add-note"
+                  onPress={newEntry}
+                  style={({ pressed }) => [styles.addBtn, pressed && styles.pressed]}
+                >
+                  <Ionicons name="add" size={16} color={colors.gold} />
+                  <Text style={styles.addBtnText}>Add note</Text>
+                </Pressable>
+              </View>
+              {entriesLoading ? (
+                <ActivityIndicator color={colors.gold} style={{ marginTop: spacing.sm }} />
+              ) : entries.length === 0 ? (
+                <Text style={styles.journalEmpty}>
+                  No notes yet for this day. Tap Add note to write a reflection.
+                </Text>
+              ) : (
+                entries.map((e) => (
+                  <Pressable
+                    key={e.entry_id}
+                    testID={`cal-entry-${e.entry_id}`}
+                    onPress={() => openEntry(e.entry_id)}
+                    style={({ pressed }) => [styles.entryRow, pressed && styles.pressed]}
+                  >
+                    <Ionicons
+                      name={
+                        e.kind === "examen"
+                          ? "sunny-outline"
+                          : e.kind === "examination"
+                            ? "leaf-outline"
+                            : "create-outline"
+                      }
+                      size={18}
+                      color={colors.gold}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.entryTitle} numberOfLines={1}>
+                        {e.title || "Untitled entry"}
+                      </Text>
+                      <Text style={styles.entryPreview} numberOfLines={2}>
+                        {e.body}
+                      </Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                  </Pressable>
+                ))
+              )}
+            </View>
             <View style={{ height: spacing.xxl }} />
           </>
         )}
@@ -244,4 +343,60 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginTop: spacing.md,
   },
+  entryDot: {
+    position: "absolute",
+    bottom: 4,
+    right: 6,
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: colors.gold,
+  },
+  journalSection: {
+    marginTop: spacing.lg,
+    paddingTop: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderSoft,
+  },
+  journalHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: spacing.sm,
+  },
+  journalTitle: { fontFamily: fonts.headingSemi, fontSize: 18, color: colors.textPrimary },
+  addBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: radius.round,
+    backgroundColor: colors.primary,
+  },
+  addBtnText: { fontFamily: fonts.uiSemi, color: colors.gold, fontSize: 12 },
+  journalEmpty: {
+    fontFamily: fonts.bodyItalic,
+    fontStyle: "italic",
+    color: colors.textSecondary,
+    fontSize: 13,
+    marginTop: spacing.sm,
+  },
+  entryRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSoft,
+  },
+  entryTitle: { fontFamily: fonts.headingSemi, fontSize: 15, color: colors.textPrimary },
+  entryPreview: {
+    fontFamily: fonts.bodyRegular,
+    fontSize: 12,
+    color: colors.textMuted,
+    lineHeight: 18,
+    marginTop: 2,
+  },
+  pressed: { opacity: 0.7 },
 });

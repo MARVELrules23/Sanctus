@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="3" skipped="0" tests="35" time="9.760" timestamp="2026-06-08T04:51:36.845867+00:00" hostname="agent-env-fc5799df-9b8b-46e1-9046-8eb2561003f0"><testcase classname="backend.tests.test_new_features.TestWellnessProfile" name="test_get_blank_default_profile" time="0.010" /><testcase classname="backend.tests.test_new_features.TestWellnessProfile" name="test_put_updates_profile" time="0.088" /><testcase classname="backend.tests.test_new_features.TestWellnessProfile" name="test_put_rejects_bad_goal" time="0.043" /><testcase classname="backend.tests.test_new_features.TestWellnessProfile" name="test_put_rejects_bad_activity" time="0.043" /><testcase classname="backend.tests.test_new_features.TestWellnessProfile" name="test_put_rejects_bad_date" time="0.043" /><testcase classname="backend.tests.test_new_features.TestWellnessProfile" name="test_unauth" time="0.045" /><testcase classname="backend.tests.test_new_features.TestWeightLog" name="test_create_log_and_list_desc" time="0.009"><failure message="AssertionError: Internal Server Error&#10;assert 500 == 200&#10; +  where 500 = &lt;Response [500]&gt;.status_code">backend/tests/test_new_features.py:142: in test_create_log_and_list_desc
+    assert r.status_code == 200, r.text
+E   AssertionError: Internal Server Error
+E   assert 500 == 200
+E    +  where 500 = &lt;Response [500]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_new_features.TestWeightLog" name="test_reject_bad_weight" time="0.049" /><testcase classname="backend.tests.test_new_features.TestWeightLog" name="test_reject_bad_date" time="0.043" /><testcase classname="backend.tests.test_new_features.TestWeightLog" name="test_delete_log" time="0.005"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:1116: in json
+    return complexjson.loads(self.text, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/__init__.py:346: in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:337: in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:355: in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+E   json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+During handling of the above exception, another exception occurred:
+backend/tests/test_new_features.py:170: in test_delete_log
+    log_id = r.json()["log_id"]
+             ^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/models.py:1120: in json
+    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
+E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase><testcase classname="backend.tests.test_new_features.TestWeightLog" name="test_cross_user_cannot_delete" time="0.005"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:1116: in json
+    return complexjson.loads(self.text, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/__init__.py:346: in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:337: in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:355: in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+E   json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+During handling of the above exception, another exception occurred:
+backend/tests/test_new_features.py:181: in test_cross_user_cannot_delete
+    log_id = r.json()["log_id"]
+             ^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/models.py:1120: in json
+    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
+E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase><testcase classname="backend.tests.test_new_features.TestWeightLog" name="test_cross_user_list_isolation" time="0.003" /><testcase classname="backend.tests.test_new_features.TestWeightLog" name="test_unauth" time="0.043" /><testcase classname="backend.tests.test_new_features.TestWellnessSuggest" name="test_suggest_requires_goal" time="0.005" /><testcase classname="backend.tests.test_new_features.TestWellnessSuggest" name="test_suggest_returns_brief" time="6.057" /><testcase classname="backend.tests.test_new_features.TestPrayerTemplates" name="test_examen_prompts" time="0.043" /><testcase classname="backend.tests.test_new_features.TestPrayerTemplates" name="test_examen_unauth" time="0.002" /><testcase classname="backend.tests.test_new_features.TestPrayerTemplates" name="test_examination_sections" time="0.043" /><testcase classname="backend.tests.test_new_features.TestPrayerTemplates" name="test_examination_unauth" time="0.001" /><testcase classname="backend.tests.test_new_features.TestJournalKinds" name="test_save_examen_entry" time="0.044" /><testcase classname="backend.tests.test_new_features.TestJournalKinds" name="test_save_examination_then_confess" time="0.130" /><testcase classname="backend.tests.test_new_features.TestJournalKinds" name="test_confess_404" time="0.044" /><testcase classname="backend.tests.test_new_features.TestJournalKinds" name="test_cross_user_cannot_confess" time="0.047" /><testcase classname="backend.tests.test_new_features.TestJournalKinds" name="test_unknown_kind_normalised_to_free" time="0.043" /><testcase classname="backend.tests.test_new_features.TestChurches" name="test_nearby_valid" time="2.066" /><testcase classname="backend.tests.test_new_features.TestChurches" name="test_nearby_bad_coords" time="0.043" /><testcase classname="backend.tests.test_new_features.TestChurches" name="test_nearby_unauth" time="0.002" /><testcase classname="backend.tests.test_new_features.TestChurches" name="test_save_and_list_and_delete" time="0.218" /><testcase classname="backend.tests.test_new_features.TestChurches" name="test_save_idempotent_upsert" time="0.132" /><testcase classname="backend.tests.test_new_features.TestChurches" name="test_cross_user_isolation" time="0.094" /><testcase classname="backend.tests.test_new_features.TestChurches" name="test_save_unauth" time="0.043" /><testcase classname="backend.tests.test_new_features.TestRegressionSmoke" name="test_root" time="0.042" /><testcase classname="backend.tests.test_new_features.TestRegressionSmoke" name="test_liturgical_day" time="0.042" /><testcase classname="backend.tests.test_new_features.TestRegressionSmoke" name="test_preferences" time="0.004" /><testcase classname="backend.tests.test_new_features.TestRegressionSmoke" name="test_journal_list_still_works" time="0.048" /></testsuite></testsuites>

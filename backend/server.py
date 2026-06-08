@@ -901,18 +901,18 @@ async def log_weight(payload: WeightLogPayload, user: User = Depends(get_current
         raise HTTPException(status_code=400, detail="weight_kg out of range")
     log_id = f"wl_{uuid.uuid4().hex[:12]}"
     now = datetime.now(timezone.utc).isoformat()
-    doc = {
+    # Fields that may be overwritten on a same-day re-weigh.
+    set_doc = {
         "log_id": log_id,
         "user_id": user.user_id,
         "date": payload.date,
         "weight_kg": payload.weight_kg,
         "note": payload.note,
-        "created_at": now,
     }
     # Upsert so two logs on same date overwrite (typical weigh-in habit).
     await db.weight_log.update_one(
         {"user_id": user.user_id, "date": payload.date},
-        {"$set": doc, "$setOnInsert": {"created_at": now}},
+        {"$set": set_doc, "$setOnInsert": {"created_at": now}},
         upsert=True,
     )
     # Mirror latest weight into the wellness profile.

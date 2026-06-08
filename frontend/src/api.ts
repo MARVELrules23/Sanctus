@@ -127,15 +127,33 @@ export type JournalMood =
   | "weary"
   | null;
 
+export type JournalKind = "free" | "examen" | "examination";
+
 export type JournalEntry = {
   entry_id: string;
   date: string;
   title: string;
   body: string;
   mood: JournalMood;
+  kind?: JournalKind;
+  structured?: Record<string, unknown> | null;
   liturgical?: LiturgicalDay;
+  confessed_at?: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type ExamenPrompt = {
+  key: string;
+  title: string;
+  prompt: string;
+  icon: string;
+};
+
+export type ExaminationSection = {
+  key: string;
+  title: string;
+  prompts: string[];
 };
 
 export type GroceryItem = { name: string; count: number };
@@ -143,3 +161,54 @@ export type GroceryWeek = { start: string; end: string; items: GroceryItem[]; da
 
 export type MealItem = MealPlan["breakfast"];
 export type ExerciseItem = WorkoutPlan["exercises"][number];
+
+export type WellnessProfile = {
+  weight_kg: number | null;
+  height_cm: number | null;
+  target_weight_kg: number | null;
+  target_date: string | null;
+  goal_type: "lose" | "maintain" | "gain" | null;
+  activity_level: "sedentary" | "light" | "moderate" | "very_active" | null;
+  weekly_rate_kg: number | null;
+  units: "metric" | "imperial";
+  notes: string | null;
+  updated_at?: string | null;
+};
+
+export type WeightLog = {
+  log_id: string;
+  date: string;
+  weight_kg: number;
+  note?: string | null;
+  created_at?: string;
+};
+
+export type WellnessSuggestion = {
+  calorie_target: number;
+  macro_focus: string;
+  meal_focus: string[];
+  workout_focus: string[];
+  weekly_split: string;
+  encouragement: string;
+  based_on: string;
+};
+
+export type ChurchItem = {
+  church_id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  distance_km?: number;
+  address?: string;
+  denomination?: string;
+  website?: string;
+  phone?: string;
+  mass_times?: string[];
+  confession_times?: string[];
+  mass_times_raw?: string;
+  opening_hours?: string;
+  schedule_source?: string;
+  is_starred?: boolean;
+  notes?: string;
+  saved_at?: string | null;
+};

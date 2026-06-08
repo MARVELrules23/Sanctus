@@ -169,16 +169,36 @@ export default function TodayScreen() {
             onPress={() => router.push("/rosary")}
           />
           <QuickTile
+            testID="quick-journal"
+            icon="create-outline"
+            label="Journal"
+            onPress={() => router.push("/journal-list")}
+          />
+          <QuickTile
             testID="quick-grocery"
             icon="cart-outline"
             label="Grocery"
             onPress={() => router.push("/grocery")}
           />
+        </View>
+        <View style={styles.quickRow}>
           <QuickTile
-            testID="quick-journal"
-            icon="create-outline"
-            label="Journal"
-            onPress={() => router.push("/journal-list")}
+            testID="quick-calendar"
+            icon="calendar-outline"
+            label="Calendar"
+            onPress={() => router.push("/(tabs)/calendar")}
+          />
+          <QuickTile
+            testID="quick-churches"
+            icon="home-outline"
+            label="Churches"
+            onPress={() => router.push("/churches")}
+          />
+          <QuickTile
+            testID="quick-examen"
+            icon="sunny-outline"
+            label="Examen"
+            onPress={() => router.push({ pathname: "/journal", params: { date, mode: "examen" } })}
           />
         </View>
 

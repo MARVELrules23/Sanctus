@@ -55,11 +55,19 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="wellness"
+        options={{
+          title: "Wellness",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="heart-circle-outline" color={color} size={size} />
+          ),
+          tabBarTestID: "tab-wellness",
+        }}
+      />
+      <Tabs.Screen
         name="calendar"
         options={{
-          title: "Calendar",
-          tabBarIcon: ({ color, size }) => <Ionicons name="calendar-outline" color={color} size={size} />,
-          tabBarTestID: "tab-calendar",
+          href: null,
         }}
       />
       <Tabs.Screen

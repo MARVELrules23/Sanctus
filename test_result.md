@@ -139,3 +139,21 @@
 ## agent_communication
 
 main_agent: "Added live Mass readings (Universalis JSONP, USCCB scrape fallback, AI citations as last resort), Catholic journal with mood tagging (create/edit/delete + list), wired all previously-orphaned screens (rosary, grocery, edit-meal, edit-workout) into navigation, and added real PDF export for the weekly grocery list via expo-print + expo-sharing. Backend extended with `/api/readings` (uses USCCB scraper module) and `/api/journal` CRUD endpoints. Please run backend tests for the new endpoints and a smoke pass over the existing ones."
+
+main_agent_2026-06-08: "Implemented the latest batch of features. Tab bar now: Today · Meals · Workouts · Wellness · Profile (Calendar hidden from bar, still navigable via Today card). New screens/files:
+
+  Backend (already in place; confirm wired):
+  - `/api/wellness/profile` GET/PUT, `/api/wellness/log` GET/POST/DELETE, `/api/wellness/suggest` POST
+  - `/api/churches/nearby` GET, `/api/churches/saved` GET, `/api/churches/save` POST, `/api/churches/saved/{id}` DELETE
+  - `/api/prayers/examen` GET, `/api/prayers/examination` GET
+  - `/api/journal` now supports `kind` (free|examen|examination) and `structured` payload
+  - `/api/journal/{id}/confess` POST to mark examination entries as confessed
+
+  Frontend:
+  - `/app/frontend/app/(tabs)/wellness.tsx` (new tab): profile (weight/height/target/goal/activity), weight-in logger + sparkline, AI brief via /wellness/suggest
+  - `/app/frontend/app/churches.tsx` (new screen): expo-location permission flow (pre-prompt → grant → denied/blocked w/ Open Settings), Nearby/Saved segmented control, star toggling, deep links to Maps/Phone/Website
+  - `/app/frontend/app/journal.tsx` updated: mode chips Free|Examen|Confession; Examen renders 5 Ignatian prompts (from /prayers/examen); Confession renders 9-section examination of conscience (from /prayers/examination) with checkbox + private notes; ‘Mark as confessed’ button on examination entries
+  - `/app/frontend/app/(tabs)/calendar.tsx`: shows entry dot on days with journal entries; below day detail lists journal entries for that day with tap-to-open; ‘Add note’ button creates a new entry pre-dated to the day
+  - `/app/frontend/app/(tabs)/index.tsx`: 2-row Quick tile grid (Rosary/Journal/Grocery, Calendar/Churches/Examen)
+
+  Please test all of: new backend routes (auth required, scoping per-user), and frontend flows for Wellness tab, Churches screen permission flow + save/unsave, Journal mode switching + structured save + mark confessed, Calendar journal-linked notes."

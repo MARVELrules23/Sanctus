@@ -1,0 +1,66 @@
+{
+  "summary": "Backend: 85/85 pytest cases pass (35 new + 50 carried-over). All new endpoints verified: /api/wellness/profile GET/PUT (with bad-goal/bad-activity/bad-date 400s and blank-default GET), /api/wellness/log POST/GET/DELETE (desc-sorted by date, cross-user delete returns 404, list isolation), /api/wellness/suggest (400 without goal, returns calorie_target+macro_focus+meal_focus[]+workout_focus[]+weekly_split+encouragement when goal set; AI call ~3s via emergentintegrations), /api/prayers/examen (5 Ignatian prompts gratitude/petition/review/forgiveness/renewal), /api/prayers/examination (9 sections), /api/journal POST kind ∈ {free, examen, examination} with structured payload (unknown kind normalised to 'free'), /api/journal/{id}/confess sets confessed_at and returns 404 for missing/foreign entries, /api/churches/nearby ~Vatican returns Overpass results with distance_km + is_starred scoped to user, bad lat/lng -> 400, /api/churches/save/saved/{id} idempotent upsert + cross-user isolation + 404 on double-delete. Regression smoke: liturgical, preferences, journal list, root health all still pass. Found and FIXED one CRITICAL bug in POST /api/wellness/log (server.py:902-917): `created_at` was present in both `$set` (via doc dict) and `$setOnInsert`, causing MongoDB WriteError code 40 ('Updating the path created_at would create a conflict at created_at') → endpoint returned 500. Fix: moved `created_at` out of $set, keeping it only in $setOnInsert so original timestamp is preserved across same-day re-weighs. Frontend: code review confirms tab bar has the 5 expected tabs (Today/Meals/Workouts/Wellness/Profile) with calendar hidden via href:null and correct testIDs (tab-today/meals/workouts/wellness/profile). Login screen renders and rejects unauth requests. Interactive UI flows beyond the login gate could not be exercised because Emergent Google OAuth + AsyncStorage v2 web (IndexedDB-backed, not localStorage) prevents external session seeding from a headless browser; main agent should self-test those screens (Wellness goal editor, Churches permission/star, Journal mode chips, Calendar entry dots) in dev.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "POST /api/wellness/log",
+        "issue": "FIXED in this iteration. Was 500 due to MongoDB conflict between $set.created_at and $setOnInsert.created_at. server.py:902-917 rewritten to keep created_at only in $setOnInsert."
+      },
+      {
+        "endpoint": "DELETE /api/churches/saved/{church_id}",
+        "issue": "Route declared with `{church_id:path}` so callers must URL-encode `:` and `/`. Works (verified in test), but watch for clients that double-encode."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "Interactive flow testing (Wellness goal editor, Churches location flow, Journal mode chips, Calendar entry dots)",
+        "issue": "Could not exercise via Playwright — Emergent Google OAuth bars headless login and AsyncStorage v2 on web stores tokens in IndexedDB (object store RKStorage/keyvaluepairs), not localStorage, so external session seeding does not unblock the auth gate. Main agent should self-test these in a real browser session.",
+        "affected_testIDs": ["tab-wellness", "wellness-screen", "churches-use-location-button", "journal-mode-chip-examen", "journal-mode-chip-examination", "calendar-add-note-button"]
+      }
+    ],
+    "design_issues": [],
+    "react_native_issues": [
+      {
+        "component": "shadow* style props",
+        "issue": "Repeated console warning on web: '\"shadow*\" style props are deprecated. Use \"boxShadow\".' Several screens (login + others) use shadowColor/shadowOpacity/shadowRadius which RN-Web now deprecates. Migrate to boxShadow (or rely on `elevation` for native + boxShadow via Platform.select for web)."
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/conftest.py",
+    "/app/backend/tests/test_sanctus_backend.py",
+    "/app/backend/tests/test_readings_journal.py",
+    "/app/backend/tests/test_new_features.py",
+    "/app/test_reports/pytest/full_results.xml",
+    "/app/test_reports/pytest/new_features_results.xml"
+  ],
+  "action_items": [
+    "Self-test frontend Wellness tab end-to-end in dev: set goal=lose / activity / weight / target_date, save, log weight, delete log, tap Generate brief (calls /wellness/suggest).",
+    "Self-test Churches screen: pre-permission card → 'Use my location' → location prompt → list renders with distance & star toggles → Saved tab lists saved churches.",
+    "Self-test Journal mode chips Free/Examen/Confession render correct UIs (5 examen cards, 9 examination sections with checkbox + private notes) and the 'Mark as confessed' button works on examination entries.",
+    "Self-test Calendar: entry dots on days with journal entries, tap-to-open entry list, 'Add note' creates a pre-dated journal entry.",
+    "(low priority) Migrate shadow* styles to boxShadow on web to silence RN-Web deprecation warnings."
+  ],
+  "critical_code_review_comments": [
+    "server.py:902-917 (FIXED) — MongoDB upsert had `created_at` in both $set and $setOnInsert, raising WriteError code 40 and returning 500 to every weight log POST.",
+    "server.py:1089 — `@api.delete('/churches/saved/{church_id:path}')` uses :path converter which is correct for OSM IDs that contain '/', but combined with FastAPI URL parsing requires callers to URL-encode the colon; the included frontend api client appears to handle this, just keep in mind.",
+    "server.py:967-996 — /wellness/suggest catches generic Exception and returns 502; consider returning a more descriptive detail for the frontend to render a graceful retry CTA.",
+    "server.py:920-923 — Mirror-of-latest-weight into wellness profile is fired on every weight log POST regardless of whether it is the latest by date; an out-of-order back-fill (e.g. logging yesterday's weigh-in tomorrow) will overwrite today's weight on the profile. Consider gating by `date >= existing.updated_date` before mirroring.",
+    "server.py:1113-1121 — Still uses deprecated FastAPI @app.on_event startup/shutdown (carried from prior iterations).",
+    "churches.py:182-232 — masstimes.org scrape is best-effort and frequently silent-failing; behavior is documented in nearby_churches but a frontend indicator that schedule data is user-overridable would be useful."
+  ],
+  "updated_files": [
+    "/app/backend/server.py (bug fix in log_weight: created_at moved out of $set)",
+    "/app/backend/tests/test_new_features.py (new — 35 tests for wellness/prayers/journal-kinds/churches)"
+  ],
+  "success_rate": {"backend": "100% (85/85)", "frontend": "code-review only (auth gate not bypassable in CI)"},
+  "seed_data_creation": "Re-uses existing conftest seeded_user (user_id=test_user_1, token=test_token_abc). Adds module-scoped second user (user_id=test_user_2, token=test_token_xyz_2) for cross-user isolation tests. Test data prefixed with TEST_; module fixtures clean up wellness, weight_log, journal, user_churches on teardown. Primary test user is re-seeded after test run so the main agent can use it for follow-up dev probes.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend URL: EXPO_PUBLIC_BACKEND_URL (frontend/.env). Auth uses Authorization: Bearer <token> against user_sessions docs (NOT cookies). Frontend AsyncStorage on web stores the token under key '@sanctus_session_token' in IndexedDB (object store RKStorage/keyvaluepairs) — NOT localStorage — so to bypass the login gate from Playwright you'd need to write to IndexedDB before navigation, or stub the auth-context module. Test fixture session: token='test_token_abc', user_id='test_user_1'. Pytest suite at /app/backend/tests/ covers 85 cases; /wellness/suggest takes ~3-10s due to Anthropic call. Frontend code is unchanged in this iteration.",
+  "rca_of_issue": "RCA — POST /api/wellness/log returned 500. Mongo upsert update document had `created_at: now` inside the `$set` doc dict AND `$setOnInsert: {created_at: now}` in the same update operator block. MongoDB requires that a field cannot appear in more than one update operator, raising WriteError(code=40, 'Updating the path created_at would create a conflict at created_at'). Reproduction: POST /api/wellness/log {date:'2026-01-10', weight_kg:80.5} -> 500 with traceback `pymongo.errors.WriteError` in backend.err.log. Fix applied at server.py:902-917: moved `created_at` out of the $set doc and kept it solely in $setOnInsert so the original creation timestamp is preserved across same-day re-weighs while later fields (weight_kg, note, log_id) get refreshed. Verified by all 7 TestWeightLog tests now passing post-fix."
+}

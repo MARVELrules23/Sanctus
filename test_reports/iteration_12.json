@@ -1,0 +1,61 @@
+{
+  "summary": "Frontend-only retest of Self-Defense FOR TOMORROW card after the FollowUp field-name fix (sd-followup.ts now exposes `intensity`; play/[id].tsx & session/[id].tsx read focus_title / duration_min / focus_description / intensity). All five retest items PASS: (1) Authenticated with TEST_FE_ITER11_TOKEN; (2) /self-defense/session/sd_cd22e760126045 renders the FOR TOMORROW card with focus_title 'Footwork only — no strikes', meta line 'Virtue · Discipline  ·  12 min · low' (no empty segments, no trailing/orphan dot), italic motto, non-empty Discipline practice description, and Journal this session button; (3) Tapping Journal navigates to /journal with seed_title='Boxing — Monday, June 8' and seed_body fully populated (journal-title and journal-body inputs verified prefilled); (4) Player overlay (after advancing sd-player-next to completion on the same session, idempotent) renders the same fully-populated FOR TOMORROW card with focus_title, virtue, '12 min · low', motto, and Discipline practice description; (5) No 'silhouette' substring or SVG anywhere in the player DOM; MovementBreakdown card and CUES/AVOID lists still render correctly per step. Field-name mismatch bug from iter11 is fully resolved.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "verified_flows": {
+    "session_detail_followup_card": {
+      "focus_title_renders": "Footwork only — no strikes",
+      "meta_line_renders_all_segments": "Virtue · Discipline  ·  12 min · low",
+      "motto_renders_in_quotes": true,
+      "discipline_practice_description_renders": true,
+      "journal_button_visible": true,
+      "no_orphan_separator_dots": true
+    },
+    "journal_navigation_no_regression": {
+      "url_has_seed_title": true,
+      "url_has_seed_body": true,
+      "journal_title_input_prefilled": "Boxing — Monday, June 8",
+      "journal_body_textarea_prefilled": "Discipline: Boxing / Session: Orthodox Stance & the Jab Foundation / Focus / Duration / prompts / Tomorrow's focus / Virtue to grow"
+    },
+    "player_completion_overlay": {
+      "reached_via_sd_player_next": true,
+      "iterations_to_complete": 26,
+      "followup_card_focus_title": "Footwork only — no strikes",
+      "followup_card_virtue_row": "Virtue · Discipline",
+      "followup_card_duration_intensity_row": "12 min · low",
+      "followup_card_motto": true,
+      "followup_card_focus_description": true,
+      "sd_player_journal_button_present": true
+    },
+    "visual_cleanliness": {
+      "no_silhouette_substring": true,
+      "movement_breakdown_card_still_rendered": true
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/setup_iter11_auth.py (reused — seeds TEST_FE_ITER11_TOKEN / ui_test_user_1)"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "sd-followup.ts now correctly exposes intensity (computed as session.intensity_actual || session.plan?.intensity || 'moderate') and the type matches its consumers in play/[id].tsx (lines 475, 482, 487) and session/[id].tsx (lines 241, 243, 248). No remaining drift.",
+    "Pre-existing console warning still present (non-blocking): React Native '\"shadow*\" style props are deprecated. Use \"boxShadow\".' emitted from the player screen — same warning as iter11, no functional impact.",
+    "Minor (carryover, not a new regression): session/[id].tsx FOR TOMORROW block uses testID 'sd-session-followup' (not 'sd-followup-card' as on the player). Already working for testing; just a naming inconsistency — leave as-is unless the team wants parity."
+  ],
+  "updated_files": [
+    "/app/test_reports/iteration_12.json"
+  ],
+  "success_rate": {
+    "backend": "n/a — not in scope",
+    "frontend": "100% — all five retest checkpoints pass; FOR TOMORROW card fully populated on both surfaces."
+  },
+  "seed_data_creation": "Re-ran /app/backend/tests/setup_iter11_auth.py to refresh the ui_test_user_1 / TEST_FE_ITER11_TOKEN session. Reused completed Boxing session sd_cd22e760126045 (plan.intensity='low', completed_at set); no new data created.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "The FollowUp field-name mismatch is fully resolved. If retesting later, re-run setup_iter11_auth.py to refresh the 7-day session, then inject localStorage['sanctus_session_token'] = JSON.stringify('TEST_FE_ITER11_TOKEN'). Session sd_cd22e760126045 stays completed; to retest the player overlay just open /self-defense/play/sd_cd22e760126045 and click sd-player-next ~26 times until sd-player-complete appears (or call POST /api/self-defense/sessions/{sid}/complete which is idempotent).",
+  "rca_of_issue": "Iter 11 root cause (field-name drift between FollowUp util and JSX consumers) was correctly remediated: (a) FollowUp type extended with `intensity: string`; (b) buildSelfDefenseFollowUp now returns intensity = session.intensity_actual || session.plan?.intensity || 'moderate'; (c) JSX in both play/[id].tsx and session/[id].tsx updated to read focus_title, duration_min, focus_description, intensity. Verified at runtime: meta row shows 'Virtue · Discipline  ·  12 min · low' on both surfaces with no blank segments or orphan separators."
+}

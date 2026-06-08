@@ -23,6 +23,8 @@ export type FollowUp = {
   journal_title: string;
   /** Pre-filled journal body with prompts */
   journal_body: string;
+  /** Intensity recommendation for tomorrow's session */
+  intensity: string;
 };
 
 type Suggestion = Omit<FollowUp, "journal_title" | "journal_body">;
@@ -242,5 +244,6 @@ export function buildSelfDefenseFollowUp(
     ...s,
     journal_title,
     journal_body,
+    intensity,
   };
 }

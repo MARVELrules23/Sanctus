@@ -238,14 +238,14 @@ export default function SDSessionViewerScreen() {
               <Ionicons name="ribbon-outline" size={16} color={colors.gold} />
               <Text style={styles.followEyebrow}>FOR TOMORROW</Text>
             </View>
-            <Text style={styles.followFocus}>{followUp.focus}</Text>
+            <Text style={styles.followFocus}>{followUp.focus_title}</Text>
             <Text style={styles.followMeta}>
-              Virtue · {followUp.virtue}  ·  {followUp.duration_minutes} min · {followUp.intensity}
+              Virtue · {followUp.virtue}  ·  {followUp.duration_min} min · {followUp.intensity}
             </Text>
             <Text style={styles.followMotto}>“{followUp.motto}”</Text>
             <View style={styles.followPracticeBox}>
               <Text style={styles.followPracticeLabel}>Discipline practice</Text>
-              <Text style={styles.followPracticeText}>{followUp.discipline_practice}</Text>
+              <Text style={styles.followPracticeText}>{followUp.focus_description}</Text>
             </View>
             <Pressable
               testID="sd-session-journal"

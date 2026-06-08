@@ -472,19 +472,19 @@ export default function SelfDefensePlayerScreen() {
               {followUp ? (
                 <View style={styles.followCard} testID="sd-followup-card">
                   <Text style={styles.followEyebrow}>FOR TOMORROW</Text>
-                  <Text style={styles.followFocus}>{followUp.focus}</Text>
+                  <Text style={styles.followFocus}>{followUp.focus_title}</Text>
                   <View style={styles.followRow}>
                     <Ionicons name="ribbon-outline" size={14} color={colors.gold} />
                     <Text style={styles.followMeta}>Virtue · {followUp.virtue}</Text>
                   </View>
                   <View style={styles.followRow}>
                     <Ionicons name="time-outline" size={14} color={colors.gold} />
-                    <Text style={styles.followMeta}>{followUp.duration_minutes} min · {followUp.intensity}</Text>
+                    <Text style={styles.followMeta}>{followUp.duration_min} min · {followUp.intensity}</Text>
                   </View>
                   <Text style={styles.followMotto}>“{followUp.motto}”</Text>
                   <View style={styles.followPracticeBox}>
                     <Text style={styles.followPracticeLabel}>Discipline practice</Text>
-                    <Text style={styles.followPracticeText}>{followUp.discipline_practice}</Text>
+                    <Text style={styles.followPracticeText}>{followUp.focus_description}</Text>
                   </View>
                 </View>
               ) : null}

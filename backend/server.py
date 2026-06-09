@@ -1214,6 +1214,32 @@ class CommunityChurchSubmission(BaseModel):
     website: Optional[str] = Field(None, max_length=300)
     phone: Optional[str] = Field(None, max_length=60)
     notes: Optional[str] = Field(None, max_length=600)
+    # Free-form schedule strings (e.g. "Sun 9:00 AM", "Wed 6:30 PM"). We keep
+    # them as small list of short labels rather than a structured rrule because
+    # parish schedules vary wildly and are usually published as plain text.
+    mass_times: Optional[List[str]] = Field(default=None, max_length=24)
+    confession_times: Optional[List[str]] = Field(default=None, max_length=24)
+
+
+def _clean_time_list(items: Optional[List[str]]) -> List[str]:
+    if not items:
+        return []
+    cleaned: List[str] = []
+    seen: set = set()
+    for raw in items:
+        if not isinstance(raw, str):
+            continue
+        s = raw.strip()
+        if not s or len(s) > 80:
+            continue
+        key = s.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        cleaned.append(s)
+        if len(cleaned) >= 24:
+            break
+    return cleaned
 
 
 def _community_to_shape(doc: dict, origin: Optional[Tuple[float, float]] = None) -> dict:
@@ -1228,8 +1254,8 @@ def _community_to_shape(doc: dict, origin: Optional[Tuple[float, float]] = None)
         "phone": doc.get("phone", "") or "",
         "mass_times_raw": "",
         "opening_hours": "",
-        "mass_times": [],
-        "confession_times": [],
+        "mass_times": list(doc.get("mass_times") or []),
+        "confession_times": list(doc.get("confession_times") or []),
         "notes": doc.get("notes", "") or "",
         "source": "community",
         "submitted_by_name": doc.get("submitted_by_name") or "a Sanctus user",
@@ -1367,6 +1393,8 @@ async def submit_community_church(
         "website": (payload.website or "").strip() or None,
         "phone": (payload.phone or "").strip() or None,
         "notes": (payload.notes or "").strip() or None,
+        "mass_times": _clean_time_list(payload.mass_times),
+        "confession_times": _clean_time_list(payload.confession_times),
         "submitted_by": user.user_id,
         "submitted_by_name": getattr(user, "name", None) or "Anonymous",
         "created_at": now,

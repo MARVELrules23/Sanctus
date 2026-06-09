@@ -12,7 +12,10 @@
       "supportsTablet": true,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Find Catholic churches near you",
-        "NSPhotoLibraryUsageDescription": "Choose a profile picture from your photos"
+        "NSPhotoLibraryUsageDescription": "Choose a profile picture from your photos",
+        "NSCalendarsUsageDescription": "Save parish events to your calendar",
+        "NSCalendarsFullAccessUsageDescription": "Save parish events to your calendar",
+        "NSRemindersUsageDescription": "Add prayer reminders to your reminders"
       }
     },
     "android": {
@@ -24,7 +27,9 @@
       "permissions": [
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
-        "READ_MEDIA_IMAGES"
+        "READ_MEDIA_IMAGES",
+        "READ_CALENDAR",
+        "WRITE_CALENDAR"
       ]
     },
     "web": {
@@ -44,7 +49,13 @@
         }
       ],
       "expo-font",
-      "expo-audio"
+      "expo-audio",
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "Save parish events to your calendar"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

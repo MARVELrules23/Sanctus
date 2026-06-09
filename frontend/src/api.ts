@@ -255,6 +255,45 @@ export type ChurchItem = {
   is_starred?: boolean;
   notes?: string;
   saved_at?: string | null;
+  // Community-submitted churches carry these so the UI can render a credit
+  // badge ("Added by …") and offer a flag button.
+  source?: "osm" | "community" | string;
+  submitted_by_name?: string;
+};
+
+// ---- Parish Events ----
+export type ParishEventType =
+  | "mass"
+  | "confession"
+  | "adoration"
+  | "talk"
+  | "retreat"
+  | "service"
+  | "young_adult"
+  | "social"
+  | "rosary"
+  | "other";
+
+export type ParishEvent = {
+  id: string;
+  type: ParishEventType;
+  type_label: string;
+  title: string;
+  description: string;
+  start_at: string; // ISO
+  end_at: string | null;
+  church_id: string | null;
+  church_name: string | null;
+  address: string;
+  lat: number;
+  lng: number;
+  organizer_user_id: string;
+  organizer_name: string;
+  created_at: string;
+  flag_count: number;
+  is_owner: boolean;
+  has_flagged: boolean;
+  distance_km?: number;
 };
 
 // ---- Community types ----

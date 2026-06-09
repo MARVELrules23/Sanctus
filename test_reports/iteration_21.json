@@ -1,0 +1,42 @@
+{
+  "summary": "Tested Manual Church mass/confession arrays + Parish Events end-to-end (19 pytest tests). Found and fixed 1 critical bug: /api/churches/manual was accepting mass_times/confession_times in the payload but never persisting them in the inserted Mongo doc (the doc dict in submit_community_church omitted both fields and never called _clean_time_list). After patch, all 19 tests pass (100%). Parish Events flow (create/list/flag-quorum auto-hide at 3 unique flags/owner-only delete/me/list/negative cases) all behave correctly.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "POST /api/churches/manual",
+        "issue": "submit_community_church accepted mass_times/confession_times in the Pydantic payload but the inserted Mongo doc omitted both fields and never invoked _clean_time_list. Result: round-trip always returned empty arrays both from /churches/manual and /churches/nearby. FIXED by inserting `mass_times: _clean_time_list(payload.mass_times)` and `confession_times: _clean_time_list(payload.confession_times)` into the doc at server.py ~line 1395.",
+        "priority": "CRITICAL"
+      }
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_parish_events.py",
+    "/app/test_reports/pytest/iteration_21_parish.xml"
+  ],
+  "action_items": [
+    "Verify the fix to server.py submit_community_church (mass_times/confession_times persistence) is acceptable; consider also persisting them on the dedupe-hit path so that an updated submission can backfill times on an existing entry.",
+    "Optional: dedupe path currently short-circuits on (name_lc, 150m) and returns the existing doc unchanged — if the new submission carries times the existing doc lacks, those are silently dropped. Consider merging time arrays on dedupe-hit."
+  ],
+  "critical_code_review_comments": [
+    "server.py /app/backend/server.py:1385-1403 — the inserted doc was missing mass_times/confession_times; _clean_time_list helper was unused. Fixed.",
+    "server.py /app/backend/server.py:1368 — on dedupe hit the freshly-submitted mass/confession arrays are discarded; only the existing doc is returned.",
+    "parish_events.py:238 — the past-start guard allows up to 1 day in the past (`_now() - timedelta(days=1)`). The spec said 'in the past → 400'; current behavior rejects only events more than 24h old. The test uses 5 days past so it passes, but the boundary is lenient."
+  ],
+  "updated_files": [
+    "/app/backend/server.py (mass_times/confession_times persistence in submit_community_church)",
+    "/app/backend/tests/test_parish_events.py (new test file)"
+  ],
+  "success_rate": {"backend": "100% (19/19 after fix)", "frontend": "n/a"},
+  "seed_data_creation": "Seeded 3 test users (pe_user_a/b/c) + a 4th transient user (pe_user_d) and matching user_sessions tokens directly in Mongo. Cleaned up community_churches and parish_events for those users on fixture teardown.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Full pytest suite at /app/backend/tests/test_parish_events.py is idempotent (seeds + teardown). Run with: pytest backend/tests/test_parish_events.py -v. Uses EXPO_PUBLIC_BACKEND_URL from frontend/.env. The fix to submit_community_church is minimal (two added lines into the doc dict).",
+  "rca_of_issue": "RCA: When CommunityChurchSubmission was extended with mass_times/confession_times Optional[List[str]] fields and _clean_time_list helper was added, the POST handler's `doc = {...}` Mongo insert dict was NOT updated to include either field. The helper was defined but never called. Consequence: POST returned an empty arrays via _community_to_shape (which reads doc.get('mass_times') or []), and /churches/nearby therefore also returned empty arrays — breaking the stated key acceptance criterion. Reproduction: POST /api/churches/manual with mass_times=['Sun 9am'] → response.mass_times == []. Mitigation: include `mass_times: _clean_time_list(payload.mass_times)` and `confession_times: _clean_time_list(payload.confession_times)` in the insert doc. Verified by 3 failing tests now passing."
+}

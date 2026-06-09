@@ -410,10 +410,20 @@ export default function ChurchesScreen() {
               {loadingNearby ? (
                 <ActivityIndicator color={colors.gold} style={{ marginTop: spacing.xl }} />
               ) : nearby.length === 0 ? (
-                <Text style={styles.empty}>
-                  No Catholic churches found in the search radius. Try refreshing from a different
-                  spot.
-                </Text>
+                <>
+                  <Text style={styles.empty}>
+                    No Catholic churches found in the search radius. Try refreshing from a different
+                    spot.
+                  </Text>
+                  <Pressable
+                    testID="churches-add-cta-empty"
+                    onPress={() => router.push("/add-church")}
+                    style={({ pressed }) => [styles.addCta, pressed && styles.pressed]}
+                  >
+                    <Ionicons name="add-circle-outline" size={18} color={colors.gold} />
+                    <Text style={styles.addCtaText}>Add a parish manually</Text>
+                  </Pressable>
+                </>
               ) : (
                 nearby.map((c) => (
                   <ChurchCard
@@ -426,6 +436,18 @@ export default function ChurchesScreen() {
                   />
                 ))
               )}
+              {!loadingNearby && nearby.length > 0 ? (
+                <Pressable
+                  testID="churches-add-cta"
+                  onPress={() => router.push("/add-church")}
+                  style={({ pressed }) => [styles.addCta, pressed && styles.pressed]}
+                >
+                  <Ionicons name="add-circle-outline" size={18} color={colors.gold} />
+                  <Text style={styles.addCtaText}>
+                    Don&apos;t see your parish? Add it here.
+                  </Text>
+                </Pressable>
+              ) : null}
             </>
           )
         ) : loadingSaved ? (
@@ -466,6 +488,7 @@ function ChurchCard({
   onWeb: () => void;
   onCall: () => void;
 }) {
+  const router = useRouter();
   return (
     <View style={styles.card} testID={`church-${c.church_id}`}>
       <View style={styles.churchHeader}>
@@ -475,6 +498,14 @@ function ChurchCard({
             <Text style={styles.churchMeta}>{c.distance_km.toFixed(1)} km away</Text>
           ) : null}
           {c.address ? <Text style={styles.churchAddr}>{c.address}</Text> : null}
+          {c.source === "community" ? (
+            <View style={styles.communityBadge} testID={`church-community-${c.church_id}`}>
+              <Ionicons name="people-outline" size={11} color={colors.liturgical.purple} />
+              <Text style={styles.communityBadgeText}>
+                Added by {c.submitted_by_name || "a Sanctus user"}
+              </Text>
+            </View>
+          ) : null}
         </View>
         <Pressable testID={`church-star-${c.church_id}`} onPress={onStar} hitSlop={10}>
           <Ionicons
@@ -510,6 +541,24 @@ function ChurchCard({
       ) : null}
 
       <View style={styles.actionsRow}>
+        <Pressable
+          testID={`church-events-${c.church_id}`}
+          onPress={() =>
+            router.push({
+              pathname: "/parish-events",
+              params: {
+                church_id: c.church_id,
+                church_name: c.name,
+                lat: String(c.lat),
+                lng: String(c.lng),
+              },
+            })
+          }
+          style={({ pressed }) => [styles.actionBtn, pressed && styles.pressed]}
+        >
+          <Ionicons name="calendar-outline" size={16} color={colors.primary} />
+          <Text style={styles.actionText}>Events</Text>
+        </Pressable>
         <Pressable testID={`church-map-${c.church_id}`} onPress={onMaps} style={({ pressed }) => [styles.actionBtn, pressed && styles.pressed]}>
           <Ionicons name="map-outline" size={16} color={colors.primary} />
           <Text style={styles.actionText}>Map</Text>
@@ -683,6 +732,45 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
     textAlign: "center",
     paddingHorizontal: spacing.lg,
+  },
+  addCta: {
+    marginTop: spacing.lg,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.gold,
+    borderStyle: "dashed",
+    backgroundColor: colors.surface,
+  },
+  addCtaText: {
+    fontFamily: fonts.uiSemi,
+    fontSize: 13,
+    color: colors.gold,
+    letterSpacing: 0.3,
+  },
+  communityBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    alignSelf: "flex-start",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radius.round,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.liturgical.purple,
+    marginTop: 6,
+  },
+  communityBadgeText: {
+    fontFamily: fonts.uiSemi,
+    fontSize: 10,
+    color: colors.liturgical.purple,
+    letterSpacing: 0.4,
   },
   pressed: { opacity: 0.7 },
 });

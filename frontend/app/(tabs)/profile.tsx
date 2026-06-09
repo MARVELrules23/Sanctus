@@ -236,6 +236,23 @@ export default function ProfileScreen() {
           </Pressable>
         </View>
 
+        {user?.is_admin ? (
+          <>
+            <Text style={styles.section}>Admin</Text>
+            <View style={styles.linkRow} testID="profile-admin-links">
+              <Pressable
+                testID="profile-admin-saints-link"
+                onPress={() => router.push("/admin/saints")}
+                style={({ pressed }) => [styles.linkCard, pressed && styles.pressed]}
+              >
+                <Ionicons name="sparkles-outline" size={18} color={colors.gold} />
+                <Text style={styles.linkLabel}>Saints · Review</Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+              </Pressable>
+            </View>
+          </>
+        ) : null}
+
         <Pressable
           testID="sign-out-button"
           onPress={signOut}

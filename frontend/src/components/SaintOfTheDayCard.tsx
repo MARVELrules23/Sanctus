@@ -11,6 +11,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
 import { SaintPublic, getSaintsToday } from "@/src/api";
+import { useAuth } from "@/src/auth-context";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 
 const RANK_LABEL: Record<SaintPublic["rank"], string> = {
@@ -21,12 +22,21 @@ const RANK_LABEL: Record<SaintPublic["rank"], string> = {
 
 export default function SaintOfTheDayCard({ date }: { date: string }) {
   const router = useRouter();
+  const { user } = useAuth();
   const [primary, setPrimary] = useState<SaintPublic | null>(null);
   const [others, setOthers] = useState<SaintPublic[]>([]);
   const [expanded, setExpanded] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
   const load = useCallback(async () => {
+    // Don't even try when we have no auth context yet — the endpoint is
+    // logged-in-only and an anonymous call would just log 401s.
+    if (!user) {
+      setPrimary(null);
+      setOthers([]);
+      setLoaded(true);
+      return;
+    }
     try {
       const r = await getSaintsToday(date);
       setPrimary(r.primary);
@@ -37,7 +47,7 @@ export default function SaintOfTheDayCard({ date }: { date: string }) {
     } finally {
       setLoaded(true);
     }
-  }, [date]);
+  }, [date, user]);
 
   useEffect(() => { void load(); }, [load]);
 

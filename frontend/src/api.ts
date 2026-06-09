@@ -76,6 +76,7 @@ export type User = {
   tradition_path?: "convert" | "revert" | "cradle" | null;
   age?: number | null;
   show_attribution?: boolean | null;
+  is_admin?: boolean | null;
 };
 
 export type GoalMode = "liturgical" | "goals";

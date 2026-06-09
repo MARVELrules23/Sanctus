@@ -1,0 +1,50 @@
+{
+  "summary": "Comprehensive backend tests for the new Saint/Blessed/Venerable of the Day feature. 19/19 pytest cases passed, covering the full happy path (manual create -> approve -> public read -> delete -> 404), auth gating (401 unauth, 403 non-admin), approval validation (empty quote / quote_source -> 400), primary-vs-secondaries ordering on shared feast_date, fallback rotation when no feast match exists, draft/rejected invisibility on public GET, admin list filtering, PATCH validation (rejects invalid rank), and even the real Claude /admin/propose call (succeeded against Emergent LLM). All test data was cleaned up; the seeded admin (philipwils13@gmail.com) is intact.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "GET /api/saints/today",
+        "issue": "When the request is unauthenticated, server returns 403 (FastAPI's HTTPBearer default) rather than the 401 the spec describes. Functionally equivalent (both block access) but worth noting if the frontend distinguishes them. Source: backend/server.py get_current_user / HTTPBearer auto-error."
+      },
+      {
+        "endpoint": "POST /api/saints/admin/propose",
+        "issue": "feast_date returned by the model can override the requested MM-DD silently (line 413: `feast_date=(data.get('feast_date') or mmdd)`). If Claude proposes Saint Ephrem with feast_date 06-09 for a request of 12-01, the draft will be stored under 06-09, which may surprise an admin proposing for a specific quiet day. Consider warning in the response payload when the model-supplied feast_date differs from the requested mmdd."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_saints.py",
+    "/app/test_reports/pytest/iteration_24_saints.xml"
+  ],
+  "action_items": [
+    "Optional: in admin_propose, surface a soft warning (or override) when Claude returns a feast_date that doesn't match the requested date — currently the model value silently wins.",
+    "Optional: standardize on 401 vs 403 for the unauthenticated case on saints public endpoints (currently 403 due to HTTPBearer auto_error default).",
+    "Optional: index check — the test exercised feast_date / status / last_shown_at queries successfully; if you add many entries, confirm the (status, feast_date) and (status, last_shown_at) compound indexes from server.py lines 212-216 are still being created on startup."
+  ],
+  "critical_code_review_comments": [
+    "saints.py is 538 lines — fine for now but watch the size as admin UI grows.",
+    "_extract_json is robust to ```json fences and prose wrappers — good.",
+    "Approve endpoint correctly refuses to flip status when name/biography/recommended_action/quote_source/quote are empty.",
+    "_public() strips internal fields (status, proposed_by_ai, approved_at, approved_by, last_shown_at) before returning to non-admin users — good.",
+    "Cleanup-safety in tests: confirmed that the seeded admin user (philipwils13@gmail.com / user_ade7a898e281) is preserved and only the test-only non-admin user + test saints + test sessions are removed."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_saints.py (new file)"
+  ],
+  "success_rate": {
+    "backend": "100% (19/19)",
+    "frontend": "n/a (not in scope)"
+  },
+  "seed_data_creation": "Test suite mints two ephemeral session tokens (one for the existing admin user_ade7a898e281, one for a brand-new non-admin user test_user_saints_nonadmin) plus several saints docs prefixed st_test_/TEST/Saint Test. All are removed in module teardown. Post-run DB verification: 0 test saints remain, 0 test sessions remain, non-admin test user removed, admin user intact with is_admin=true.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Saints router is fully exercised. To test again, just rerun `pytest backend/tests/test_saints.py -v`. The suite expects the admin seed at user_ade7a898e281 with is_admin=true; if missing, it auto-skips. The Claude /propose test will skip on 502/503 if the Emergent LLM is unreachable — on this run it succeeded.",
+  "rca_of_issue": "No bugs to RCA — the saints feature works end-to-end as designed."
+}

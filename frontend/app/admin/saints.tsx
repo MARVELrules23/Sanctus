@@ -339,7 +339,7 @@ export default function AdminSaintsScreen() {
         {loading ? (
           <View style={styles.center}><ActivityIndicator color={colors.gold} /></View>
         ) : grouped.length === 0 ? (
-          <Text style={styles.empty}>No entries with status "{filter}".</Text>
+          <Text style={styles.empty}>No entries with status “{filter}”.</Text>
         ) : (
           grouped.map((s) => (
             <View key={s.saint_id} style={styles.entryCard} testID={`admin-entry-${s.saint_id}`}>

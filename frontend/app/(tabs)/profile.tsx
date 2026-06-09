@@ -217,6 +217,24 @@ export default function ProfileScreen() {
         <Text style={styles.section}>About</Text>
         <View style={styles.linkRow} testID="profile-about-links">
           <Pressable
+            testID="profile-shop-link"
+            onPress={() => router.push("/shop")}
+            style={({ pressed }) => [styles.linkCard, pressed && styles.pressed]}
+          >
+            <Ionicons name="basket-outline" size={18} color={colors.primary} />
+            <Text style={styles.linkLabel}>Sanctus Shop</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          </Pressable>
+          <Pressable
+            testID="profile-orders-link"
+            onPress={() => router.push("/orders")}
+            style={({ pressed }) => [styles.linkCard, pressed && styles.pressed]}
+          >
+            <Ionicons name="receipt-outline" size={18} color={colors.primary} />
+            <Text style={styles.linkLabel}>My Orders</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          </Pressable>
+          <Pressable
             testID="profile-support-link"
             onPress={() => router.push("/support")}
             style={({ pressed }) => [styles.linkCard, pressed && styles.pressed]}
@@ -247,6 +265,15 @@ export default function ProfileScreen() {
               >
                 <Ionicons name="sparkles-outline" size={18} color={colors.gold} />
                 <Text style={styles.linkLabel}>Saints · Review</Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+              </Pressable>
+              <Pressable
+                testID="profile-admin-shop-link"
+                onPress={() => router.push("/admin/shop")}
+                style={({ pressed }) => [styles.linkCard, pressed && styles.pressed]}
+              >
+                <Ionicons name="storefront-outline" size={18} color={colors.gold} />
+                <Text style={styles.linkLabel}>Shop · Admin</Text>
                 <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
               </Pressable>
             </View>

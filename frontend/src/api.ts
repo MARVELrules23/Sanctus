@@ -669,3 +669,126 @@ export async function adminRejectSaint(saintId: string): Promise<{ ok: boolean }
 export async function adminDeleteSaint(saintId: string): Promise<{ ok: boolean }> {
   return await api(`/saints/admin/${encodeURIComponent(saintId)}`, { method: "DELETE" });
 }
+
+// ===== Shop =====
+
+export type ShopProduct = {
+  product_id: string;
+  name: string;
+  description: string;
+  price_cents: number;
+  currency: string;
+  image_url?: string | null;
+  stock?: number | null;
+  status: "active" | "archived";
+  shipping_amount_cents: number;
+};
+
+export type ShopOrder = {
+  order_id: string;
+  user_id: string;
+  product_id: string;
+  product_name?: string | null;
+  product_image_url?: string | null;
+  quantity: number;
+  currency: string;
+  unit_amount_cents?: number;
+  shipping_amount_cents: number;
+  total_cents?: number;
+  status: "pending" | "paid" | "cancelled" | "failed";
+  shipping_details?: any;
+  customer_email?: string | null;
+  tracking_number?: string | null;
+  created_at?: string | null;
+  paid_at?: string | null;
+};
+
+export async function listShopProducts(): Promise<{
+  products: ShopProduct[];
+  shipping_amount_cents: number;
+  currency: string;
+}> {
+  return await api(`/shop/products`);
+}
+
+export async function getShopProduct(productId: string): Promise<ShopProduct> {
+  return await api(`/shop/products/${encodeURIComponent(productId)}`);
+}
+
+export async function createShopCheckout(body: {
+  product_id: string;
+  quantity?: number;
+  return_origin: string;
+  client_token?: string;
+}): Promise<{ url: string; order_id: string }> {
+  return await api(`/shop/checkout`, { method: "POST", body });
+}
+
+export async function reconcileShopSession(
+  sessionId: string,
+): Promise<{ order: ShopOrder; payment_status: string }> {
+  return await api(`/shop/reconcile/${encodeURIComponent(sessionId)}`, { method: "POST" });
+}
+
+export async function listMyOrders(): Promise<{ orders: ShopOrder[] }> {
+  return await api(`/shop/orders`);
+}
+
+export async function getMyOrder(orderId: string): Promise<ShopOrder> {
+  return await api(`/shop/orders/${encodeURIComponent(orderId)}`);
+}
+
+// ----- Admin shop -----
+
+export async function adminListProducts(): Promise<{ products: ShopProduct[] }> {
+  return await api(`/shop/admin/products`);
+}
+
+export async function adminCreateProduct(body: {
+  name: string;
+  description?: string;
+  price_cents: number;
+  image_url?: string | null;
+  stock?: number | null;
+}): Promise<ShopProduct> {
+  return await api(`/shop/admin/products`, { method: "POST", body });
+}
+
+export async function adminUpdateProduct(
+  productId: string,
+  body: Partial<{
+    name: string;
+    description: string;
+    price_cents: number;
+    image_url: string | null;
+    stock: number | null;
+    status: "active" | "archived";
+  }>,
+): Promise<ShopProduct> {
+  return await api(`/shop/admin/products/${encodeURIComponent(productId)}`, {
+    method: "PATCH",
+    body,
+  });
+}
+
+export async function adminArchiveProduct(productId: string): Promise<{ ok: boolean }> {
+  return await api(`/shop/admin/products/${encodeURIComponent(productId)}`, { method: "DELETE" });
+}
+
+export async function adminListOrders(params?: { status?: string }): Promise<{
+  orders: ShopOrder[];
+}> {
+  const qs = params?.status ? `?status=${encodeURIComponent(params.status)}` : "";
+  return await api(`/shop/admin/orders${qs}`);
+}
+
+export async function adminSetOrderTracking(
+  orderId: string,
+  tracking_number: string,
+): Promise<ShopOrder> {
+  return await api(`/shop/admin/orders/${encodeURIComponent(orderId)}/tracking`, {
+    method: "POST",
+    body: { tracking_number },
+  });
+}
+

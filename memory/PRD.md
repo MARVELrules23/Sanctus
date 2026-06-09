@@ -61,7 +61,7 @@ Reverent & traditional aesthetic: cream/parchment background, deep stained-gl- C
 - **Fun fact** card below morning prayer — Catholic tradition surrounding the destination feast
 
 ### Decisions locked in (user confirmation 2026-06)
-1. **Build timing:** Deferred — start ~4–6 weeks before Oct 1 to give Hallowtide a soft-launch window.
+1. **Build timing:** **Start: July 2026** (confirmed by user — gives ~10-week buffer before Hallowtide kicks off Oct 1).
 2. **Content source:** AI-proposed via Claude Sonnet 4.5; user reviews each day's set in an admin screen and approves before they go live. (No raw AI shipped without review.)
 3. **Difficulty tracks:** **Three tiers per day** — Beginner / Committed / Devoted. User picks once at season start; can change between seasons.
 4. **Journal integration:** Reuse the existing Journal feature. Each challenge-day entry appears in the normal journal feed, **tagged with the season** (`#hallowtide`, `#advent`, `#lent`).

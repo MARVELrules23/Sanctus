@@ -1366,6 +1366,39 @@ async def submit_community_church(
         "loc": {"$geoWithin": {"$centerSphere": [[payload.lng, payload.lat], radius_rad]}},
     })
     if existing:
+        # Same-name + within-150m hit. Don't create a duplicate doc, but if
+        # the resubmission carries fresh mass/confession times *not already*
+        # in the existing record, merge them in. This makes the manual-entry
+        # flow function as a community wiki — successive users can flesh out
+        # the schedule for the same parish without us creating multiple rows.
+        incoming_mass = _clean_time_list(payload.mass_times)
+        incoming_conf = _clean_time_list(payload.confession_times)
+        merged_mass = list(existing.get("mass_times") or [])
+        merged_conf = list(existing.get("confession_times") or [])
+        lower_mass = {x.lower() for x in merged_mass}
+        lower_conf = {x.lower() for x in merged_conf}
+        added = False
+        for t in incoming_mass:
+            if t.lower() not in lower_mass and len(merged_mass) < 24:
+                merged_mass.append(t)
+                lower_mass.add(t.lower())
+                added = True
+        for t in incoming_conf:
+            if t.lower() not in lower_conf and len(merged_conf) < 24:
+                merged_conf.append(t)
+                lower_conf.add(t.lower())
+                added = True
+        if added:
+            await db.community_churches.update_one(
+                {"church_id": existing["church_id"]},
+                {"$set": {
+                    "mass_times": merged_mass,
+                    "confession_times": merged_conf,
+                    "updated_at": datetime.now(timezone.utc),
+                }},
+            )
+            existing["mass_times"] = merged_mass
+            existing["confession_times"] = merged_conf
         return _community_to_shape(existing, origin=(payload.lat, payload.lng))
 
     # Rate-limit: max 5 submissions per user per 24h.

@@ -589,6 +589,28 @@ function ChurchCard({
             <Text style={styles.actionText}>Call</Text>
           </Pressable>
         ) : null}
+        <Pressable
+          testID={`church-edit-${c.church_id}`}
+          onPress={() =>
+            router.push({
+              pathname: "/edit-church",
+              params: {
+                church_id: c.church_id,
+                church_name: c.name,
+                address: c.address || "",
+                existing_mass: JSON.stringify(c.mass_times || []),
+                existing_conf: JSON.stringify(c.confession_times || []),
+                existing_website: c.website || "",
+                existing_phone: c.phone || "",
+                existing_notes: c.notes || "",
+              },
+            })
+          }
+          style={({ pressed }) => [styles.actionBtn, styles.actionBtnEdit, pressed && styles.pressed]}
+        >
+          <Ionicons name="create-outline" size={16} color={colors.gold} />
+          <Text style={[styles.actionText, styles.actionTextEdit]}>Edit</Text>
+        </Pressable>
       </View>
     </View>
   );
@@ -703,6 +725,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   actionText: { fontFamily: fonts.uiSemi, fontSize: 12, color: colors.primary },
+  actionBtnEdit: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  actionTextEdit: { color: colors.gold },
   primaryBtn: {
     backgroundColor: colors.primary,
     paddingVertical: 14,

@@ -506,6 +506,20 @@ function ChurchCard({
               </Text>
             </View>
           ) : null}
+          {c.editor_count && c.editor_count > 0 ? (
+            <View style={styles.communityBadge} testID={`church-editors-${c.church_id}`}>
+              <Ionicons name="create-outline" size={11} color={colors.gold} />
+              <Text style={styles.communityBadgeText}>
+                {c.contributors && c.contributors.length > 0
+                  ? `Edited by ${c.contributors.slice(0, 2).join(", ")}${
+                      c.editor_count > c.contributors.length
+                        ? ` + ${c.editor_count - c.contributors.length} more`
+                        : ""
+                    }`
+                  : `Edited by ${c.editor_count} ${c.editor_count === 1 ? "person" : "people"}`}
+              </Text>
+            </View>
+          ) : null}
         </View>
         <Pressable testID={`church-star-${c.church_id}`} onPress={onStar} hitSlop={10}>
           <Ionicons

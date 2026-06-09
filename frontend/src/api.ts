@@ -72,6 +72,10 @@ export type User = {
   email: string;
   name: string;
   picture?: string | null;
+  denomination?: "catholic" | "protestant" | "orthodox" | null;
+  tradition_path?: "convert" | "revert" | "cradle" | null;
+  age?: number | null;
+  show_attribution?: boolean | null;
 };
 
 export type GoalMode = "liturgical" | "goals";
@@ -110,11 +114,22 @@ export type BibleHighlight = {
   created_at?: string;
 };
 
-export async function updateMe(patch: { name?: string; picture?: string | null }): Promise<User> {
+export async function updateMe(patch: {
+  name?: string;
+  picture?: string | null;
+  denomination?: "catholic" | "protestant" | "orthodox" | null;
+  tradition_path?: "convert" | "revert" | "cradle" | null;
+  age?: number | null;
+  show_attribution?: boolean | null;
+}): Promise<User> {
   // Backend accepts empty string to clear picture; pass through null as empty.
-  const body: Record<string, string> = {};
+  const body: Record<string, unknown> = {};
   if (patch.name !== undefined) body.name = patch.name;
   if (patch.picture !== undefined) body.picture = patch.picture ?? "";
+  if (patch.denomination !== undefined) body.denomination = patch.denomination ?? "";
+  if (patch.tradition_path !== undefined) body.tradition_path = patch.tradition_path ?? "";
+  if (patch.age !== undefined) body.age = patch.age == null ? 0 : patch.age;
+  if (patch.show_attribution !== undefined) body.show_attribution = !!patch.show_attribution;
   return await api<User>("/auth/me", { method: "PUT", body });
 }
 
@@ -259,6 +274,23 @@ export type ChurchItem = {
   // badge ("Added by …") and offer a flag button.
   source?: "osm" | "community" | string;
   submitted_by_name?: string;
+  // Editor count from community overlays — UI shows "Edited by N people".
+  editor_count?: number;
+  contributors?: string[];
+  last_edited_by?: string | null;
+};
+
+export type ChurchOverlay = {
+  church_id: string;
+  mass_times: string[];
+  confession_times: string[];
+  website: string;
+  phone: string;
+  notes: string;
+  editor_count: number;
+  contributors?: string[];
+  last_edited_by?: string | null;
+  updated_at: string | null;
 };
 
 // ---- Parish Events ----

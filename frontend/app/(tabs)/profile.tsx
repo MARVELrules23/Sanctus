@@ -13,7 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
-import { api } from "@/src/api";
+import { api, User } from "@/src/api";
 import { useAuth } from "@/src/auth-context";
 import Ornament from "@/src/components/Ornament";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
@@ -91,6 +91,7 @@ export default function ProfileScreen() {
           <View style={{ flex: 1 }}>
             <Text style={styles.userName}>{user?.name ?? "Faithful soul"}</Text>
             <Text style={styles.userEmail}>{user?.email}</Text>
+            <FaithBioChips user={user} />
           </View>
           <Pressable
             testID="profile-edit-button"
@@ -100,6 +101,28 @@ export default function ProfileScreen() {
             accessibilityLabel="Edit profile"
           >
             <Ionicons name="pencil" size={16} color={colors.primary} />
+          </Pressable>
+        </View>
+
+        {/* Quick links — entry points to user-scoped lists */}
+        <View style={styles.quickLinksRow}>
+          <Pressable
+            testID="profile-my-events"
+            onPress={() => router.push("/my-events")}
+            style={({ pressed }) => [styles.quickLink, pressed && styles.pressed]}
+          >
+            <Ionicons name="calendar-outline" size={18} color={colors.gold} />
+            <Text style={styles.quickLinkText}>My Events</Text>
+            <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
+          </Pressable>
+          <Pressable
+            testID="profile-my-journal"
+            onPress={() => router.push("/journal")}
+            style={({ pressed }) => [styles.quickLink, pressed && styles.pressed]}
+          >
+            <Ionicons name="book-outline" size={18} color={colors.gold} />
+            <Text style={styles.quickLinkText}>Journal</Text>
+            <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
           </Pressable>
         </View>
 
@@ -207,6 +230,42 @@ export default function ProfileScreen() {
   );
 }
 
+// Faith bio chips — a tiny row showing the user's tradition, path, and age.
+// We only render chips for the bits the user actually filled in (everything
+// is optional and defaults to null). The motivation: give people a sense of
+// who they're chatting with in Community, without forcing a long bio form.
+function FaithBioChips({ user }: { user: User | null | undefined }) {
+  if (!user) return null;
+  const labelFor = (key: string, val?: string | null): string | null => {
+    if (!val) return null;
+    if (key === "denomination") {
+      if (val === "catholic") return "Catholic";
+      if (val === "protestant") return "Protestant";
+      if (val === "orthodox") return "Orthodox";
+    }
+    if (key === "path") {
+      if (val === "convert") return "Convert";
+      if (val === "revert") return "Revert";
+      if (val === "cradle") return "Cradle";
+    }
+    return val;
+  };
+  const denom = labelFor("denomination", user.denomination ?? null);
+  const path = labelFor("path", user.tradition_path ?? null);
+  const age = user.age && user.age > 0 ? `Age ${user.age}` : null;
+  const items: string[] = [denom, path, age].filter(Boolean) as string[];
+  if (items.length === 0) return null;
+  return (
+    <View style={styles.bioChipRow} testID="profile-bio-chips">
+      {items.map((label) => (
+        <View key={label} style={styles.bioChip}>
+          <Text style={styles.bioChipText}>{label}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   scroll: { padding: spacing.lg },
@@ -290,4 +349,48 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
   },
   pressed: { opacity: 0.7 },
+  quickLinksRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  quickLink: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingVertical: 12,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    backgroundColor: colors.surface,
+  },
+  quickLinkText: {
+    fontFamily: fonts.uiSemi,
+    fontSize: 13,
+    color: colors.textPrimary,
+    flex: 1,
+  },
+  bioChipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: 8,
+  },
+  bioChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: radius.round,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.gold,
+  },
+  bioChipText: {
+    fontFamily: fonts.uiSemi,
+    fontSize: 11,
+    color: colors.primary,
+    letterSpacing: 0.3,
+  },
 });

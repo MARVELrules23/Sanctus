@@ -1,0 +1,66 @@
+{
+  "summary": "Backend testing for overlay attribution, bio fields, and /me/list passed 18/18. Frontend smoke confirmed the Edit Profile screen mounts and the Save flow runs to completion — but the bio fields are silently dropped because edit-profile.tsx only sends {name, picture} to updateMe(). GET /auth/me after a UI save returns denomination=None, tradition_path=None, age=None, show_attribution=None even though the user picked chips/age in the form. Deprecated style warnings (shadow*) noted across the app but not introduced by this iteration. Expo bundler also fails to compile /sanctuary/meditation due to missing react-native-web-webview, but this is unrelated to this feature.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "edit-profile.tsx",
+        "issue": "onSave() at line ~131 only passes {name, picture} to updateMe(). The new bio fields (denomination, traditionPath, ageNum, showAttribution) are collected in state but NEVER sent. Verified live: selecting 'Catholic' + 'Convert' + age 35 and pressing Save returns 200 but GET /api/auth/me afterwards still shows denomination=null, tradition_path=null, age=null, show_attribution=null. The entire Faith bio + attribution UI is non-functional.",
+        "testID": "edit-profile-save",
+        "priority": "HIGH"
+      },
+      {
+        "component": "edit-profile.tsx",
+        "issue": "`dirty` flag is set when chips are toggled but Save button enable depends on `dirty && isValid`. Since the dirty bit is set but the payload is empty for bio-only changes, users get false success feedback (no error, returns to previous screen) while nothing persisted.",
+        "testID": "edit-profile-save",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "Edit Profile → save bio fields → Profile chips",
+        "issue": "FaithBioChips on profile tab can never light up via the in-app Edit Profile screen because the save call strips the bio fields. Chips would only ever populate if bio fields were set directly via the backend API.",
+        "affected_testIDs": ["edit-profile-save", "edit-profile-denom-catholic", "edit-profile-path-convert", "edit-profile-age-input", "edit-profile-attribution"]
+      }
+    ],
+    "design_issues": [],
+    "react_native_issues": [
+      {
+        "component": "global StyleSheet usage",
+        "issue": "Console emits 'shadow* style props are deprecated. Use boxShadow.' on every screen load. React Native Web is moving off shadowOffset/shadowOpacity etc. Reference: theme/shadow definitions used in many StyleSheet.create blocks across screens including edit-profile.tsx, edit-church.tsx. Pre-existing — not introduced by this iteration."
+      },
+      {
+        "component": "react-native-youtube-iframe (SanctuaryAudio.tsx)",
+        "issue": "Metro bundler fails to resolve 'react-native-web-webview' when compiling /app/sanctuary/meditation.tsx. Pre-existing failure visible in /var/log/supervisor/expo.err.log; does not affect this iteration's screens but blocks any meditation-related navigation."
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_overlay_bio_events.py",
+    "/app/test_reports/pytest/iteration_22_overlay.xml"
+  ],
+  "action_items": [
+    "Fix edit-profile.tsx onSave(): pass denomination, tradition_path: traditionPath, age: ageNum (use 0 to clear), and show_attribution into updateMe() so bio fields actually persist. The updateMe() helper in src/api.ts already supports all four fields — only the caller needs updating.",
+    "Optional: after the fix, also clear `dirty` state on successful save to prevent a stale 'unsaved changes' indicator if the page is reopened.",
+    "Out-of-scope but worth noting: install react-native-web-webview (or stub react-native-youtube-iframe) to unblock Expo web bundle for /sanctuary/meditation.tsx.",
+    "Out-of-scope: migrate shadow* StyleSheet props to boxShadow per React Native Web deprecation."
+  ],
+  "critical_code_review_comments": [
+    "Backend PUT /api/auth/me correctly validates denomination ∈ {catholic,protestant,orthodox}, tradition_path ∈ {convert,revert,cradle}, age 12..120, treats '' / 0 as clear. Returns proper 400 on invalid input.",
+    "_overlay_to_shape and _apply_overlays correctly dedupe contributors by user_id and only surface names when name_visible=True. last_edited_by is null when the most recent editor opted out — exactly the spec'd behavior.",
+    "PUT /churches/{id}/overlay correctly gatekeeps to osm:/community: id prefixes (400 otherwise) and applies case-insensitive dedupe + replace_mass wipe semantics.",
+    "/churches/nearby, /search, /saved all funnel through _apply_overlays so editor_count/contributors/last_edited_by are present on every shape.",
+    "/api/parish-events/me/list filters strictly by organizer_user_id and excludes removed events; cross-user isolation verified.",
+    "Frontend bug noted above is the only blocker — backend behavior matches the spec end-to-end."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100%", "frontend": "75% — UI mounts and accepts input, but the save call drops the new bio fields"},
+  "seed_data_creation": "Inserted 2 test users (TEST_overlay_user_a, TEST_overlay_user_b) and matching user_sessions with tokens TEST_overlay_token_a/b. One community church 'TEST Overlay Parish' and two parish_events ('TEST Holy Hour A'/'B') created during tests. All cleaned up in module teardown.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend pytest suite at /app/backend/tests/test_overlay_bio_events.py covers all overlay/bio/me-list scenarios — re-run after frontend fix to confirm no regression. To verify the frontend fix: seed a user_session token in Mongo, navigate to /edit-profile via the preview URL, set localStorage.sanctus_session_token = JSON.stringify('<token>'), pick a denomination chip + path chip + age + flip attribution, press Save, then GET /api/auth/me — all four bio fields should now be persisted (currently null).",
+  "rca_of_issue": "Root cause: edit-profile.tsx line ~131 — `const updated = await updateMe({ name: trimmedName, picture });` ignores the four new state variables `denomination`, `traditionPath`, `ageNum`/`ageText`, `showAttribution`. The `updateMe()` helper in /app/frontend/src/api.ts (lines 117-132) DOES accept and forward these keys correctly; only the screen-level caller was not updated when the bio UI was added. Reproduction: see context_for_next_testing_agent. Mitigation: expand the onSave payload to include all five fields. Empty/0 values intentionally clear (server treats '' / 0 as null)."
+}

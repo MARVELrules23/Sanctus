@@ -9,6 +9,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -28,6 +29,17 @@ export default function EditProfileScreen() {
   const { user, setUser } = useAuth();
   const [name, setName] = useState<string>(user?.name ?? "");
   const [picture, setPicture] = useState<string | null>(user?.picture ?? null);
+  // Faith bio fields — all optional and default to "Prefer not to say" (null).
+  const [denomination, setDenomination] = useState<"catholic" | "protestant" | "orthodox" | null>(
+    (user?.denomination as any) ?? null,
+  );
+  const [traditionPath, setTraditionPath] = useState<"convert" | "revert" | "cradle" | null>(
+    (user?.tradition_path as any) ?? null,
+  );
+  const [ageText, setAgeText] = useState<string>(
+    user?.age && user.age > 0 ? String(user.age) : "",
+  );
+  const [showAttribution, setShowAttribution] = useState<boolean>(!!user?.show_attribution);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [pickingPic, setPickingPic] = useState(false);
@@ -36,11 +48,19 @@ export default function EditProfileScreen() {
     if (user) {
       setName(user.name ?? "");
       setPicture(user.picture ?? null);
+      setDenomination((user.denomination as any) ?? null);
+      setTraditionPath((user.tradition_path as any) ?? null);
+      setAgeText(user.age && user.age > 0 ? String(user.age) : "");
+      setShowAttribution(!!user.show_attribution);
     }
   }, [user]);
 
   const trimmedName = name.trim();
-  const isValid = trimmedName.length >= 1 && trimmedName.length <= 60;
+  const ageNum = ageText.trim() === "" ? 0 : Number(ageText.trim());
+  const ageValid =
+    ageText.trim() === "" || (Number.isFinite(ageNum) && ageNum >= 12 && ageNum <= 120);
+  const isValid =
+    trimmedName.length >= 1 && trimmedName.length <= 60 && ageValid;
 
   const onPickImage = async () => {
     if (pickingPic) return;
@@ -238,6 +258,116 @@ export default function EditProfileScreen() {
           </View>
           <Text style={styles.help}>Linked to your Google sign-in.</Text>
 
+          {/* Faith bio — completely optional but powers contextual chips in
+              Profile / Community. We default everything to "Prefer not to
+              say" and surface chips only when the user picks a value. */}
+          <View style={styles.bioSection}>
+            <Text style={styles.bioHeader}>Faith bio</Text>
+            <Text style={styles.bioSubheader}>
+              Optional. Helps fellow Sanctus users get to know you in Community.
+            </Text>
+          </View>
+
+          <Text style={styles.label}>Tradition</Text>
+          <View style={styles.chipRow}>
+            {[
+              { v: null, label: "Prefer not to say" },
+              { v: "catholic", label: "Catholic" },
+              { v: "protestant", label: "Protestant" },
+              { v: "orthodox", label: "Orthodox" },
+            ].map((opt) => {
+              const sel = denomination === opt.v;
+              return (
+                <Pressable
+                  key={opt.label}
+                  testID={`edit-profile-denom-${opt.v ?? "none"}`}
+                  onPress={() => {
+                    setDenomination(opt.v as any);
+                    setDirty(true);
+                  }}
+                  style={[styles.optionChip, sel && styles.optionChipSel]}
+                >
+                  <Text style={[styles.optionText, sel && styles.optionTextSel]}>
+                    {opt.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <Text style={styles.label}>Path</Text>
+          <View style={styles.chipRow}>
+            {[
+              { v: null, label: "Prefer not to say" },
+              { v: "convert", label: "Convert" },
+              { v: "revert", label: "Revert" },
+              { v: "cradle", label: "Cradle" },
+            ].map((opt) => {
+              const sel = traditionPath === opt.v;
+              return (
+                <Pressable
+                  key={opt.label}
+                  testID={`edit-profile-path-${opt.v ?? "none"}`}
+                  onPress={() => {
+                    setTraditionPath(opt.v as any);
+                    setDirty(true);
+                  }}
+                  style={[styles.optionChip, sel && styles.optionChipSel]}
+                >
+                  <Text style={[styles.optionText, sel && styles.optionTextSel]}>
+                    {opt.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <Text style={styles.label}>Age</Text>
+          <TextInput
+            testID="edit-profile-age-input"
+            style={styles.input}
+            value={ageText}
+            onChangeText={(t) => {
+              // Digits only, max 3 chars (we accept up to 120).
+              const cleaned = t.replace(/[^0-9]/g, "").slice(0, 3);
+              setAgeText(cleaned);
+              setDirty(true);
+            }}
+            placeholder="Leave blank to keep private"
+            placeholderTextColor={colors.textMuted}
+            keyboardType="number-pad"
+            returnKeyType="done"
+            maxLength={3}
+          />
+          <Text style={styles.help}>
+            {ageText.trim() === ""
+              ? "Optional"
+              : !ageValid
+              ? "Enter an age between 12 and 120"
+              : `${ageNum} years old`}
+          </Text>
+
+          <View style={styles.attribCard}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.attribTitle}>Default attribution for church edits</Text>
+              <Text style={styles.attribBody}>
+                When you edit a parish, automatically pre-select &ldquo;show my
+                name&rdquo; on the contributor list. You can still toggle this
+                off per edit.
+              </Text>
+            </View>
+            <Switch
+              testID="edit-profile-attribution"
+              value={showAttribution}
+              onValueChange={(v) => {
+                setShowAttribution(v);
+                setDirty(true);
+              }}
+              trackColor={{ false: colors.borderSoft, true: colors.gold }}
+              thumbColor={Platform.OS === "android" ? colors.surface : undefined}
+            />
+          </View>
+
           <View style={{ height: spacing.xxl }} />
         </ScrollView>
       </KeyboardAvoidingView>
@@ -321,5 +451,52 @@ const styles = StyleSheet.create({
   inputDisabled: { backgroundColor: colors.borderSoft, borderColor: colors.borderSoft },
   inputDisabledText: { fontFamily: fonts.bodyRegular, fontSize: 16, color: colors.textSecondary },
   help: { fontFamily: fonts.bodyRegular, fontSize: 12, color: colors.textMuted, marginTop: 6 },
+  bioSection: { marginTop: spacing.xl },
+  bioHeader: {
+    fontFamily: fonts.headingBold,
+    fontSize: 18,
+    color: colors.textPrimary,
+  },
+  bioSubheader: {
+    fontFamily: fonts.bodyRegular,
+    fontSize: 12,
+    color: colors.textMuted,
+    marginTop: 4,
+  },
+  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  optionChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: radius.round,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  optionChipSel: { backgroundColor: colors.primary, borderColor: colors.primary },
+  optionText: { fontFamily: fonts.uiMedium, color: colors.textPrimary, fontSize: 13 },
+  optionTextSel: { color: colors.gold },
+  attribCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    padding: spacing.md,
+    marginTop: spacing.lg,
+  },
+  attribTitle: {
+    fontFamily: fonts.uiSemi,
+    fontSize: 14,
+    color: colors.textPrimary,
+    marginBottom: 4,
+  },
+  attribBody: {
+    fontFamily: fonts.bodyRegular,
+    fontSize: 12,
+    color: colors.textSecondary,
+    lineHeight: 18,
+  },
   pressed: { opacity: 0.7 },
 });

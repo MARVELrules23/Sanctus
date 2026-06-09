@@ -53,6 +53,13 @@ class User(BaseModel):
     email: str
     name: str
     picture: Optional[str] = None
+    # Faith bio (all optional — users may keep things private). These power
+    # the small chips on the Profile screen and are exposed publicly via
+    # /auth/me so the client can render them.
+    denomination: Optional[str] = None        # catholic | protestant | orthodox
+    tradition_path: Optional[str] = None      # convert | revert | cradle
+    age: Optional[int] = None                 # 12..120, optional
+    show_attribution: Optional[bool] = None   # default for overlay attributions
 
 
 class PreferencesPayload(BaseModel):
@@ -124,6 +131,10 @@ class SuggestExerciseRequest(BaseModel):
 class UpdateMeRequest(BaseModel):
     name: Optional[str] = None
     picture: Optional[str] = None  # base64 data URI or http(s) URL; empty string clears
+    denomination: Optional[str] = None       # "catholic" | "protestant" | "orthodox" | "" to clear
+    tradition_path: Optional[str] = None     # "convert" | "revert" | "cradle" | "" to clear
+    age: Optional[int] = None                # 12..120, or 0/-1 to clear
+    show_attribution: Optional[bool] = None  # default for overlay attributions
 
 
 # ---------- Auth helpers ----------
@@ -188,6 +199,10 @@ async def ensure_indexes():
     await db.community_churches.create_index([("loc", "2dsphere")])
     await db.community_churches.create_index([("submitted_by", 1), ("created_at", -1)])
     await db.community_churches.create_index([("removed", 1)])
+    # Church overlays — community edits applied on top of any church (OSM or
+    # community-submitted). Indexed by church_id so we can batch-merge cheaply.
+    await db.church_overlays.create_index("church_id", unique=True)
+    await db.church_overlays.create_index([("updated_at", -1)])
 
 
 async def get_current_user(authorization: Optional[str] = Header(None)) -> User:
@@ -275,6 +290,26 @@ async def update_me(payload: UpdateMeRequest, user: User = Depends(get_current_u
         if pic.startswith("data:image/") and len(pic) > 2_800_000:
             raise HTTPException(status_code=413, detail="picture too large (max ~2MB)")
         update["picture"] = pic or None
+    if payload.denomination is not None:
+        d = payload.denomination.strip().lower()
+        if d and d not in {"catholic", "protestant", "orthodox"}:
+            raise HTTPException(status_code=400, detail="denomination must be catholic, protestant, or orthodox")
+        update["denomination"] = d or None
+    if payload.tradition_path is not None:
+        t = payload.tradition_path.strip().lower()
+        if t and t not in {"convert", "revert", "cradle"}:
+            raise HTTPException(status_code=400, detail="tradition_path must be convert, revert, or cradle")
+        update["tradition_path"] = t or None
+    if payload.age is not None:
+        # 0 (or negative) clears; otherwise must be a sensible adult-or-teen range.
+        if payload.age <= 0:
+            update["age"] = None
+        elif not (12 <= payload.age <= 120):
+            raise HTTPException(status_code=400, detail="age must be between 12 and 120")
+        else:
+            update["age"] = int(payload.age)
+    if payload.show_attribution is not None:
+        update["show_attribution"] = bool(payload.show_attribution)
     if not update:
         return user
     await db.users.update_one({"user_id": user.user_id}, {"$set": update})
@@ -1157,6 +1192,9 @@ async def churches_nearby(
     # Merge in community-added churches within the same radius.
     community = await _community_churches_nearby(lat, lng, radius_m)
     churches = _merge_churches(churches, community)
+    # Overlay user-contributed details (mass/confession/website/phone/notes)
+    # on top of whatever the OSM/community sources provided.
+    churches = await _apply_overlays(churches)
     # Annotate which churches the user has starred.
     starred_ids = {
         d["church_id"]
@@ -1187,6 +1225,8 @@ async def churches_search(
     # the search radius if a center was provided).
     community = await _community_churches_search(q, lat=lat, lng=lng, radius_m=radius_m)
     churches = _merge_churches(churches, community)
+    # Overlay user-contributed details on top.
+    churches = await _apply_overlays(churches)
     starred_ids = {
         d["church_id"]
         async for d in db.user_churches.find({"user_id": user.user_id}, {"church_id": 1, "_id": 0})
@@ -1440,6 +1480,231 @@ async def submit_community_church(
     return _community_to_shape(doc, origin=(payload.lat, payload.lng))
 
 
+# ---------------------------------------------------------------------------
+# Church overlays
+# ---------------------------------------------------------------------------
+# Anyone signed-in can add the Mass / Confession schedule, website, or phone
+# number to *any* church — including OSM-sourced ones whose data is sparse.
+# Edits land in a single `church_overlays` doc keyed by church_id. We merge
+# overlays into both `/churches/nearby` and `/churches/search` so they show
+# up immediately for everyone in the area.
+#
+# Design choices:
+#   • Mass / confession times are *unioned* with whatever the underlying
+#     source already has (deduped case-insensitively). This makes the field
+#     act as a community wiki — successive editors keep adding.
+#   • Scalars (website, phone, notes) are *replaced* — last-write-wins. We
+#     store a small `editors` audit list (last 20) so we can attribute
+#     changes if abuse becomes a problem.
+#   • No delete endpoint yet — if it becomes a problem, we'll add a flag
+#     mechanism (same as parish events).
+
+class ChurchOverlayPayload(BaseModel):
+    mass_times: Optional[List[str]] = Field(default=None, max_length=24)
+    confession_times: Optional[List[str]] = Field(default=None, max_length=24)
+    website: Optional[str] = Field(default=None, max_length=300)
+    phone: Optional[str] = Field(default=None, max_length=60)
+    notes: Optional[str] = Field(default=None, max_length=600)
+    # Mass/confession behaviour: by default new entries are *added* to the
+    # existing list; set replace=True to wipe the existing list and use the
+    # incoming one instead (e.g. when the user is fixing a typo).
+    replace_mass: bool = False
+    replace_confession: bool = False
+    # Whether the editor wants their display name credited publicly on this
+    # church card. Defaults to False (anonymous community wiki).
+    show_name: bool = False
+
+
+def _merge_time_lists(existing: List[str], incoming: List[str], replace: bool) -> List[str]:
+    """Return existing ∪ incoming (case-insensitive dedupe, capped at 24).
+    If ``replace`` is True, ignore the existing list and use the incoming one."""
+    base = [] if replace else list(existing or [])
+    seen = {x.lower() for x in base}
+    for it in _clean_time_list(incoming):
+        if it.lower() in seen:
+            continue
+        base.append(it)
+        seen.add(it.lower())
+        if len(base) >= 24:
+            break
+    return base
+
+
+def _scalar_or_existing(incoming: Optional[str], existing: Optional[str]) -> Optional[str]:
+    if incoming is None:
+        return existing
+    s = incoming.strip()
+    return s or None  # empty string clears the field
+
+
+@api.put("/churches/{church_id:path}/overlay")
+async def upsert_church_overlay(
+    church_id: str,
+    payload: ChurchOverlayPayload,
+    user: User = Depends(get_current_user),
+):
+    """Add or update community-supplied details for an existing church."""
+    if not church_id or len(church_id) > 200:
+        raise HTTPException(status_code=400, detail="invalid church_id")
+    # Trust but validate — the church should exist either as a community doc
+    # OR be an OSM id (we don't have an OSM lookup table, but the prefix
+    # `osm:` and the format are enough to gatekeep). This stops people from
+    # spamming arbitrary string keys.
+    if not (church_id.startswith("osm:") or church_id.startswith("community:")):
+        raise HTTPException(status_code=400, detail="unsupported church_id format")
+
+    now = datetime.now(timezone.utc)
+    existing = await db.church_overlays.find_one({"church_id": church_id}, {"_id": 0}) or {}
+    merged_mass = _merge_time_lists(
+        existing.get("mass_times", []), payload.mass_times or [], payload.replace_mass
+    )
+    merged_conf = _merge_time_lists(
+        existing.get("confession_times", []),
+        payload.confession_times or [],
+        payload.replace_confession,
+    )
+    website = _scalar_or_existing(payload.website, existing.get("website"))
+    phone = _scalar_or_existing(payload.phone, existing.get("phone"))
+    notes = _scalar_or_existing(payload.notes, existing.get("notes"))
+
+    # Audit ring buffer (last 20 editors) — small footprint, useful for moderation.
+    fields_touched: List[str] = []
+    if payload.mass_times is not None:
+        fields_touched.append("mass_times")
+    if payload.confession_times is not None:
+        fields_touched.append("confession_times")
+    if payload.website is not None:
+        fields_touched.append("website")
+    if payload.phone is not None:
+        fields_touched.append("phone")
+    if payload.notes is not None:
+        fields_touched.append("notes")
+    editors = list(existing.get("editors") or [])
+    editors.append({
+        "user_id": user.user_id,
+        "name": getattr(user, "name", None) or "Anonymous",
+        "at": now.isoformat(),
+        "fields": fields_touched,
+        "name_visible": bool(payload.show_name),
+    })
+    editors = editors[-20:]
+
+    doc = {
+        "church_id": church_id,
+        "mass_times": merged_mass,
+        "confession_times": merged_conf,
+        "website": website,
+        "phone": phone,
+        "notes": notes,
+        "editors": editors,
+        "updated_at": now,
+        "created_at": existing.get("created_at") or now,
+    }
+    await db.church_overlays.update_one(
+        {"church_id": church_id}, {"$set": doc}, upsert=True
+    )
+    return _overlay_to_shape(doc)
+
+
+@api.get("/churches/{church_id:path}/overlay")
+async def get_church_overlay(
+    church_id: str,
+    user: User = Depends(get_current_user),
+):
+    doc = await db.church_overlays.find_one({"church_id": church_id}, {"_id": 0})
+    if not doc:
+        return _overlay_to_shape({"church_id": church_id})
+    return _overlay_to_shape(doc)
+
+
+def _overlay_to_shape(doc: dict) -> dict:
+    editors = list(doc.get("editors") or [])
+    # Public attribution list: only editors who explicitly opted in to be
+    # credited. We dedupe by user_id and keep the most recent name for each.
+    seen: Dict[str, str] = {}
+    for e in editors:
+        if e.get("name_visible") and e.get("name"):
+            seen[e.get("user_id") or e["name"]] = str(e["name"]).strip()
+    contributors = [n for n in seen.values() if n]
+    last_editor: Optional[Dict[str, Any]] = editors[-1] if editors else None
+    return {
+        "church_id": doc.get("church_id", ""),
+        "mass_times": list(doc.get("mass_times") or []),
+        "confession_times": list(doc.get("confession_times") or []),
+        "website": doc.get("website") or "",
+        "phone": doc.get("phone") or "",
+        "notes": doc.get("notes") or "",
+        "editor_count": len({e.get("user_id") for e in editors if e.get("user_id")}),
+        "contributors": contributors,
+        "last_edited_by": (
+            last_editor.get("name") if (last_editor and last_editor.get("name_visible")) else None
+        ),
+        "updated_at": (
+            doc["updated_at"].isoformat()
+            if isinstance(doc.get("updated_at"), datetime)
+            else doc.get("updated_at")
+        ),
+    }
+
+
+async def _apply_overlays(churches: List[dict]) -> List[dict]:
+    """Merge community overlays onto a list of church dicts in place. Mass /
+    confession arrays union with overlay entries (overlay items appended after
+    existing ones, deduped). Website / phone / notes — overlay wins when
+    non-empty.
+
+    The whole function is one Mongo query keyed by `church_id IN [...]`, so
+    it stays cheap even on a full radius dump.
+    """
+    if not churches:
+        return churches
+    ids = [c.get("church_id") for c in churches if c.get("church_id")]
+    if not ids:
+        return churches
+    cursor = db.church_overlays.find({"church_id": {"$in": ids}}, {"_id": 0})
+    overlays = {o["church_id"]: o async for o in cursor}
+    for c in churches:
+        ov = overlays.get(c.get("church_id"))
+        if not ov:
+            c.setdefault("editor_count", 0)
+            c.setdefault("contributors", [])
+            c.setdefault("last_edited_by", None)
+            continue
+        # Time arrays: union with existing.
+        existing_mass = list(c.get("mass_times") or [])
+        existing_conf = list(c.get("confession_times") or [])
+        seen_mass = {x.lower() for x in existing_mass}
+        for t in (ov.get("mass_times") or []):
+            if t.lower() not in seen_mass:
+                existing_mass.append(t)
+                seen_mass.add(t.lower())
+        seen_conf = {x.lower() for x in existing_conf}
+        for t in (ov.get("confession_times") or []):
+            if t.lower() not in seen_conf:
+                existing_conf.append(t)
+                seen_conf.add(t.lower())
+        c["mass_times"] = existing_mass
+        c["confession_times"] = existing_conf
+        # Scalars: overlay wins when non-empty.
+        if ov.get("website"):
+            c["website"] = ov["website"]
+        if ov.get("phone"):
+            c["phone"] = ov["phone"]
+        if ov.get("notes"):
+            c["notes"] = ov["notes"]
+        editors = list(ov.get("editors") or [])
+        c["editor_count"] = len({e.get("user_id") for e in editors if e.get("user_id")})
+        # Visible contributors: dedupe by user_id and keep latest opted-in name.
+        named: Dict[str, str] = {}
+        for e in editors:
+            if e.get("name_visible") and e.get("name"):
+                named[e.get("user_id") or e["name"]] = str(e["name"]).strip()
+        c["contributors"] = [n for n in named.values() if n]
+        last = editors[-1] if editors else None
+        c["last_edited_by"] = (last.get("name") if (last and last.get("name_visible")) else None)
+    return churches
+
+
 def _user_church_doc(d: dict) -> dict:
     return {
         "church_id": d["church_id"],
@@ -1462,7 +1727,11 @@ def _user_church_doc(d: dict) -> dict:
 async def list_saved_churches(user: User = Depends(get_current_user)):
     cursor = db.user_churches.find({"user_id": user.user_id}, {"_id": 0}).sort("saved_at", -1)
     docs = await cursor.to_list(length=200)
-    return {"items": [_user_church_doc(d) for d in docs]}
+    items = [_user_church_doc(d) for d in docs]
+    # Apply community overlays so saved-church cards always show the latest
+    # mass/confession/website edits made by anyone in the community.
+    items = await _apply_overlays(items)
+    return {"items": items}
 
 
 @api.post("/churches/save")

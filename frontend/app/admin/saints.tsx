@@ -4,6 +4,7 @@ import {
   Alert,
   Image,
   KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -13,6 +14,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useRouter } from "expo-router";
@@ -48,6 +50,7 @@ function EditorModal({
 }) {
   const [draft, setDraft] = useState<SaintAdmin | null>(entry);
   const [saving, setSaving] = useState(false);
+  const [pickingPic, setPickingPic] = useState(false);
 
   useEffect(() => { setDraft(entry); }, [entry]);
 
@@ -55,6 +58,72 @@ function EditorModal({
 
   const set = <K extends keyof SaintAdmin>(k: K, v: SaintAdmin[K]) =>
     setDraft({ ...draft, [k]: v });
+
+  const onPickPicture = async () => {
+    if (pickingPic) return;
+    setPickingPic(true);
+    try {
+      const perm = await ImagePicker.getMediaLibraryPermissionsAsync();
+      let status = perm.status;
+      let canAskAgain = perm.canAskAgain;
+      if (status !== "granted") {
+        if (canAskAgain) {
+          const req = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          status = req.status;
+          canAskAgain = req.canAskAgain;
+        }
+      }
+      if (status !== "granted") {
+        if (!canAskAgain) {
+          Alert.alert(
+            "Photos permission needed",
+            "Sanctus needs access to your photos to attach an image to this entry.",
+            [
+              { text: "Cancel", style: "cancel" },
+              { text: "Open Settings", onPress: () => Linking.openSettings() },
+            ],
+          );
+        }
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [3, 4],
+        quality: 0.72,
+        base64: true,
+      });
+      if (result.canceled || !result.assets?.length) return;
+      const asset = result.assets[0];
+      let uri = asset.uri;
+      if (asset.base64) {
+        const mime = asset.mimeType || "image/jpeg";
+        uri = `data:${mime};base64,${asset.base64}`;
+      }
+      // Hard guard ~2.8 MB to keep Mongo docs small.
+      if (uri.startsWith("data:") && uri.length > 2_800_000) {
+        Alert.alert("Image too large", "Please pick a smaller photo (max ~2 MB).");
+        return;
+      }
+      setDraft({
+        ...draft,
+        picture_url: uri,
+        // If the source field is empty, pre-fill a sensible default for uploads.
+        picture_source: draft.picture_source && draft.picture_source.trim().length > 0
+          ? draft.picture_source
+          : "Uploaded by admin",
+      });
+    } catch (e) {
+      console.warn("saint image pick failed", e);
+      Alert.alert("Could not load that photo", "Please try a different one.");
+    } finally {
+      setPickingPic(false);
+    }
+  };
+
+  const clearPicture = () => {
+    setDraft({ ...draft, picture_url: null });
+  };
 
   const save = async () => {
     setSaving(true);
@@ -128,14 +197,49 @@ function EditorModal({
               </Pressable>
             </View>
 
-            <Text style={styles.label}>Picture URL (Wikimedia Commons)</Text>
-            <TextInput value={draft.picture_url || ""} onChangeText={(v) => set("picture_url", v || null)} style={styles.input} placeholder="https://upload.wikimedia.org/..." placeholderTextColor={colors.textMuted} autoCapitalize="none" />
+            <Text style={styles.label}>Picture</Text>
             {draft.picture_url ? (
-              <Image source={{ uri: draft.picture_url }} style={styles.previewImg} resizeMode="cover" />
+              <View style={styles.previewWrap}>
+                <Image source={{ uri: draft.picture_url }} style={styles.previewImg} resizeMode="cover" />
+                <Pressable
+                  onPress={clearPicture}
+                  style={({ pressed }) => [styles.previewClear, pressed && { opacity: 0.7 }]}
+                  hitSlop={8}
+                >
+                  <Ionicons name="close" size={16} color="#fff" />
+                </Pressable>
+              </View>
             ) : null}
+            <View style={styles.row}>
+              <Pressable
+                onPress={onPickPicture}
+                disabled={pickingPic}
+                style={({ pressed }) => [styles.pickerBtn, pressed && { opacity: 0.8 }, pickingPic && { opacity: 0.6 }]}
+              >
+                {pickingPic ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <Ionicons name="image-outline" size={16} color={colors.primary} />
+                )}
+                <Text style={styles.pickerBtnText}>
+                  {pickingPic ? "Loading…" : draft.picture_url ? "Replace from library" : "Upload from library"}
+                </Text>
+              </Pressable>
+            </View>
+            <Text style={styles.subtleLabel}>…or paste a public URL (Wikimedia Commons)</Text>
+            <TextInput
+              value={draft.picture_url && draft.picture_url.startsWith("data:") ? "" : (draft.picture_url || "")}
+              onChangeText={(v) => set("picture_url", v || null)}
+              style={styles.input}
+              placeholder="https://upload.wikimedia.org/..."
+              placeholderTextColor={colors.textMuted}
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={!draft.picture_url || !draft.picture_url.startsWith("data:")}
+            />
 
-            <Text style={styles.label}>Picture source</Text>
-            <TextInput value={draft.picture_source || ""} onChangeText={(v) => set("picture_source", v || null)} style={styles.input} placeholder="Wikimedia Commons (public domain)" placeholderTextColor={colors.textMuted} />
+            <Text style={styles.label}>Picture source / credit</Text>
+            <TextInput value={draft.picture_source || ""} onChangeText={(v) => set("picture_source", v || null)} style={styles.input} placeholder="Wikimedia Commons (public domain) or photographer name" placeholderTextColor={colors.textMuted} />
 
             <Text style={styles.label}>Quote (verbatim)</Text>
             <TextInput value={draft.quote} onChangeText={(v) => set("quote", v)} style={[styles.input, styles.multiline]} multiline placeholder="A short, verified quotation by the person…" placeholderTextColor={colors.textMuted} />
@@ -447,7 +551,12 @@ const styles = StyleSheet.create({
   proposeBtnText: { fontFamily: fonts.uiSemi, fontSize: 13, color: colors.gold },
   saveBtn: { paddingHorizontal: spacing.md, paddingVertical: 6, borderRadius: radius.round, backgroundColor: colors.primary, minWidth: 72, alignItems: "center" },
   saveBtnText: { fontFamily: fonts.uiSemi, color: colors.gold, fontSize: 13 },
-  previewImg: { width: "100%", height: 180, borderRadius: radius.sm, marginTop: 8, backgroundColor: colors.background },
+  previewImg: { width: "100%", height: 220, borderRadius: radius.sm, marginTop: 8, backgroundColor: colors.background },
+  previewWrap: { position: "relative", marginTop: 8 },
+  previewClear: { position: "absolute", top: 8, right: 8, width: 26, height: 26, borderRadius: 13, backgroundColor: "rgba(0,0,0,0.55)", alignItems: "center", justifyContent: "center" },
+  pickerBtn: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 14, paddingVertical: 10, borderRadius: radius.round, borderWidth: 1, borderColor: colors.borderSoft, backgroundColor: colors.background, marginTop: spacing.sm },
+  pickerBtnText: { fontFamily: fonts.uiSemi, fontSize: 12, color: colors.primary },
+  subtleLabel: { marginTop: spacing.md, fontFamily: fonts.uiMedium, fontSize: 11, color: colors.textMuted },
   empty: { textAlign: "center", fontFamily: fonts.bodyItalic, fontStyle: "italic", color: colors.textMuted, marginTop: spacing.lg },
   entryCard: { marginTop: spacing.md, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderSoft, ...shadow.card },
   entryHeader: { flexDirection: "row", gap: spacing.sm, alignItems: "center" },

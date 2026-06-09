@@ -12,7 +12,7 @@
       "supportsTablet": true,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Find Catholic churches near you",
-        "NSPhotoLibraryUsageDescription": "Choose a profile picture from your photos",
+        "NSPhotoLibraryUsageDescription": "Attach photos to your profile and Saints entries",
         "NSCalendarsUsageDescription": "Save parish events to your calendar",
         "NSCalendarsFullAccessUsageDescription": "Save parish events to your calendar",
         "NSRemindersUsageDescription": "Add prayer reminders to your reminders"

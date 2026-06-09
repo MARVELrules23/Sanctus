@@ -100,6 +100,24 @@ export default function MeditationScreen() {
     // Keep playing state — the audio component will pick up the new track and start.
   };
 
+  /**
+   * Toggle play/pause from the breathing-orb tap. If the user hasn't picked
+   * a timer yet we deliberately leave the timer untouched — they can run an
+   * open-ended sit and tap again to pause. Hitting play with a timer that's
+   * already counted down to zero resets it to the previously-chosen length
+   * so the orb behaves like a real play/pause control.
+   */
+  const toggleOrb = () => {
+    if (playing) {
+      setPlaying(false);
+      return;
+    }
+    if (timerMin != null && secondsLeft <= 0) {
+      setSecondsLeft(timerMin * 60);
+    }
+    setPlaying(true);
+  };
+
   return (
     <SafeAreaView style={styles.screen} edges={["top"]}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -130,7 +148,7 @@ export default function MeditationScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Breathing orb */}
-        <BreathingGuide active={playing} />
+        <BreathingGuide active={playing} onTogglePlay={toggleOrb} />
 
         {/* Rotating scripture / saint quote */}
         <RotatingQuote active={playing} />

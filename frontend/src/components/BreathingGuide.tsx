@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, {
   Easing,
   cancelAnimation,
@@ -7,6 +7,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
+import { Ionicons } from "@expo/vector-icons";
 
 import { colors, fonts } from "@/src/theme";
 
@@ -14,6 +15,11 @@ import { colors, fonts } from "@/src/theme";
  * 4-7-8 breathing pattern — inhale 4s, hold 7s, exhale 8s.
  * The orb scales up during inhale, holds, then contracts during exhale.
  * Designed to lull, not to distract — animations are slow and steady.
+ *
+ * The orb itself acts as the play/pause control for the meditation. The
+ * `onTogglePlay` callback wires it back to the parent screen which owns
+ * the actual audio + timer state. Centering the touch target on the orb
+ * matches user mental model ("tap the circle to begin").
  */
 
 type Phase = "inhale" | "hold" | "exhale";
@@ -27,9 +33,10 @@ const PHASES: { name: Phase; label: string; duration: number; scale: number }[] 
 export interface BreathingGuideProps {
   active: boolean;          // when false, the orb stays at rest
   size?: number;            // diameter at rest, default 140
+  onTogglePlay?: () => void; // tap-to-toggle behavior
 }
 
-export default function BreathingGuide({ active, size = 140 }: BreathingGuideProps) {
+export default function BreathingGuide({ active, size = 140, onTogglePlay }: BreathingGuideProps) {
   const scale = useSharedValue(1);
   const [phaseIdx, setPhaseIdx] = useState(0);
   const phaseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -71,8 +78,20 @@ export default function BreathingGuide({ active, size = 140 }: BreathingGuidePro
 
   const phase = PHASES[phaseIdx];
 
+  // The Pressable wraps the orb + the centered label so the entire visual
+  // hot zone is reactive to taps. The reanimated transform stays on the
+  // inner View so scaling the orb doesn't grow the hit area unexpectedly.
   return (
-    <View style={styles.wrap} testID="breathing-guide">
+    <Pressable
+      onPress={onTogglePlay}
+      style={styles.wrap}
+      hitSlop={12}
+      testID="breathing-guide"
+      accessibilityRole="button"
+      accessibilityLabel={active ? "Pause meditation" : "Begin meditation"}
+      accessibilityState={{ selected: active }}
+      disabled={!onTogglePlay}
+    >
       <View
         style={[
           styles.outerRing,
@@ -87,9 +106,16 @@ export default function BreathingGuide({ active, size = 140 }: BreathingGuidePro
         ]}
       />
       <View style={styles.labelWrap} pointerEvents="none">
-        <Text style={styles.label}>{active ? phase.label : "Tap play to begin"}</Text>
+        {active ? (
+          <Text style={styles.label}>{phase.label}</Text>
+        ) : (
+          <>
+            <Ionicons name="play" size={28} color={colors.gold} style={{ marginBottom: 6 }} />
+            <Text style={styles.label}>Tap to begin</Text>
+          </>
+        )}
       </View>
-    </View>
+    </Pressable>
   );
 }
 

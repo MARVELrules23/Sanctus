@@ -740,12 +740,6 @@ def build_router(
 
         return {"reflection": reflection_text, "teaching_id": teaching["id"]}
 
-    class SaveToJournalRequest(BaseModel):
-        date: str
-        teaching_id: str
-        reflection: Optional[str] = None
-        user_note: Optional[str] = None
-
     @router.post("/save-to-journal")
     async def save_to_journal(payload: SaveToJournalRequest, user=Depends(get_user)):
         teaching = next((t for t in TEACHINGS if t["id"] == payload.teaching_id), None)

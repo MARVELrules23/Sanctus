@@ -96,13 +96,67 @@ def message_public(m: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def thread_public(t: Dict[str, Any], other_user: Optional[Dict[str, Any]],
-                  unread: int = 0) -> Dict[str, Any]:
-    return {
+                  unread: int = 0,
+                  members_lookup: Optional[Dict[str, Dict[str, Any]]] = None,
+                  viewer_id: Optional[str] = None) -> Dict[str, Any]:
+    """Project a DM thread for the client.
+
+    Backwards-compatible with 1-on-1 threads: `other` is set to the other
+    member's public user for non-group threads. Group threads get the
+    full `members` array, `is_group`, `name`, and an `auto_name` fallback
+    so the client can render "Mary, John + 3" when no custom name is set.
+    """
+    is_group = bool(t.get("is_group"))
+    member_ids: List[str] = list(t.get("member_ids") or [])
+    out: Dict[str, Any] = {
         "thread_id": t.get("thread_id"),
-        "other": public_user(other_user) if other_user else None,
+        "is_group": is_group,
+        "name": t.get("name"),
+        "created_by": t.get("created_by"),
         "last_message": t.get("last_message"),
         "last_message_at": iso(t.get("last_message_at")),
         "unread": unread,
+    }
+    if is_group:
+        # Resolve all members; fall back to a stub if a member was deleted.
+        members_lookup = members_lookup or {}
+        members = []
+        for mid in member_ids:
+            u = members_lookup.get(mid)
+            members.append(public_user(u) if u else {"user_id": mid, "name": "Unknown", "picture": None})
+        out["members"] = members
+        # Auto-name uses everyone except the viewer for a contextual title.
+        names = [m["name"] for m in members if m["user_id"] != viewer_id]
+        if not names:
+            names = [m["name"] for m in members]
+        if len(names) <= 3:
+            out["auto_name"] = ", ".join(names)
+        else:
+            out["auto_name"] = f"{', '.join(names[:2])} + {len(names) - 2} others"
+        out["other"] = None
+    else:
+        out["other"] = public_user(other_user) if other_user else None
+        out["members"] = None
+        out["auto_name"] = None
+    return out
+
+
+def friendship_key(a: str, b: str) -> str:
+    """Deterministic key so a friendship is unique regardless of who initiated."""
+    x, y = sorted([a, b])
+    return f"{x}__{y}"
+
+
+def friendship_public(f: Dict[str, Any],
+                      other_user: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """Project a friendship row for the client."""
+    return {
+        "friendship_id": f.get("friendship_id"),
+        "user": public_user(other_user) if other_user else None,
+        "status": f.get("status", "pending"),       # pending | accepted
+        "requested_by": f.get("requested_by"),      # who sent the original request
+        "created_at": iso(f.get("created_at")),
+        "accepted_at": iso(f.get("accepted_at")),
     }
 
 
@@ -110,6 +164,8 @@ def thread_public(t: Dict[str, Any], other_user: Optional[Dict[str, Any]],
 MAX_POST_LEN = 1500
 MAX_REPLY_LEN = 800
 MAX_DM_LEN = 1500
+MAX_GROUP_MEMBERS = 50
+MAX_GROUP_NAME_LEN = 60
 
 
 def clean_body(text: str, limit: int) -> str:
@@ -119,3 +175,16 @@ def clean_body(text: str, limit: int) -> str:
     if len(text) > limit:
         text = text[:limit].rstrip()
     return text
+
+
+def clean_group_name(text: Optional[str]) -> Optional[str]:
+    """Trim and validate a group-chat name. Returns None if empty (so the
+    client falls back to the auto-name)."""
+    if not text:
+        return None
+    s = text.strip()
+    if not s:
+        return None
+    if len(s) > MAX_GROUP_NAME_LEN:
+        s = s[:MAX_GROUP_NAME_LEN].rstrip()
+    return s

@@ -45,13 +45,22 @@ export default function DMInboxScreen() {
           <Ionicons name="chevron-back" size={26} color={colors.primary} />
         </Pressable>
         <Text style={styles.headerTitle}>Messages</Text>
-        <Pressable
-          onPress={() => router.push("/community/people")}
-          hitSlop={12}
-          testID="dm-new"
-        >
-          <Ionicons name="create-outline" size={22} color={colors.primary} />
-        </Pressable>
+        <View style={{ flexDirection: "row", gap: spacing.md }}>
+          <Pressable
+            onPress={() => router.push("/community/dm/new-group")}
+            hitSlop={12}
+            testID="dm-new-group"
+          >
+            <Ionicons name="people-outline" size={22} color={colors.primary} />
+          </Pressable>
+          <Pressable
+            onPress={() => router.push("/community/people")}
+            hitSlop={12}
+            testID="dm-new"
+          >
+            <Ionicons name="create-outline" size={22} color={colors.primary} />
+          </Pressable>
+        </View>
       </View>
 
       {loading ? (
@@ -79,30 +88,43 @@ export default function DMInboxScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={colors.gold} />}
           contentContainerStyle={styles.scroll}
         >
-          {threads.map((t) => (
-            <Pressable
-              key={t.thread_id}
-              testID={`dm-thread-${t.thread_id}`}
-              onPress={() => router.push({ pathname: "/community/dm/[thread_id]", params: { thread_id: t.thread_id } })}
-              style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]}
-            >
-              <Avatar name={t.other?.name} picture={t.other?.picture ?? null} size={48} />
-              <View style={styles.middle}>
-                <View style={styles.topLine}>
-                  <Text style={styles.name} numberOfLines={1}>{t.other?.name || "Unknown"}</Text>
-                  {t.last_message_at ? <Text style={styles.time}>{timeAgo(t.last_message_at)}</Text> : null}
+          {threads.map((t) => {
+            const displayName = t.is_group
+              ? (t.name || t.auto_name || "Group chat")
+              : (t.other?.name || "Unknown");
+            return (
+              <Pressable
+                key={t.thread_id}
+                testID={`dm-thread-${t.thread_id}`}
+                onPress={() => router.push({ pathname: "/community/dm/[thread_id]", params: { thread_id: t.thread_id } })}
+                style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]}
+              >
+                {t.is_group ? (
+                  <View style={styles.groupAvatar}>
+                    <Ionicons name="people" size={22} color={colors.gold} />
+                  </View>
+                ) : (
+                  <Avatar name={t.other?.name} picture={t.other?.picture ?? null} size={48} />
+                )}
+                <View style={styles.middle}>
+                  <View style={styles.topLine}>
+                    <Text style={styles.name} numberOfLines={1}>
+                      {t.is_group ? `👥  ${displayName}` : displayName}
+                    </Text>
+                    {t.last_message_at ? <Text style={styles.time}>{timeAgo(t.last_message_at)}</Text> : null}
+                  </View>
+                  <View style={styles.bottomLine}>
+                    <Text style={[styles.preview, t.unread > 0 && styles.previewUnread]} numberOfLines={1}>
+                      {t.last_message || (t.is_group ? `${t.members?.length || 0} members` : "Say hello")}
+                    </Text>
+                    {t.unread > 0 ? (
+                      <View style={styles.unreadDot}><Text style={styles.unreadText}>{t.unread}</Text></View>
+                    ) : null}
+                  </View>
                 </View>
-                <View style={styles.bottomLine}>
-                  <Text style={[styles.preview, t.unread > 0 && styles.previewUnread]} numberOfLines={1}>
-                    {t.last_message || "Say hello"}
-                  </Text>
-                  {t.unread > 0 ? (
-                    <View style={styles.unreadDot}><Text style={styles.unreadText}>{t.unread}</Text></View>
-                  ) : null}
-                </View>
-              </View>
-            </Pressable>
-          ))}
+              </Pressable>
+            );
+          })}
           <View style={{ height: spacing.xxl }} />
         </ScrollView>
       )}
@@ -167,4 +189,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   unreadText: { fontFamily: fonts.uiSemi, color: colors.primary, fontSize: 11 },
+  groupAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 });

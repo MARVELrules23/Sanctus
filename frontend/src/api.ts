@@ -364,6 +364,11 @@ export type CommunityFeed = {
 export type CommunityDMThread = {
   thread_id: string;
   other: CommunityUserPublic | null;
+  is_group: boolean;
+  name: string | null;
+  auto_name?: string | null;
+  members?: CommunityUserPublic[] | null;
+  created_by?: string | null;
   last_message: string | null;
   last_message_at: string | null;
   unread: number;
@@ -376,6 +381,70 @@ export type CommunityDMMessage = {
   body: string;
   created_at: string;
 };
+
+// ---- Friendships ----
+export type FriendStatus = "none" | "pending" | "accepted" | "self";
+
+export type Friendship = {
+  friendship_id: string;
+  user: CommunityUserPublic | null;
+  status: "pending" | "accepted";
+  requested_by: string;
+  created_at: string;
+  accepted_at: string | null;
+};
+
+export async function friendStatus(userId: string): Promise<{ status: FriendStatus; requested_by: string | null }> {
+  return await api(`/community/friends/status/${encodeURIComponent(userId)}`);
+}
+
+export async function friendRequest(userId: string): Promise<Friendship> {
+  return await api(`/community/friends/request`, { method: "POST", body: { user_id: userId } });
+}
+
+export async function friendAccept(userId: string): Promise<Friendship> {
+  return await api(`/community/friends/accept`, { method: "POST", body: { user_id: userId } });
+}
+
+export async function friendDecline(userId: string): Promise<{ ok: boolean }> {
+  return await api(`/community/friends/decline`, { method: "POST", body: { user_id: userId } });
+}
+
+export async function friendRemove(userId: string): Promise<{ ok: boolean }> {
+  return await api(`/community/friends/${encodeURIComponent(userId)}`, { method: "DELETE" });
+}
+
+export async function friendList(status: "accepted" | "incoming" | "outgoing" = "accepted"): Promise<{ items: Friendship[]; count: number }> {
+  return await api(`/community/friends/list?status=${status}`);
+}
+
+// ---- Group DMs ----
+export async function dmCreateGroup(memberIds: string[], name?: string | null): Promise<CommunityDMThread> {
+  return await api(`/community/dm/threads/group`, {
+    method: "POST",
+    body: { member_ids: memberIds, name: name ?? null },
+  });
+}
+
+export async function dmRenameGroup(threadId: string, name: string | null): Promise<CommunityDMThread> {
+  return await api(`/community/dm/threads/${encodeURIComponent(threadId)}/name`, {
+    method: "PUT",
+    body: { name },
+  });
+}
+
+export async function dmAddGroupMember(threadId: string, userId: string): Promise<CommunityDMThread> {
+  return await api(`/community/dm/threads/${encodeURIComponent(threadId)}/members`, {
+    method: "POST",
+    body: { user_id: userId },
+  });
+}
+
+export async function dmRemoveGroupMember(threadId: string, userId: string): Promise<{ ok: boolean; deleted: boolean }> {
+  return await api(`/community/dm/threads/${encodeURIComponent(threadId)}/members/${encodeURIComponent(userId)}`, {
+    method: "DELETE",
+  });
+}
 
 export const REPORT_REASONS_FALLBACK = [
   "Inappropriate content",

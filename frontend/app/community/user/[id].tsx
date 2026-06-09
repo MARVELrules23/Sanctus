@@ -11,7 +11,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 
-import { api, CommunityPost, CommunityUserPublic } from "@/src/api";
+import { api, CommunityPost, CommunityUserPublic, friendAccept, friendDecline, friendRemove, friendRequest, friendStatus, FriendStatus } from "@/src/api";
 import Avatar from "@/src/components/Avatar";
 import { PostCard } from "@/app/(tabs)/community";
 import { useAuth } from "@/src/auth-context";
@@ -23,6 +23,8 @@ type ProfileResponse = {
   is_self: boolean;
 };
 
+type FriendState = { status: FriendStatus; requested_by: string | null };
+
 export default function CommunityUserProfileScreen() {
   const router = useRouter();
   const { user: me } = useAuth();
@@ -31,6 +33,8 @@ export default function CommunityUserProfileScreen() {
 
   const [data, setData] = useState<ProfileResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [friend, setFriend] = useState<FriendState>({ status: "none", requested_by: null });
+  const [friendBusy, setFriendBusy] = useState(false);
 
   const load = useCallback(async () => {
     if (!userId) return;
@@ -38,6 +42,14 @@ export default function CommunityUserProfileScreen() {
     try {
       const r = await api<ProfileResponse>(`/community/users/${userId}`);
       setData(r);
+      if (!r.is_self) {
+        try {
+          const fs = await friendStatus(userId);
+          setFriend(fs);
+        } catch {
+          /* ignore */
+        }
+      }
     } catch {
       // ignore
     } finally {
@@ -46,6 +58,45 @@ export default function CommunityUserProfileScreen() {
   }, [userId]);
 
   useEffect(() => { void load(); }, [load]);
+
+  // Drive the right button copy / action based on the friendship state.
+  // We treat "self" the same as having no button.
+  const onFriendAction = async () => {
+    if (!userId || friendBusy || !me) return;
+    setFriendBusy(true);
+    try {
+      if (friend.status === "none") {
+        await friendRequest(userId);
+        setFriend({ status: "pending", requested_by: me.user_id });
+      } else if (friend.status === "pending" && friend.requested_by === me.user_id) {
+        // I sent it — clicking again cancels.
+        await friendDecline(userId);
+        setFriend({ status: "none", requested_by: null });
+      } else if (friend.status === "pending" && friend.requested_by !== me.user_id) {
+        await friendAccept(userId);
+        setFriend({ status: "accepted", requested_by: friend.requested_by });
+      } else if (friend.status === "accepted") {
+        await friendRemove(userId);
+        setFriend({ status: "none", requested_by: null });
+      }
+    } catch (e) {
+      console.warn("friend action failed", e);
+    } finally {
+      setFriendBusy(false);
+    }
+  };
+
+  // Compute button label/icon/color from state — kept inline so it's
+  // obvious at a glance which copy maps to which state.
+  const friendUi = (() => {
+    if (friend.status === "accepted")
+      return { label: "Friends", icon: "checkmark-circle" as const, accent: true };
+    if (friend.status === "pending" && friend.requested_by === me?.user_id)
+      return { label: "Cancel request", icon: "time-outline" as const, accent: false };
+    if (friend.status === "pending")
+      return { label: "Accept request", icon: "person-add" as const, accent: true };
+    return { label: "Add friend", icon: "person-add-outline" as const, accent: true };
+  })();
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]} testID="community-user-profile">
@@ -68,14 +119,35 @@ export default function CommunityUserProfileScreen() {
             <Avatar name={data.user.name} picture={data.user.picture ?? null} size={88} />
             <Text style={styles.name}>{data.user.name}</Text>
             {!data.is_self ? (
-              <Pressable
-                onPress={() => router.push({ pathname: "/community/dm/[thread_id]", params: { thread_id: "new", other_id: data.user.user_id } })}
-                style={({ pressed }) => [styles.cta, pressed && { opacity: 0.7 }]}
-                testID="profile-dm"
-              >
-                <Ionicons name="paper-plane-outline" size={16} color={colors.gold} />
-                <Text style={styles.ctaText}>Message</Text>
-              </Pressable>
+              <View style={styles.actionRow}>
+                <Pressable
+                  onPress={onFriendAction}
+                  disabled={friendBusy}
+                  style={({ pressed }) => [
+                    styles.cta,
+                    !friendUi.accent && styles.ctaSecondary,
+                    (pressed || friendBusy) && { opacity: 0.7 },
+                  ]}
+                  testID="profile-friend-button"
+                >
+                  <Ionicons
+                    name={friendUi.icon}
+                    size={16}
+                    color={friendUi.accent ? colors.gold : colors.primary}
+                  />
+                  <Text style={[styles.ctaText, !friendUi.accent && styles.ctaTextSecondary]}>
+                    {friendUi.label}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => router.push({ pathname: "/community/dm/[thread_id]", params: { thread_id: "new", other_id: data.user.user_id } })}
+                  style={({ pressed }) => [styles.cta, styles.ctaSecondary, pressed && { opacity: 0.7 }]}
+                  testID="profile-dm"
+                >
+                  <Ionicons name="paper-plane-outline" size={16} color={colors.primary} />
+                  <Text style={[styles.ctaText, styles.ctaTextSecondary]}>Message</Text>
+                </Pressable>
+              </View>
             ) : null}
           </View>
 
@@ -141,6 +213,19 @@ const styles = StyleSheet.create({
     ...shadow.card,
   },
   ctaText: { fontFamily: fonts.uiSemi, fontSize: 13, color: colors.gold },
+  actionRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  ctaSecondary: {
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  ctaTextSecondary: { color: colors.primary },
   sectionTitle: {
     fontFamily: fonts.uiSemi,
     fontSize: 11,

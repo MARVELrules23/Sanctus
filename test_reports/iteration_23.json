@@ -1,0 +1,49 @@
+{
+  "summary": "Friends + Group DMs feature is fully working end-to-end. Backend: 36/36 pytest cases passed against /api/community/friends/{status,request,accept,decline,list,DELETE} and /api/community/dm/threads/group + /name + /members (add/remove) + group messaging + inbox projection — including all idempotency, 400/403/404 edge cases, the 50-member cap, last-member-deletes-thread behavior, and auto_name composition for groups. Frontend: confirmed dm-new-group button in inbox, new-group-screen renders with disabled Create at opacity 0.4 → 1.0 only when ≥2 friends are selected, all friend rows render with new-group-row-{uid}, chips appear with new-group-chip-{uid}, search filters by name, counter shows '2 selected · 47 more allowed', creating a group with a name routes via router.replace to /community/dm/group:{id} and that thread renders dm-thread-group-info ('Lectio Crew · 4 members · tap to manage'). User-profile button correctly toggles 'Add friend' → 'Cancel request' → 'Friends' based on friendship state. Pre-existing 'shadow* style props deprecated' warnings remain (carried from earlier iterations) and react-native-youtube-iframe still fails to compile the meditation route — neither is introduced by this iteration.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {
+        "component": "global StyleSheet shadow props",
+        "issue": "Console emits 'shadow* style props are deprecated. Use boxShadow.' on every screen including new-group.tsx (uses theme `shadow.card` on the friend row). Pre-existing — same warning reported in iterations 21 & 22. Reference: /app/frontend/app/community/dm/new-group.tsx:361 (`...shadow.card`) and shared theme."
+      },
+      {
+        "component": "react-native-youtube-iframe (SanctuaryAudio.tsx)",
+        "issue": "Metro web bundler still fails to resolve 'react-native-web-webview' (pre-existing). Does not affect this iteration. Reference: /app/frontend/src/components/SanctuaryAudio.tsx via /app/sanctuary/meditation.tsx."
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_friends_groups.py",
+    "/app/backend/tests/setup_iter23_friends.py",
+    "/app/test_reports/pytest/iteration_23_friends_groups.xml"
+  ],
+  "action_items": [
+    "(Optional / pre-existing) Migrate `shadow.*` style tokens to `boxShadow` to clear the RN-web deprecation warnings — affects many screens including new-group.tsx.",
+    "(Optional / pre-existing) Install `react-native-web-webview` or stub `react-native-youtube-iframe` so /sanctuary/meditation compiles on web."
+  ],
+  "critical_code_review_comments": [
+    "server.py:friend_request correctly uses community_svc.friendship_key for an order-independent unique key; idempotent when pending; 400 only when status='accepted'; 403 when blocked; 404 when target missing. All paths verified.",
+    "server.py:friend_accept rejects the sender (400 'You sent this request…'), is idempotent when already accepted, and writes accepted_at. Verified.",
+    "server.py:friend_decline returns {ok:true} for the no-edge case (idempotent) and 400 when status='accepted' (forces unfriend) — matches the spec.",
+    "server.py:friend_list correctly scopes incoming = pending AND requested_by != caller; outgoing = pending AND requested_by == caller; accepted = status='accepted'. Cross-user isolation verified.",
+    "server.py:dm_create_group dedupes payload member_ids, removes the creator from the requested list, requires ≥1 other, enforces MAX_GROUP_MEMBERS=50 inclusive of creator, and returns thread with members[], is_group=true, auto_name composed from non-viewer member names.",
+    "server.py:dm_rename_group, add/remove_member, and dm_messages for groups all gate by `is_group AND caller in member_ids` and 404 otherwise — verified with non-member outsiders.",
+    "Last-member-leave correctly deletes both the thread doc and all its messages (community_dm_messages.delete_many). Verified by direct Mongo check after the final leave.",
+    "thread_public auto_name excludes the viewer for a contextual title; falls back to all-names when the viewer is the only member; truncates to '{a}, {b} + N others' beyond 3. Logic looks correct.",
+    "new-group.tsx friend list comes from friendList('accepted') with stable alpha sort and MAX_OTHERS=49 (mirrors 50-cap with creator subtracted). Selection state via Record<user_id,user>; toggle handles dedupe and the cap with an Alert. UI states all wired to testIDs as specified."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (36/36)", "frontend": "100% (all 13 specified UI behaviors verified on viewport 390x844)"},
+  "seed_data_creation": "Backend tests auto-seed 4 TEST_fg_* users + sessions and clean up in module teardown. Frontend test seeded ui_iter23_me + 3 'friend' users with accepted friendships (community_friendships, status='accepted', members sorted, friendship_id = community_svc.friendship_key). All seed data was cleaned up after the run (group thread group:8dffd57b512144 and its messages, plus the 4 users + session).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Backend pytest at /app/backend/tests/test_friends_groups.py is the single source of truth for friends + group DM API behavior; rerun on any change to server.py friendship/group routes or community.py helpers (friendship_key, thread_public, clean_group_name, MAX_GROUP_MEMBERS). Frontend seed helper at /app/backend/tests/setup_iter23_friends.py — set localStorage.sanctus_session_token = JSON.stringify('TEST_FE_ITER23_TOKEN'), then navigate to /community/dm to exercise the picker. Note: the preview edge layer blocks DELETE via plain urllib but works via in-page fetch.",
+  "rca_of_issue": "No issues found. All 13 frontend behaviors and all 13 backend endpoints behave per spec."
+}

@@ -173,6 +173,10 @@ async def ensure_indexes():
     await db.community_dm_messages.create_index([("thread_id", 1), ("created_at", 1)])
     await db.community_reports.create_index([("reporter_id", 1), ("created_at", -1)])
     await db.community_blocks.create_index([("user_id", 1), ("blocked_id", 1)], unique=True)
+    # Friendships — one document per pair, keyed by `friendship_id` = sorted-user pair.
+    await db.community_friendships.create_index("friendship_id", unique=True)
+    await db.community_friendships.create_index([("members", 1), ("status", 1)])
+    await db.community_friendships.create_index([("members", 1), ("created_at", -1)])
     # Self-defense indexes
     await db.self_defense_sessions.create_index("session_id", unique=True)
     await db.self_defense_sessions.create_index([("user_id", 1), ("discipline_id", 1), ("generated_at", -1)])
@@ -1870,6 +1874,26 @@ class CommunityReportRequest(BaseModel):
     detail: Optional[str] = None
 
 
+# --- Friendships & group DMs ------------------------------------------------
+class FriendActionRequest(BaseModel):
+    user_id: str
+
+
+class GroupDMCreateRequest(BaseModel):
+    # All members the creator wants in the group. The creator is auto-added
+    # if not present. Max community.MAX_GROUP_MEMBERS total (incl. creator).
+    member_ids: List[str]
+    name: Optional[str] = None
+
+
+class GroupDMNameRequest(BaseModel):
+    name: Optional[str] = None  # null => clear and fall back to auto-name
+
+
+class GroupDMMemberRequest(BaseModel):
+    user_id: str
+
+
 async def _users_by_id(user_ids: List[str]) -> Dict[str, Dict[str, Any]]:
     if not user_ids:
         return {}
@@ -2221,10 +2245,17 @@ async def dm_messages(thread_id: str, user: User = Depends(get_current_user)):
         {"thread_id": thread_id},
         {"$set": {f"reads.{user.user_id}": community_svc.now_utc()}},
     )
-    other_id = next((m for m in t.get("member_ids", []) if m != user.user_id), None)
-    other = await db.users.find_one({"user_id": other_id}, {"_id": 0}) if other_id else None
+    if t.get("is_group"):
+        members_lookup = await _users_by_id(list(t.get("member_ids") or []))
+        thread_view = community_svc.thread_public(
+            t, None, members_lookup=members_lookup, viewer_id=user.user_id,
+        )
+    else:
+        other_id = next((m for m in t.get("member_ids", []) if m != user.user_id), None)
+        other = await db.users.find_one({"user_id": other_id}, {"_id": 0}) if other_id else None
+        thread_view = community_svc.thread_public(t, other)
     return {
-        "thread": community_svc.thread_public(t, other),
+        "thread": thread_view,
         "messages": [community_svc.message_public(m) for m in msgs],
     }
 
@@ -2238,9 +2269,13 @@ async def dm_send_message(thread_id: str, payload: CommunityDMSendRequest,
     body = community_svc.clean_body(payload.body, community_svc.MAX_DM_LEN)
     if not body:
         raise HTTPException(status_code=400, detail="Message cannot be empty")
-    other_id = next((m for m in t.get("member_ids", []) if m != user.user_id), None)
-    if other_id and await _is_blocked(user.user_id, other_id):
-        raise HTTPException(status_code=403, detail="Messaging is blocked between these users")
+    # In 1-on-1 threads, respect block lists. In groups, individual member
+    # blocks shouldn't gag the whole conversation — moderation happens via
+    # report + remove-from-group instead.
+    if not t.get("is_group"):
+        other_id = next((m for m in t.get("member_ids", []) if m != user.user_id), None)
+        if other_id and await _is_blocked(user.user_id, other_id):
+            raise HTTPException(status_code=403, detail="Messaging is blocked between these users")
     msg_id = f"msg_{uuid.uuid4().hex[:14]}"
     now = community_svc.now_utc()
     doc = {
@@ -2261,6 +2296,239 @@ async def dm_send_message(thread_id: str, payload: CommunityDMSendRequest,
         }},
     )
     return community_svc.message_public(doc)
+
+
+# ---- Group DM management ------------------------------------------------
+@api.post("/community/dm/threads/group")
+async def dm_create_group(payload: GroupDMCreateRequest,
+                          user: User = Depends(get_current_user)):
+    """Create a new group DM. Creator is auto-added. Capped at MAX_GROUP_MEMBERS."""
+    requested = list({m for m in (payload.member_ids or []) if m})
+    if user.user_id in requested:
+        requested.remove(user.user_id)
+    if not requested:
+        raise HTTPException(status_code=400, detail="Pick at least one other person.")
+    if len(requested) + 1 > community_svc.MAX_GROUP_MEMBERS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Group chats are limited to {community_svc.MAX_GROUP_MEMBERS} people.",
+        )
+    found = await _users_by_id(requested)
+    missing = [m for m in requested if m not in found]
+    if missing:
+        raise HTTPException(status_code=404, detail=f"Unknown user(s): {', '.join(missing)}")
+    name = community_svc.clean_group_name(payload.name)
+    member_ids = sorted([user.user_id] + requested)
+    tid = f"group:{uuid.uuid4().hex[:14]}"
+    now = community_svc.now_utc()
+    doc = {
+        "thread_id": tid,
+        "member_ids": member_ids,
+        "is_group": True,
+        "name": name,
+        "created_by": user.user_id,
+        "created_at": now,
+        "last_message_at": now,
+        "last_message": None,
+        "reads": {},
+    }
+    await db.community_dm_threads.insert_one(doc)
+    members_lookup = await _users_by_id(member_ids)
+    return community_svc.thread_public(doc, None, members_lookup=members_lookup, viewer_id=user.user_id)
+
+
+@api.put("/community/dm/threads/{thread_id}/name")
+async def dm_rename_group(thread_id: str, payload: GroupDMNameRequest,
+                          user: User = Depends(get_current_user)):
+    t = await db.community_dm_threads.find_one({"thread_id": thread_id}, {"_id": 0})
+    if not t or not t.get("is_group") or user.user_id not in (t.get("member_ids") or []):
+        raise HTTPException(status_code=404, detail="Group not found")
+    name = community_svc.clean_group_name(payload.name)
+    await db.community_dm_threads.update_one(
+        {"thread_id": thread_id}, {"$set": {"name": name}}
+    )
+    fresh = await db.community_dm_threads.find_one({"thread_id": thread_id}, {"_id": 0})
+    members_lookup = await _users_by_id(list(fresh.get("member_ids") or []))
+    return community_svc.thread_public(fresh, None, members_lookup=members_lookup, viewer_id=user.user_id)
+
+
+@api.post("/community/dm/threads/{thread_id}/members")
+async def dm_add_group_member(thread_id: str, payload: GroupDMMemberRequest,
+                              user: User = Depends(get_current_user)):
+    t = await db.community_dm_threads.find_one({"thread_id": thread_id}, {"_id": 0})
+    if not t or not t.get("is_group") or user.user_id not in (t.get("member_ids") or []):
+        raise HTTPException(status_code=404, detail="Group not found")
+    new_id = payload.user_id
+    if new_id in (t.get("member_ids") or []):
+        return community_svc.thread_public(t, None,
+                                            members_lookup=await _users_by_id(list(t.get("member_ids") or [])),
+                                            viewer_id=user.user_id)
+    if len(t.get("member_ids") or []) + 1 > community_svc.MAX_GROUP_MEMBERS:
+        raise HTTPException(status_code=400,
+                            detail=f"This group is full ({community_svc.MAX_GROUP_MEMBERS} max).")
+    new_user = await db.users.find_one({"user_id": new_id}, {"_id": 0})
+    if not new_user:
+        raise HTTPException(status_code=404, detail="Unknown user")
+    await db.community_dm_threads.update_one(
+        {"thread_id": thread_id},
+        {"$addToSet": {"member_ids": new_id}, "$set": {"last_message_at": community_svc.now_utc()}},
+    )
+    fresh = await db.community_dm_threads.find_one({"thread_id": thread_id}, {"_id": 0})
+    members_lookup = await _users_by_id(list(fresh.get("member_ids") or []))
+    return community_svc.thread_public(fresh, None, members_lookup=members_lookup, viewer_id=user.user_id)
+
+
+@api.delete("/community/dm/threads/{thread_id}/members/{user_id}")
+async def dm_remove_group_member(thread_id: str, user_id: str,
+                                  user: User = Depends(get_current_user)):
+    """Leave a group (when user_id == caller) or remove a member (creator only)."""
+    t = await db.community_dm_threads.find_one({"thread_id": thread_id}, {"_id": 0})
+    if not t or not t.get("is_group") or user.user_id not in (t.get("member_ids") or []):
+        raise HTTPException(status_code=404, detail="Group not found")
+    is_self = user_id == user.user_id
+    is_creator = t.get("created_by") == user.user_id
+    if not is_self and not is_creator:
+        raise HTTPException(status_code=403, detail="Only the creator can remove others.")
+    if user_id not in (t.get("member_ids") or []):
+        raise HTTPException(status_code=404, detail="User is not in this group")
+    await db.community_dm_threads.update_one(
+        {"thread_id": thread_id},
+        {"$pull": {"member_ids": user_id}},
+    )
+    fresh = await db.community_dm_threads.find_one({"thread_id": thread_id}, {"_id": 0})
+    # Last person out deletes the thread + its messages.
+    if not (fresh.get("member_ids") or []):
+        await db.community_dm_threads.delete_one({"thread_id": thread_id})
+        await db.community_dm_messages.delete_many({"thread_id": thread_id})
+        return {"ok": True, "deleted": True}
+    return {"ok": True, "deleted": False}
+
+
+# ---- Friendships --------------------------------------------------------
+async def _get_friendship(a: str, b: str) -> Optional[Dict[str, Any]]:
+    return await db.community_friendships.find_one(
+        {"friendship_id": community_svc.friendship_key(a, b)}, {"_id": 0}
+    )
+
+
+@api.get("/community/friends/status/{user_id}")
+async def friend_status(user_id: str, user: User = Depends(get_current_user)):
+    """Lightweight endpoint so a user-profile screen can render the right
+    button (Add friend / Pending / Friends / Accept / Cancel) in one call."""
+    if user_id == user.user_id:
+        return {"status": "self", "requested_by": None}
+    f = await _get_friendship(user.user_id, user_id)
+    if not f:
+        return {"status": "none", "requested_by": None}
+    return {
+        "status": f.get("status", "pending"),
+        "requested_by": f.get("requested_by"),
+    }
+
+
+@api.post("/community/friends/request")
+async def friend_request(payload: FriendActionRequest,
+                         user: User = Depends(get_current_user)):
+    if payload.user_id == user.user_id:
+        raise HTTPException(status_code=400, detail="Cannot friend yourself")
+    other = await db.users.find_one({"user_id": payload.user_id}, {"_id": 0})
+    if not other:
+        raise HTTPException(status_code=404, detail="User not found")
+    if await _is_blocked(user.user_id, payload.user_id):
+        raise HTTPException(status_code=403, detail="Cannot send a request to this user")
+    key = community_svc.friendship_key(user.user_id, payload.user_id)
+    existing = await db.community_friendships.find_one({"friendship_id": key}, {"_id": 0})
+    if existing:
+        if existing.get("status") == "accepted":
+            raise HTTPException(status_code=400, detail="Already friends")
+        # Pending in either direction — idempotent.
+        return community_svc.friendship_public(existing, other)
+    now = community_svc.now_utc()
+    doc = {
+        "friendship_id": key,
+        "members": sorted([user.user_id, payload.user_id]),
+        "status": "pending",
+        "requested_by": user.user_id,
+        "created_at": now,
+        "accepted_at": None,
+    }
+    await db.community_friendships.insert_one(doc)
+    return community_svc.friendship_public(doc, other)
+
+
+@api.post("/community/friends/accept")
+async def friend_accept(payload: FriendActionRequest,
+                        user: User = Depends(get_current_user)):
+    f = await _get_friendship(user.user_id, payload.user_id)
+    if not f:
+        raise HTTPException(status_code=404, detail="No friend request from this user")
+    if f.get("status") == "accepted":
+        other = await db.users.find_one({"user_id": payload.user_id}, {"_id": 0})
+        return community_svc.friendship_public(f, other)
+    if f.get("requested_by") == user.user_id:
+        raise HTTPException(status_code=400, detail="You sent this request; the other person must accept")
+    now = community_svc.now_utc()
+    await db.community_friendships.update_one(
+        {"friendship_id": f["friendship_id"]},
+        {"$set": {"status": "accepted", "accepted_at": now}},
+    )
+    fresh = await _get_friendship(user.user_id, payload.user_id)
+    other = await db.users.find_one({"user_id": payload.user_id}, {"_id": 0})
+    return community_svc.friendship_public(fresh, other)
+
+
+@api.post("/community/friends/decline")
+async def friend_decline(payload: FriendActionRequest,
+                          user: User = Depends(get_current_user)):
+    """Decline an incoming request, OR cancel an outgoing one. Either side
+    can erase a pending edge; only the requester can cancel their own
+    outgoing request."""
+    f = await _get_friendship(user.user_id, payload.user_id)
+    if not f:
+        return {"ok": True}
+    if f.get("status") == "accepted":
+        raise HTTPException(status_code=400, detail="Use unfriend instead")
+    await db.community_friendships.delete_one({"friendship_id": f["friendship_id"]})
+    return {"ok": True}
+
+
+@api.delete("/community/friends/{user_id}")
+async def friend_remove(user_id: str, user: User = Depends(get_current_user)):
+    f = await _get_friendship(user.user_id, user_id)
+    if not f:
+        return {"ok": True}
+    await db.community_friendships.delete_one({"friendship_id": f["friendship_id"]})
+    return {"ok": True}
+
+
+@api.get("/community/friends/list")
+async def friend_list(status: str = "accepted",
+                       user: User = Depends(get_current_user)):
+    """status: accepted | incoming | outgoing"""
+    if status not in ("accepted", "incoming", "outgoing"):
+        raise HTTPException(status_code=400, detail="status must be accepted, incoming, or outgoing")
+    q: Dict[str, Any] = {"members": user.user_id}
+    if status == "accepted":
+        q["status"] = "accepted"
+    elif status == "incoming":
+        q["status"] = "pending"
+        q["requested_by"] = {"$ne": user.user_id}
+    elif status == "outgoing":
+        q["status"] = "pending"
+        q["requested_by"] = user.user_id
+    cur = db.community_friendships.find(q, {"_id": 0}).sort("created_at", -1)
+    rows = await cur.to_list(length=500)
+    other_ids = []
+    for r in rows:
+        for m in (r.get("members") or []):
+            if m != user.user_id:
+                other_ids.append(m)
+    others = await _users_by_id(other_ids)
+    items = []
+    for r in rows:
+        other_id = next((m for m in (r.get("members") or []) if m != user.user_id), None)
+        items.append(community_svc.friendship_public(r, others.get(other_id) if other_id else None))
+    return {"items": items, "count": len(items)}
 
 
 # ---- Reporting & Blocking ----

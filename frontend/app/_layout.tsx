@@ -33,7 +33,12 @@ function RootGate() {
     if (loading) return;
     const inTabs = segments[0] === "(tabs)";
     const onLogin = segments[0] === "login";
-    if (!user && !onLogin) {
+    // Routes that anyone (signed-in or not) should be able to view directly —
+    // required so the App Store / Play Store privacy + support URLs work
+    // without forcing a Google sign-in.
+    const isPublicRoute =
+      segments[0] === "privacy" || segments[0] === "support";
+    if (!user && !onLogin && !isPublicRoute) {
       router.replace("/login");
     } else if (user && (onLogin || segments.length === 0)) {
       router.replace("/(tabs)");

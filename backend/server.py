@@ -2917,10 +2917,36 @@ def _iso(value: Any) -> Optional[str]:
 from daily_practices import build_router as build_daily_practice_router
 from catechism import build_router as build_catechism_router
 from parish_events import build_router as build_parish_events_router
+from legal import build_legal_router
 
 api.include_router(build_daily_practice_router(db, get_current_user))
 api.include_router(build_catechism_router(db, get_current_user, EMERGENT_LLM_KEY))
 api.include_router(build_parish_events_router(db, get_current_user))
+
+
+async def _resolve_session_user_optional(authorization: Optional[str]):
+    """Used by the public /legal/support/contact endpoint to attach a user
+    record when a bearer token is present, without raising 401 for anonymous
+    callers."""
+    if not authorization or not authorization.lower().startswith("bearer "):
+        return None
+    token = authorization.split(" ", 1)[1].strip()
+    session = await db.user_sessions.find_one({"session_token": token}, {"_id": 0})
+    if not session:
+        return None
+    exp = session.get("expires_at")
+    if exp is not None:
+        if exp.tzinfo is None:
+            exp = exp.replace(tzinfo=timezone.utc)
+        if exp < datetime.now(timezone.utc):
+            return None
+    user_doc = await db.users.find_one({"user_id": session["user_id"]}, {"_id": 0})
+    if not user_doc:
+        return None
+    return User(**user_doc)
+
+
+api.include_router(build_legal_router(db, _resolve_session_user_optional))
 
 app.include_router(api)
 

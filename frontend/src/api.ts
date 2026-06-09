@@ -566,3 +566,37 @@ export type CatechismReflectResponse = {
   teaching_id: string;
 };
 
+
+// ---- Legal & Support ----
+export type LegalSection = { title: string; body: string };
+export type PrivacyPolicyResponse = {
+  app: string;
+  last_updated: string;
+  support_email: string;
+  sections: LegalSection[];
+};
+
+export type FAQItem = { q: string; a: string };
+export type SupportInfoResponse = {
+  app: string;
+  last_updated: string;
+  support_email: string;
+  faq: FAQItem[];
+};
+
+export async function getPrivacyPolicy(): Promise<PrivacyPolicyResponse> {
+  return await api(`/legal/privacy.json`, { auth: false });
+}
+
+export async function getSupportInfo(): Promise<SupportInfoResponse> {
+  return await api(`/legal/support.json`, { auth: false });
+}
+
+export async function submitSupportTicket(payload: {
+  subject: string;
+  message: string;
+  email?: string;
+  category?: string;
+}): Promise<{ ok: boolean; ticket_id: string; message: string }> {
+  return await api(`/legal/support/contact`, { method: "POST", body: payload });
+}

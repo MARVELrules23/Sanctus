@@ -59,6 +59,11 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "supportEmail": "philipwils13@gmail.com",
+      "supportUrl": "/api/legal/support",
+      "privacyPolicyUrl": "/api/legal/privacy"
     }
   }
 }

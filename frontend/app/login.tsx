@@ -3,6 +3,7 @@ import { ImageBackground, Pressable, StyleSheet, Text, View } from "react-native
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 
 import { useAuth } from "@/src/auth-context";
 import { colors, fonts, radius, spacing } from "@/src/theme";
@@ -13,6 +14,7 @@ const BG_IMAGE =
 
 export default function Login() {
   const { signIn } = useAuth();
+  const router = useRouter();
   return (
     <View style={styles.root} testID="login-screen">
       <ImageBackground source={{ uri: BG_IMAGE }} style={styles.bg} resizeMode="cover">
@@ -46,6 +48,23 @@ export default function Login() {
             <Text style={styles.fineprint}>
               By continuing you agree to a simple, reverent practice. We store only your name &amp; email.
             </Text>
+            <View style={styles.legalRow}>
+              <Pressable
+                testID="login-privacy-link"
+                onPress={() => router.push("/privacy")}
+                hitSlop={8}
+              >
+                <Text style={styles.legalLink}>Privacy</Text>
+              </Pressable>
+              <Text style={styles.legalDot}>·</Text>
+              <Pressable
+                testID="login-support-link"
+                onPress={() => router.push("/support")}
+                hitSlop={8}
+              >
+                <Text style={styles.legalLink}>Support</Text>
+              </Pressable>
+            </View>
           </View>
         </SafeAreaView>
       </ImageBackground>
@@ -112,5 +131,22 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: "center",
     lineHeight: 18,
+  },
+  legalRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    marginTop: 4,
+  },
+  legalLink: {
+    fontFamily: fonts.uiSemi,
+    fontSize: 12,
+    color: colors.gold,
+    textDecorationLine: "underline",
+  },
+  legalDot: {
+    color: "#D8D2C0",
+    fontSize: 12,
   },
 });

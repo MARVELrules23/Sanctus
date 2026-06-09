@@ -214,6 +214,28 @@ export default function ProfileScreen() {
           </>
         )}
 
+        <Text style={styles.section}>About</Text>
+        <View style={styles.linkRow} testID="profile-about-links">
+          <Pressable
+            testID="profile-support-link"
+            onPress={() => router.push("/support")}
+            style={({ pressed }) => [styles.linkCard, pressed && styles.pressed]}
+          >
+            <Ionicons name="help-buoy-outline" size={18} color={colors.primary} />
+            <Text style={styles.linkLabel}>Help &amp; Support</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          </Pressable>
+          <Pressable
+            testID="profile-privacy-link"
+            onPress={() => router.push("/privacy")}
+            style={({ pressed }) => [styles.linkCard, pressed && styles.pressed]}
+          >
+            <Ionicons name="lock-closed-outline" size={18} color={colors.primary} />
+            <Text style={styles.linkLabel}>Privacy Policy</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          </Pressable>
+        </View>
+
         <Pressable
           testID="sign-out-button"
           onPress={signOut}
@@ -349,6 +371,28 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
   },
   pressed: { opacity: 0.7 },
+  linkRow: {
+    flexDirection: "column",
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+  },
+  linkCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    paddingVertical: 14,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    backgroundColor: colors.surface,
+  },
+  linkLabel: {
+    flex: 1,
+    fontFamily: fonts.uiSemi,
+    fontSize: 14,
+    color: colors.textPrimary,
+  },
   quickLinksRow: {
     flexDirection: "row",
     gap: spacing.sm,

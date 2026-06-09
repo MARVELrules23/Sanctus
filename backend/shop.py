@@ -393,17 +393,27 @@ def build_router(
 
     async def _apply_paid_session(session_obj, order_doc) -> Dict[str, Any]:
         """Promote an order to paid based on a Stripe Checkout Session that has
-        `payment_status == "paid"`. Idempotent."""
+        `payment_status == "paid"`. Idempotent.
+
+        `session_obj` can be a real `stripe.checkout.Session` (dot-access) or a
+        dict (from a raw webhook payload) — we read both safely.
+        """
         if order_doc.get("status") == "paid":
             return order_doc  # already settled
+
+        def _field(obj, key, default=None):
+            if isinstance(obj, dict):
+                return obj.get(key, default)
+            return getattr(obj, key, default)
+
         now = datetime.now(timezone.utc)
         update = {
             "status": "paid",
             "paid_at": now,
             "updated_at": now,
-            "stripe_payment_intent": getattr(session_obj, "payment_intent", None),
-            "shipping_details": getattr(session_obj, "shipping_details", None) or session_obj.get("shipping_details"),
-            "customer_details": getattr(session_obj, "customer_details", None) or session_obj.get("customer_details"),
+            "stripe_payment_intent": _field(session_obj, "payment_intent"),
+            "shipping_details": _field(session_obj, "shipping_details"),
+            "customer_details": _field(session_obj, "customer_details"),
         }
         await orders.update_one({"order_id": order_doc["order_id"]}, {"$set": update})
         order_doc.update(update)
@@ -488,17 +498,28 @@ def build_router(
         if not stripe_ready:
             raise HTTPException(status_code=503, detail="payments not configured")
         payload = await request.body()
+        is_live = stripe_api_key.startswith("sk_live_")
         try:
             if stripe_webhook_secret:
                 event = stripe.Webhook.construct_event(payload, stripe_signature, stripe_webhook_secret)
+            elif is_live:
+                # In live mode we never accept unsigned events.
+                raise HTTPException(
+                    status_code=401,
+                    detail="STRIPE_WEBHOOK_SECRET must be configured in live mode",
+                )
             else:
-                # No verification when no secret configured — accept Stripe-style payloads.
-                # Safe enough for test mode; once the user adds a secret post-deploy
-                # we'll switch to verified mode automatically.
+                # Test mode + no secret: accept unverified payloads so devs can
+                # exercise the flow with the Stripe CLI before configuring a
+                # secret. We still rely on the success-page reconcile path as
+                # the source of truth, so this is acceptable.
                 import json
+                logger.warning("shop webhook: accepting unsigned event (test mode, no STRIPE_WEBHOOK_SECRET)")
                 event = json.loads(payload.decode("utf-8"))
         except stripe.error.SignatureVerificationError:
             raise HTTPException(status_code=400, detail="invalid signature")
+        except HTTPException:
+            raise
         except Exception as e:
             raise HTTPException(status_code=400, detail=str(e))
 

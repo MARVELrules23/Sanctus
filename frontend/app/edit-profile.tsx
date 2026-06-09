@@ -128,7 +128,14 @@ export default function EditProfileScreen() {
     if (!isValid || saving) return;
     setSaving(true);
     try {
-      const updated = await updateMe({ name: trimmedName, picture });
+      const updated = await updateMe({
+        name: trimmedName,
+        picture,
+        denomination,
+        tradition_path: traditionPath,
+        age: ageText.trim() === "" ? 0 : ageNum,
+        show_attribution: showAttribution,
+      });
       setUser(updated);
       router.back();
     } catch (e: any) {

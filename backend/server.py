@@ -60,6 +60,7 @@ class User(BaseModel):
     tradition_path: Optional[str] = None      # convert | revert | cradle
     age: Optional[int] = None                 # 12..120, optional
     show_attribution: Optional[bool] = None   # default for overlay attributions
+    is_admin: Optional[bool] = False          # gates /api/saints/admin/* etc.
 
 
 class PreferencesPayload(BaseModel):
@@ -207,6 +208,15 @@ async def ensure_indexes():
     # community-submitted). Indexed by church_id so we can batch-merge cheaply.
     await db.church_overlays.create_index("church_id", unique=True)
     await db.church_overlays.create_index([("updated_at", -1)])
+    # Saints / Blessed / Venerable of the Day
+    await db.saints.create_index("saint_id", unique=True)
+    await db.saints.create_index("feast_date")
+    await db.saints.create_index("status")
+    await db.saints.create_index([("status", 1), ("feast_date", 1)])
+    await db.saints.create_index([("status", 1), ("last_shown_at", 1)])
+    # Support tickets created via /api/legal/support/contact
+    await db.support_tickets.create_index("ticket_id", unique=True)
+    await db.support_tickets.create_index([("status", 1), ("created_at", -1)])
 
 
 async def get_current_user(authorization: Optional[str] = Header(None)) -> User:
@@ -2917,11 +2927,13 @@ def _iso(value: Any) -> Optional[str]:
 from daily_practices import build_router as build_daily_practice_router
 from catechism import build_router as build_catechism_router
 from parish_events import build_router as build_parish_events_router
+from saints import build_router as build_saints_router
 from legal import build_legal_router
 
 api.include_router(build_daily_practice_router(db, get_current_user))
 api.include_router(build_catechism_router(db, get_current_user, EMERGENT_LLM_KEY))
 api.include_router(build_parish_events_router(db, get_current_user))
+api.include_router(build_saints_router(db, get_current_user, EMERGENT_LLM_KEY))
 
 
 async def _resolve_session_user_optional(authorization: Optional[str]):

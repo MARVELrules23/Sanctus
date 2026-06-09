@@ -16,6 +16,7 @@ import { api, DayDoc, JournalEntry, LiturgicalDay, MealPlan, Readings, WorkoutPl
 import { useAuth } from "@/src/auth-context";
 import DailyPracticeCard from "@/src/components/DailyPracticeCard";
 import CatechismCard from "@/src/components/CatechismCard";
+import SaintOfTheDayCard from "@/src/components/SaintOfTheDayCard";
 import LiturgicalBadge from "@/src/components/LiturgicalBadge";
 import Ornament from "@/src/components/Ornament";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
@@ -261,6 +262,9 @@ export default function TodayScreen() {
 
         {/* Today's practice */}
         <DailyPracticeCard date={date} />
+
+        {/* Saint / Blessed / Venerable of the Day */}
+        <SaintOfTheDayCard date={date} />
 
         {/* Catechism in 90 seconds */}
         <CatechismCard date={date} />

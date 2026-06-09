@@ -600,3 +600,71 @@ export async function submitSupportTicket(payload: {
 }): Promise<{ ok: boolean; ticket_id: string; message: string }> {
   return await api(`/legal/support/contact`, { method: "POST", body: payload });
 }
+
+
+// ---- Saints of the Day ----
+export type SaintRank = "saint" | "blessed" | "venerable";
+export type SaintPublic = {
+  saint_id: string;
+  name: string;
+  rank: SaintRank;
+  feast_date: string | null; // MM-DD
+  is_primary: boolean;
+  picture_url: string | null;
+  picture_source: string | null;
+  quote: string;
+  quote_source: string;
+  biography: string;
+  recommended_action: string;
+};
+export type SaintAdmin = SaintPublic & {
+  status: "draft" | "approved" | "rejected";
+  proposed_by_ai: boolean;
+  proposed_at: string | null;
+  approved_at: string | null;
+  approved_by: string | null;
+  last_shown_at: string | null;
+};
+export type SaintsTodayResponse = {
+  date: string;
+  primary: SaintPublic | null;
+  others: SaintPublic[];
+};
+
+export async function getSaintsToday(date: string): Promise<SaintsTodayResponse> {
+  return await api(`/saints/today?date=${encodeURIComponent(date)}`);
+}
+
+export async function getSaint(saintId: string): Promise<SaintPublic> {
+  return await api(`/saints/${encodeURIComponent(saintId)}`);
+}
+
+export async function adminListSaints(status?: string): Promise<{ items: SaintAdmin[]; count: number }> {
+  const qs = status ? `?status=${encodeURIComponent(status)}` : "";
+  return await api(`/saints/admin/list${qs}`);
+}
+
+export async function adminProposeSaint(payload: {
+  date: string;
+  rank_hint?: string;
+  name_hint?: string;
+  is_primary?: boolean;
+}): Promise<SaintAdmin> {
+  return await api(`/saints/admin/propose`, { method: "POST", body: payload });
+}
+
+export async function adminUpdateSaint(saintId: string, patch: Partial<SaintPublic>): Promise<SaintAdmin> {
+  return await api(`/saints/admin/${encodeURIComponent(saintId)}`, { method: "PATCH", body: patch });
+}
+
+export async function adminApproveSaint(saintId: string): Promise<SaintAdmin> {
+  return await api(`/saints/admin/${encodeURIComponent(saintId)}/approve`, { method: "POST" });
+}
+
+export async function adminRejectSaint(saintId: string): Promise<{ ok: boolean }> {
+  return await api(`/saints/admin/${encodeURIComponent(saintId)}/reject`, { method: "POST" });
+}
+
+export async function adminDeleteSaint(saintId: string): Promise<{ ok: boolean }> {
+  return await api(`/saints/admin/${encodeURIComponent(saintId)}`, { method: "DELETE" });
+}

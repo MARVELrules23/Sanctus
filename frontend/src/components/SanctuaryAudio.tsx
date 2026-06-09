@@ -8,14 +8,15 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
-import YoutubePlayer from "react-native-youtube-iframe";
 
+import YouTubeEmbed from "@/src/components/YouTubeEmbed";
 import { colors, fonts, radius, spacing } from "@/src/theme";
 import type { SanctuaryTrack } from "@/src/utils/sanctuary-tracks";
 
 /**
  * SanctuaryAudio — plays either an MP3 (via expo-audio) or a YouTube video
- * (via react-native-youtube-iframe). Auto-routes by track.source.kind.
+ * (via the platform-aware YouTubeEmbed component). Auto-routes by
+ * `track.source.kind`.
  *
  * The player tries to be transparent to the parent: pass `track` and `playing`,
  * and we keep the underlying media in sync. When the user pauses/plays, we
@@ -141,39 +142,12 @@ function YoutubeBackedPlayer({
   onPlayPauseChange: (p: boolean) => void;
   variant: "card" | "compact";
 }) {
-  // We always render the iframe. The `play` prop drives playback through the
-  // iframe API. We do NOT gate the play button on the YouTube "ready" event —
-  // mobile WebViews drop that callback often enough that users get a stuck
-  // spinner. Letting the toggle always be tappable means if the iframe isn't
-  // ready yet, the next state update from `play={playing}` simply takes
-  // effect the moment it is.
   const [hadError, setHadError] = useState(false);
 
-  // If the track id changes (different YouTube video), clear any prior error
-  // so the new video gets a fresh chance.
+  // Reset error state when track changes
   useEffect(() => {
     setHadError(false);
   }, [track.id]);
-
-  const onChangeState = React.useCallback(
-    (event: string) => {
-      // YouTube iframe events: "unstarted", "ended", "playing", "paused",
-      // "buffering", "video cued". We only sync the lifted state on real
-      // start/stop transitions — "buffering" is transient and shouldn't
-      // toggle the parent's playing flag.
-      if (event === "paused" || event === "ended") {
-        onPlayPauseChange(false);
-      } else if (event === "playing") {
-        onPlayPauseChange(true);
-      }
-    },
-    [onPlayPauseChange],
-  );
-
-  const onError = React.useCallback((err: string) => {
-    console.warn("[SanctuaryAudio youtube] error", err);
-    setHadError(true);
-  }, []);
 
   return (
     <View>
@@ -185,24 +159,13 @@ function YoutubeBackedPlayer({
         variant={variant}
       />
       <View style={styles.youtubeFrame}>
-        <YoutubePlayer
-          height={200}
-          width={320}
+        <YouTubeEmbed
           videoId={videoId}
-          play={playing}
-          onChangeState={onChangeState}
-          onError={onError}
-          webViewProps={{
-            allowsInlineMediaPlayback: true,
-            mediaPlaybackRequiresUserAction: false,
-            javaScriptEnabled: true,
-            domStorageEnabled: true,
-          }}
-          initialPlayerParams={{
-            controls: true,
-            modestbranding: true,
-            playsinline: true,
-            rel: false,
+          playing={playing}
+          onPlayingChange={onPlayPauseChange}
+          onError={(err) => {
+            console.warn("[SanctuaryAudio youtube] error", err);
+            setHadError(true);
           }}
         />
       </View>

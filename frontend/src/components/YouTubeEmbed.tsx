@@ -1,15 +1,21 @@
 /**
  * YouTubeEmbed — native implementation.
  *
- * Uses react-native-youtube-iframe (a WebView-backed YouTube IFrame API
- * wrapper). On iOS/Android the native WebView can be configured with
- * `mediaPlaybackRequiresUserAction: false`, which is enough to autoplay
- * once `play={true}` is sent.
+ * Uses react-native-youtube-iframe, which mounts a real native WebView on
+ * iOS/Android. The WebView is configured with
+ * `mediaPlaybackRequiresUserAction: false` and
+ * `allowsInlineMediaPlayback: true`, which together tell the OS-level
+ * media policy: "no user gesture required for playback to begin."
  *
- * Apps a "muted autoplay → unmute on confirmed play" strategy as a belt-
- * and-suspenders measure for stricter WebViews.
+ * That means we can autoplay AUDIBLY on native — the `mute=true → unmute`
+ * dance the web build uses is unnecessary here. We pass `mute={false}` from
+ * the start so audio starts the moment the parent flips `playing → true`.
+ *
+ * (Browser autoplay-with-sound restrictions only exist on the WEB target,
+ * because the host browser owns the media engagement policy. That's why
+ * the `.web.tsx` variant has to keep the muted-first flow.)
  */
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback } from "react";
 import { StyleSheet, View } from "react-native";
 import YoutubePlayer from "react-native-youtube-iframe";
 
@@ -30,42 +36,12 @@ export default function YouTubeEmbed({
   onError,
   height = 200,
 }: YouTubeEmbedProps) {
-  const [muted, setMuted] = useState(true);
-  const unmuteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const clearUnmuteTimer = () => {
-    if (unmuteTimerRef.current) {
-      clearTimeout(unmuteTimerRef.current);
-      unmuteTimerRef.current = null;
-    }
-  };
-
-  // Re-arm the muted-autoplay flow whenever the parent toggles `playing`
-  // on, or whenever the user switches to a different video.
-  useEffect(() => {
-    if (playing) {
-      setMuted(true);
-    } else {
-      setMuted(true);
-      clearUnmuteTimer();
-    }
-  }, [playing, videoId]);
-
-  useEffect(() => clearUnmuteTimer, []);
-
   const onChangeState = useCallback(
     (event: string) => {
-      if (event === "playing") {
-        onPlayingChange(true);
-        clearUnmuteTimer();
-        unmuteTimerRef.current = setTimeout(() => {
-          setMuted(false);
-        }, 250);
-      } else if (event === "paused" || event === "ended") {
-        onPlayingChange(false);
-        clearUnmuteTimer();
-        setMuted(true);
-      }
+      // YouTube IFrame API lifecycle: "unstarted", "ended", "playing",
+      // "paused", "buffering", "video cued".
+      if (event === "playing") onPlayingChange(true);
+      else if (event === "paused" || event === "ended") onPlayingChange(false);
     },
     [onPlayingChange],
   );
@@ -76,7 +52,8 @@ export default function YouTubeEmbed({
         height={height}
         videoId={videoId}
         play={playing}
-        mute={muted}
+        // Audible from the start: the WebView config below permits this.
+        mute={false}
         onChangeState={onChangeState}
         onError={onError}
         webViewProps={{

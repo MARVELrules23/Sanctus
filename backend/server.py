@@ -6,7 +6,7 @@ import hashlib
 import logging
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
 from fastapi import FastAPI, APIRouter, Depends, HTTPException, Header, Query, Request
@@ -171,6 +171,23 @@ async def ensure_indexes():
     # Daily-practice indexes
     await db.daily_practices.create_index([("user_id", 1), ("date", 1)], unique=True)
     await db.daily_practices.create_index([("user_id", 1), ("date", -1)])
+    # Catechism indexes
+    await db.catechism_assignments.create_index(
+        [("user_id", 1), ("date", 1)], unique=True
+    )
+    await db.catechism_assignments.create_index([("user_id", 1), ("date", -1)])
+    # Parish events indexes
+    await db.parish_events.create_index("id", unique=True)
+    await db.parish_events.create_index([("loc", "2dsphere")])
+    await db.parish_events.create_index([("church_id", 1), ("start_at", 1)])
+    await db.parish_events.create_index([("start_at", 1)])
+    await db.parish_events.create_index([("organizer_user_id", 1), ("created_at", -1)])
+    await db.parish_events.create_index([("removed", 1), ("start_at", 1)])
+    # Community-added churches indexes
+    await db.community_churches.create_index("church_id", unique=True)
+    await db.community_churches.create_index([("loc", "2dsphere")])
+    await db.community_churches.create_index([("submitted_by", 1), ("created_at", -1)])
+    await db.community_churches.create_index([("removed", 1)])
 
 
 async def get_current_user(authorization: Optional[str] = Header(None)) -> User:
@@ -831,7 +848,7 @@ async def save_journal(payload: JournalSaveRequest, user: User = Depends(get_cur
     lit = get_liturgical_day(d)
     now = datetime.now(timezone.utc).isoformat()
     entry_id = f"jrn_{uuid.uuid4().hex[:12]}"
-    kind = payload.kind if payload.kind in {"free", "examen", "examination"} else "free"
+    kind = payload.kind if payload.kind in {"free", "examen", "examination", "catechism"} else "free"
     doc = {
         "entry_id": entry_id,
         "user_id": user.user_id,
@@ -856,7 +873,7 @@ async def update_journal(entry_id: str, payload: JournalSaveRequest, user: User 
         raise HTTPException(status_code=404, detail="entry not found")
     if not payload.body.strip():
         raise HTTPException(status_code=400, detail="body cannot be empty")
-    kind = payload.kind if payload.kind in {"free", "examen", "examination"} else existing.get("kind", "free")
+    kind = payload.kind if payload.kind in {"free", "examen", "examination", "catechism"} else existing.get("kind", "free")
     update = {
         "title": (payload.title or "").strip(),
         "body": payload.body.strip(),
@@ -873,9 +890,11 @@ async def update_journal(entry_id: str, payload: JournalSaveRequest, user: User 
 async def list_journal(
     user: User = Depends(get_current_user),
     date: Optional[str] = None,
+    kind: Optional[str] = None,
     limit: int = Query(50, ge=1, le=200),
 ):
-    """List entries for current user. If `date` given, only entries on that day."""
+    """List entries for current user. If `date` given, only entries on that day.
+    Optionally filter by `kind` (e.g. ``catechism`` for the CCC Reflection folder)."""
     query: dict = {"user_id": user.user_id}
     if date:
         try:
@@ -883,6 +902,10 @@ async def list_journal(
         except ValueError:
             raise HTTPException(status_code=400, detail="date must be YYYY-MM-DD")
         query["date"] = date
+    if kind:
+        if kind not in {"free", "examen", "examination", "catechism"}:
+            raise HTTPException(status_code=400, detail="invalid kind")
+        query["kind"] = kind
     cursor = db.journal.find(query, {"_id": 0}).sort("created_at", -1).limit(limit)
     docs = await cursor.to_list(length=limit)
     return {"items": [_journal_doc(d) for d in docs]}
@@ -1131,6 +1154,9 @@ async def churches_nearby(
     churches = await nearby_churches(lat, lng, radius_m=radius_m)
     if enrich and churches:
         churches = await enrich_with_masstimes(churches)
+    # Merge in community-added churches within the same radius.
+    community = await _community_churches_nearby(lat, lng, radius_m)
+    churches = _merge_churches(churches, community)
     # Annotate which churches the user has starred.
     starred_ids = {
         d["church_id"]
@@ -1157,6 +1183,10 @@ async def churches_search(
     churches = await search_churches(q, lat=lat, lng=lng, radius_m=radius_m)
     if enrich and churches:
         churches = await enrich_with_masstimes(churches)
+    # Include community churches whose name matches the query (and are within
+    # the search radius if a center was provided).
+    community = await _community_churches_search(q, lat=lat, lng=lng, radius_m=radius_m)
+    churches = _merge_churches(churches, community)
     starred_ids = {
         d["church_id"]
         async for d in db.user_churches.find({"user_id": user.user_id}, {"church_id": 1, "_id": 0})
@@ -1166,6 +1196,187 @@ async def churches_search(
         c.setdefault("mass_times", [])
         c.setdefault("confession_times", [])
     return {"items": churches, "count": len(churches), "query": q}
+
+
+# ---------------------------------------------------------------------------
+# Community-added churches (user submissions)
+# ---------------------------------------------------------------------------
+# Catholic places of worship that didn't surface from OSM. Submitted by
+# end-users to grow the database organically. Anyone with the same area
+# will see them, tagged with `source: "community"` so the UI can render a
+# subtle "Added by a Sanctus user" footnote.
+
+class CommunityChurchSubmission(BaseModel):
+    name: str = Field(..., min_length=2, max_length=160)
+    lat: float
+    lng: float
+    address: Optional[str] = Field(None, max_length=240)
+    website: Optional[str] = Field(None, max_length=300)
+    phone: Optional[str] = Field(None, max_length=60)
+    notes: Optional[str] = Field(None, max_length=600)
+
+
+def _community_to_shape(doc: dict, origin: Optional[Tuple[float, float]] = None) -> dict:
+    out = {
+        "church_id": doc["church_id"],
+        "name": doc.get("name", ""),
+        "lat": doc.get("lat"),
+        "lng": doc.get("lng"),
+        "address": doc.get("address", "") or "",
+        "denomination": "roman_catholic",
+        "website": doc.get("website", "") or "",
+        "phone": doc.get("phone", "") or "",
+        "mass_times_raw": "",
+        "opening_hours": "",
+        "mass_times": [],
+        "confession_times": [],
+        "notes": doc.get("notes", "") or "",
+        "source": "community",
+        "submitted_by_name": doc.get("submitted_by_name") or "a Sanctus user",
+    }
+    if origin and out.get("lat") is not None and out.get("lng") is not None:
+        out["distance_km"] = round(
+            _great_circle_km(origin[0], origin[1], float(out["lat"]), float(out["lng"])), 2
+        )
+    return out
+
+
+def _great_circle_km(a_lat: float, a_lng: float, b_lat: float, b_lng: float) -> float:
+    import math
+    R = 6371.0
+    p1 = math.radians(a_lat)
+    p2 = math.radians(b_lat)
+    dp = math.radians(b_lat - a_lat)
+    dl = math.radians(b_lng - a_lng)
+    s = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+    return 2 * R * math.asin(math.sqrt(s))
+
+
+async def _community_churches_nearby(lat: float, lng: float, radius_m: int) -> List[dict]:
+    radius_rad = radius_m / 6378137.0
+    cursor = db.community_churches.find(
+        {
+            "removed": {"$ne": True},
+            "loc": {"$geoWithin": {"$centerSphere": [[lng, lat], radius_rad]}},
+        },
+        {"_id": 0},
+    ).limit(40)
+    docs = await cursor.to_list(length=40)
+    return [_community_to_shape(d, origin=(lat, lng)) for d in docs]
+
+
+async def _community_churches_search(
+    q: str, lat: Optional[float], lng: Optional[float], radius_m: int
+) -> List[dict]:
+    import re
+    pattern = re.escape(q.strip())
+    if not pattern:
+        return []
+    filt: Dict[str, Any] = {
+        "removed": {"$ne": True},
+        "name": {"$regex": pattern, "$options": "i"},
+    }
+    if lat is not None and lng is not None:
+        radius_rad = radius_m / 6378137.0
+        filt["loc"] = {"$geoWithin": {"$centerSphere": [[lng, lat], radius_rad]}}
+    cursor = db.community_churches.find(filt, {"_id": 0}).limit(20)
+    docs = await cursor.to_list(length=20)
+    origin = (lat, lng) if (lat is not None and lng is not None) else None
+    return [_community_to_shape(d, origin=origin) for d in docs]
+
+
+def _merge_churches(osm: List[dict], community: List[dict]) -> List[dict]:
+    """De-duplicate by (rounded coords + lowercased name), prefer OSM rows."""
+    seen: set = set()
+
+    def key(c: dict) -> tuple:
+        lat = c.get("lat")
+        lng = c.get("lng")
+        return (
+            (c.get("name") or "").strip().lower(),
+            round(float(lat), 3) if lat is not None else None,
+            round(float(lng), 3) if lng is not None else None,
+        )
+
+    out: List[dict] = []
+    for c in osm:
+        k = key(c)
+        if k in seen:
+            continue
+        seen.add(k)
+        out.append(c)
+    for c in community:
+        k = key(c)
+        if k in seen:
+            continue
+        seen.add(k)
+        out.append(c)
+    # Sort by distance_km if present, otherwise leave order.
+    out.sort(key=lambda x: x.get("distance_km") if x.get("distance_km") is not None else 1e9)
+    return out
+
+
+@api.post("/churches/manual")
+async def submit_community_church(
+    payload: CommunityChurchSubmission, user: User = Depends(get_current_user)
+):
+    """Submit a Catholic church that didn't show up in nearby or search.
+
+    Shared with the community so other nearby users can find the same parish.
+    De-duplicates against existing OSM AND community entries by name + coords.
+    """
+    if not (-90 <= payload.lat <= 90 and -180 <= payload.lng <= 180):
+        raise HTTPException(status_code=400, detail="invalid lat/lng")
+
+    name = payload.name.strip()
+    if len(name) < 2:
+        raise HTTPException(status_code=400, detail="name too short")
+
+    # Dedupe: refuse if a community church with same lowercased-name within ~150m exists.
+    radius_rad = 150 / 6378137.0
+    existing = await db.community_churches.find_one({
+        "removed": {"$ne": True},
+        "name_lc": name.lower(),
+        "loc": {"$geoWithin": {"$centerSphere": [[payload.lng, payload.lat], radius_rad]}},
+    })
+    if existing:
+        return _community_to_shape(existing, origin=(payload.lat, payload.lng))
+
+    # Rate-limit: max 5 submissions per user per 24h.
+    one_day_ago = datetime.now(timezone.utc) - timedelta(days=1)
+    recent_n = await db.community_churches.count_documents({
+        "submitted_by": user.user_id,
+        "created_at": {"$gte": one_day_ago},
+    })
+    if recent_n >= 5:
+        raise HTTPException(
+            status_code=429,
+            detail="Daily submission limit reached. Try again tomorrow.",
+        )
+
+    church_id = f"community:{uuid.uuid4().hex[:14]}"
+    now = datetime.now(timezone.utc)
+    doc = {
+        "church_id": church_id,
+        "name": name,
+        "name_lc": name.lower(),
+        "lat": float(payload.lat),
+        "lng": float(payload.lng),
+        "loc": {"type": "Point", "coordinates": [float(payload.lng), float(payload.lat)]},
+        "address": (payload.address or "").strip() or None,
+        "website": (payload.website or "").strip() or None,
+        "phone": (payload.phone or "").strip() or None,
+        "notes": (payload.notes or "").strip() or None,
+        "submitted_by": user.user_id,
+        "submitted_by_name": getattr(user, "name", None) or "Anonymous",
+        "created_at": now,
+        "updated_at": now,
+        "flag_count": 0,
+        "flagged_by": [],
+        "removed": False,
+    }
+    await db.community_churches.insert_one(doc)
+    return _community_to_shape(doc, origin=(payload.lat, payload.lng))
 
 
 def _user_church_doc(d: dict) -> dict:
@@ -2106,8 +2317,12 @@ def _iso(value: Any) -> Optional[str]:
 
 
 from daily_practices import build_router as build_daily_practice_router
+from catechism import build_router as build_catechism_router
+from parish_events import build_router as build_parish_events_router
 
 api.include_router(build_daily_practice_router(db, get_current_user))
+api.include_router(build_catechism_router(db, get_current_user, EMERGENT_LLM_KEY))
+api.include_router(build_parish_events_router(db, get_current_user))
 
 app.include_router(api)
 

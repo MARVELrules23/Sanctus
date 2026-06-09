@@ -15,6 +15,7 @@ import { useRouter } from "expo-router";
 import { api, DayDoc, JournalEntry, LiturgicalDay, MealPlan, Readings, WorkoutPlan } from "@/src/api";
 import { useAuth } from "@/src/auth-context";
 import DailyPracticeCard from "@/src/components/DailyPracticeCard";
+import CatechismCard from "@/src/components/CatechismCard";
 import LiturgicalBadge from "@/src/components/LiturgicalBadge";
 import Ornament from "@/src/components/Ornament";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
@@ -260,6 +261,9 @@ export default function TodayScreen() {
 
         {/* Today's practice */}
         <DailyPracticeCard date={date} />
+
+        {/* Catechism in 90 seconds */}
+        <CatechismCard date={date} />
 
         {/* Journal preview */}
         <View style={styles.card} testID="journal-preview-card">

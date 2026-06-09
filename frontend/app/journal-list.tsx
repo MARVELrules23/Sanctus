@@ -23,11 +23,13 @@ export default function JournalListScreen() {
   const [items, setItems] = useState<JournalEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [filter, setFilter] = useState<"all" | "free" | "examen" | "catechism">("all");
 
   const load = useCallback(async () => {
-    const res = await api<{ items: JournalEntry[] }>(`/journal?limit=100`);
+    const qs = filter === "all" ? "" : `&kind=${filter}`;
+    const res = await api<{ items: JournalEntry[] }>(`/journal?limit=100${qs}`);
     setItems(res.items || []);
-  }, []);
+  }, [filter]);
 
   useFocusEffect(
     useCallback(() => {
@@ -102,6 +104,41 @@ export default function JournalListScreen() {
         contentContainerStyle={styles.scroll}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} />}
       >
+        {/* Folder filter chips */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chipsRow}
+        >
+          {[
+            { key: "all", label: "All", icon: "book-outline" as const },
+            { key: "free", label: "Reflections", icon: "create-outline" as const },
+            { key: "examen", label: "Examen", icon: "sunny-outline" as const },
+            { key: "catechism", label: "CCC Reflection", icon: "library-outline" as const },
+          ].map((f) => {
+            const active = filter === f.key;
+            return (
+              <Pressable
+                key={f.key}
+                testID={`journal-filter-${f.key}`}
+                onPress={() => setFilter(f.key as typeof filter)}
+                style={({ pressed }) => [
+                  styles.chip,
+                  active && styles.chipActive,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Ionicons
+                  name={f.icon}
+                  size={14}
+                  color={active ? colors.gold : colors.textSecondary}
+                />
+                <Text style={[styles.chipText, active && styles.chipTextActive]}>{f.label}</Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+
         {loading ? (
           <ActivityIndicator color={colors.gold} style={{ marginTop: spacing.xxl }} />
         ) : items.length === 0 ? (
@@ -147,9 +184,24 @@ export default function JournalListScreen() {
                 <Text style={styles.rowBody} numberOfLines={3}>
                   {it.body}
                 </Text>
-                {it.liturgical?.feast ? (
-                  <Text style={styles.rowFeast}>{it.liturgical.feast}</Text>
-                ) : null}
+                <View style={styles.rowFooter}>
+                  {it.liturgical?.feast ? (
+                    <Text style={styles.rowFeast}>{it.liturgical.feast}</Text>
+                  ) : null}
+                  {it.kind === "catechism" ? (
+                    <View style={styles.kindPill} testID={`journal-kind-ccc-${it.entry_id}`}>
+                      <Ionicons name="library" size={11} color={colors.gold} />
+                      <Text style={styles.kindPillText}>CCC</Text>
+                    </View>
+                  ) : it.kind === "examen" ? (
+                    <View style={[styles.kindPill, { borderColor: colors.liturgical.purple }]}>
+                      <Ionicons name="sunny" size={11} color={colors.liturgical.purple} />
+                      <Text style={[styles.kindPillText, { color: colors.liturgical.purple }]}>
+                        Examen
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
               </Pressable>
             );
           })

@@ -171,7 +171,7 @@ export type JournalMood =
   | "weary"
   | null;
 
-export type JournalKind = "free" | "examen" | "examination";
+export type JournalKind = "free" | "examen" | "examination" | "catechism";
 
 export type JournalEntry = {
   entry_id: string;
@@ -405,5 +405,24 @@ export type DailyPractice = {
 export type DailyPracticeHistory = {
   items: DailyPractice[];
   total_pool: number;
+};
+
+// ---- Catechism in 90 seconds ----
+export type CatechismTeaching = {
+  id: string;
+  ccc_ref: string;
+  theme: string;
+  title: string;
+  quote: string;
+  expansion: string;
+  reflection_prompt: string;
+  date: string | null;
+  saved_to_journal: boolean;
+  reflection: string | null;
+};
+
+export type CatechismReflectResponse = {
+  reflection: string;
+  teaching_id: string;
 };
 

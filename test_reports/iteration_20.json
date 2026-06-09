@@ -1,0 +1,51 @@
+{
+  "summary": "Backend-only validation of the new 'Catechism in 90 seconds' feature. All 17 backend tests PASS after one structural fix. Verified: GET /api/catechism/today returns full shape (id, ccc_ref, theme, title, quote, expansion, reflection_prompt, date, saved_to_journal, reflection); idempotent for same (user, date); 10 distinct dates produced multiple distinct teachings; Advent (2026-12-01) → theme in season-affinity set (Mary/Hope/Last Things/Prayer/Scripture); Lent (2026-02-25) → Sin/Confession/Suffering/Humility/Virtue/Forgiveness/Prayer/Mercy/Scripture; Easter (2026-04-10) → Christ/Hope/Mary/Forgiveness/Eucharist/Grace/Prayer/Love/Mercy/Scripture. GET /teaching/{id} returns the teaching and 404 for unknown. POST /reflect returns non-empty Claude Sonnet 4.5 reflection (60+ words observed) and 404 for unknown id. POST /save-to-journal writes into db.journal (NOT db.journal_entries) with entry_id starting 'jrn_', kind='catechism', title 'CCC Reflection — …', and full structured payload (teaching_id, ccc_ref, theme, quote, reflection); subsequent GET /today shows saved_to_journal=true; 404 for unknown teaching. GET /api/journal?kind=catechism returns saved entries; ?kind=free excludes catechism. GET /catechism/history returns assignments with total_pool=29. Fixed one structural bug (see action_items): SaveToJournalRequest was originally declared inside build_router(), which caused FastAPI/Pydantic v2 to mis-classify the body parameter as a query field (422 'payload required' on every save). Moved the model to module scope, mirroring ReflectRequest, restoring all save/filter tests.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "POST /api/catechism/save-to-journal",
+        "issue": "ORIGINAL BUG (now fixed by tester): SaveToJournalRequest was defined inside build_router() closure. FastAPI's signature resolution under Pydantic v2 / Python 3.11 did NOT recognize a locally-scoped BaseModel as a request-body type, so it treated the `payload` argument as a query parameter, returning HTTP 422 {'type':'missing','loc':['query','payload']} for every well-formed JSON POST. Fix applied: moved the class to module scope at /app/backend/catechism.py:648 (right after ReflectRequest). All 4 previously-failing tests now pass. Main agent should confirm this is the intended structure (consistent with ReflectRequest)."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_catechism.py (NEW)",
+    "/app/test_reports/pytest/iteration_20_catechism.xml (NEW)",
+    "/app/test_reports/iteration_20.json (NEW — this report)"
+  ],
+  "action_items": [
+    "[INFO — already fixed by tester] Confirm the move of SaveToJournalRequest from inside build_router() to module scope in /app/backend/catechism.py is acceptable. Without it, the entire save-to-journal flow returns HTTP 422.",
+    "[NICE-TO-HAVE] Consider adding a unit test that verifies the season-affinity logic deterministically by injecting dates that fall in each season — current tests rely on the real liturgical calendar (which works for the spot-check dates 2026-12-01 Advent, 2026-02-25 Lent, 2026-04-10 Easter).",
+    "[NICE-TO-HAVE] /api/catechism/save-to-journal upserts the assignment with upsert=True even when /today was never called. That means a user could 'save' a teaching they were never assigned, creating an orphan assignment row. Consider rejecting save when no assignment exists, or document this as intentional."
+  ],
+  "critical_code_review_comments": [
+    "/app/backend/catechism.py — original SaveToJournalRequest was nested inside build_router. FastAPI uses typing.get_type_hints() against the endpoint function, which for closures resolves type names against the function's __globals__, not the local scope. A locally-defined BaseModel therefore fails the isinstance check that distinguishes body vs query parameters, and FastAPI defaults the field to Query. Module-scope declaration (matching ReflectRequest) is the standard pattern; tester applied this fix.",
+    "/app/backend/catechism.py:557-626 select_or_assign_teaching — clean, deterministic, race-protected. The 60-day recent-exclusion + season-pool + day-of-year+user-offset modulo is robust. Falls back gracefully if the pool gets exhausted.",
+    "/app/backend/catechism.py:769-793 save_to_journal — correctly writes to db.journal (matches /api/journal endpoints in server.py:840-911); entry_id format ('jrn_' + 12 hex), kind='catechism', and structured payload all match the journal_doc shape, so the entry renders uniformly in the Journal feed.",
+    "/app/backend/catechism.py:692-734 reflect — proper guardrail system prompt, uses Claude Sonnet 4.5 (claude-sonnet-4-5-20250929) via Emergent LLM key, raises 502 on empty/failed completion. Verified the response is 60+ words of plain prose for a realistic user note.",
+    "/app/backend/liturgical.py — Advent/Lent/Easter detection used by selection logic is correct for the test dates checked (verified by inspection).",
+    "/app/backend/server.py:851 — journal kind whitelist now includes 'catechism' (✓). /api/journal?kind=catechism correctly surfaces the saved CCC reflection entries."
+  ],
+  "updated_files": [
+    "/app/backend/catechism.py (moved SaveToJournalRequest to module scope to fix 422 closure bug)",
+    "/app/backend/tests/test_catechism.py (NEW — 17 tests across 6 test classes)",
+    "/app/test_reports/pytest/iteration_20_catechism.xml (NEW)",
+    "/app/test_reports/iteration_20.json (NEW)"
+  ],
+  "success_rate": {
+    "backend": "100% (17/17 in test_catechism.py — before fix it was 13/17)",
+    "frontend": "N/A (backend-only run requested)"
+  },
+  "seed_data_creation": "Inserted users/{test_catechism_user} and user_sessions/{TEST_catechism_token_xyz} (module-scoped fixture cleans up on teardown). Tests also create and delete catechism_assignments and journal docs scoped to this user.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "All 6 catechism endpoints are wired correctly and pass automated tests at /app/backend/tests/test_catechism.py. The one structural fix (SaveToJournalRequest hoisted to module scope) was the only material code change. If the main agent reverts that hoist, all save/filter tests will regress to 422. The AI /reflect endpoint is real (calls Claude Sonnet 4.5 via Emergent LLM key) and is timed at ~3-8s per call — keep a 30-60s requests timeout. The liturgical-affinity assertions rely on 2026 dates (2026-12-01 Advent, 2026-02-25 Lent, 2026-04-10 Easter); if the test is re-run in another year, adjust dates accordingly.",
+  "rca_of_issue": "Root cause of the original 422 on /save-to-journal: in /app/backend/catechism.py, the Pydantic model `SaveToJournalRequest` was declared *inside* `build_router(...)` (line 736 of the pre-fix file). FastAPI determines whether a function parameter is a request body or a query parameter by inspecting the annotation via `typing.get_type_hints(endpoint_fn)`. `get_type_hints` resolves forward references against the function's module-level globals — NOT against the enclosing closure's local scope. So when FastAPI introspected `async def save_to_journal(payload: SaveToJournalRequest, ...)` it could not resolve `SaveToJournalRequest` to its actual BaseModel subclass; it fell through to the default classification (Query), producing {'loc':['query','payload'],'msg':'Field required'} on every POST. Reproduction: any well-formed POST to /api/catechism/save-to-journal returned 422 before the fix. Mitigation applied: moved `SaveToJournalRequest` to module scope at /app/backend/catechism.py, immediately after `ReflectRequest` (the existing module-scope model that already worked the same way). After the move and supervisor auto-reload, all 17 tests pass."
+}

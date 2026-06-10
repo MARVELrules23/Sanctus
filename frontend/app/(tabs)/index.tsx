@@ -17,6 +17,7 @@ import { useAuth } from "@/src/auth-context";
 import DailyPracticeCard from "@/src/components/DailyPracticeCard";
 import CatechismCard from "@/src/components/CatechismCard";
 import SaintOfTheDayCard from "@/src/components/SaintOfTheDayCard";
+import ChallengeHomeCard from "@/src/components/ChallengeHomeCard";
 import LiturgicalBadge from "@/src/components/LiturgicalBadge";
 import Ornament from "@/src/components/Ornament";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
@@ -268,6 +269,9 @@ export default function TodayScreen() {
 
         {/* Today's practice */}
         <DailyPracticeCard date={date} />
+
+        {/* Liturgical Challenge — only shown when enrolled AND today is within window */}
+        <ChallengeHomeCard date={date} />
 
         {/* Saint / Blessed / Venerable of the Day */}
         <SaintOfTheDayCard date={date} />

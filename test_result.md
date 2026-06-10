@@ -288,3 +288,20 @@ VERIFIED FLOWS:
   - Bottom-of-index sd-show-disclaimer link 'Review safety disclaimer' reopens the modal.
 
 NO ISSUES FOUND in scope. Carry-forward reminder from iteration_8: backend _sd_get_progress should still merge defaults so sessions_completed is always present on first generate (will only affect the discipline detail screen pre-first-complete). Suggest adding `?? 0` guard at /app/frontend/app/self-defense/[discipline].tsx line ~162 (progress.sessions_completed) as a defensive client-side fallback. Report at /app/test_reports/iteration_9.json."
+
+main_agent_iteration_27_2026-06-10: "Built Liturgical Challenges Phase 1 frontend. NEW FILES:
+- /app/frontend/src/components/ChallengeHomeCard.tsx — Home-tab card that auto-loads /api/challenges, finds an enrolled+active challenge for `date`, and renders today's day (title, patron, reflection, prayer items) with 'Mark today complete' check-in. Renders null if user is not enrolled or no active window — per user contract: only visible when 'toggle is on'.
+- /app/frontend/app/challenges/index.tsx — Hub listing all tracks. Per-card window state ('Begins…' / 'Day X of Y' / 'Ended…'), enrolled streak+progress chips, and an enroll/unenroll Switch (testID `challenge-toggle-${slug}`). Admin link visible when user.is_admin.
+- /app/frontend/app/challenges/[slug].tsx — Detail screen with opening prayer, preparation_content (Hallowtide soul-cake recipe), full day list (auto-expands today), per-day check-in, closing prayer. Top hero has enroll toggle (testID `challenge-detail-toggle-${slug}`). Today badge + lock icon for future days.
+- /app/frontend/app/admin/challenges.tsx — Admin panel: lists all challenges, expand to see days with status pills (DRAFT/LIVE), 'Generate missing' + 'Regen all' AI buttons, per-challenge Publish/Unpublish, per-day toggle publish, edit modal for title/theme/patron/reflection/prayer items JSON.
+
+WIRED:
+- /app/frontend/app/(tabs)/index.tsx — mounts <ChallengeHomeCard date={date}/> between DailyPracticeCard and SaintOfTheDayCard.
+- /app/frontend/app/(tabs)/calendar.tsx — fetches listChallenges(), filters to enrolled, adds a colored bottom stripe on each calendar cell within an enrolled challenge's [start,end] window (testID `cal-challenge-${date}`), and a tap-through 'Challenge tile' inside the selected-day detail card (testID `cal-challenge-tile-${slug}`). Only enrolled tracks are decorated — per user contract: 'If the toggle in the challenge section is off … not shown on the calendar itself'.
+- /app/frontend/app/(tabs)/profile.tsx — added 'Challenges · Review' link in Admin section (testID `profile-admin-challenges-link`).
+- /app/frontend/src/api.ts — added types (ChallengeSummary/Detail/Day/PrayerItem/PrepContent/etc.) and helpers: listChallenges, getChallenge, enrollChallenge, unenrollChallenge, checkinChallenge, getChallengeProgress, adminListChallenges, adminPatchChallenge, adminListChallengeDays, adminPatchChallengeDay, adminGenerateChallengeDays, adminPublishChallenge, adminUnpublishChallenge.
+
+NEEDS TESTING:
+- Backend: regression on /api/challenges/* (list/detail/enroll/checkin/progress) and /api/challenges/admin/* (all/list-days/patch/patch-day/generate-days/publish/unpublish) — auth gating, status filtering for non-admins, idempotent enroll/unenroll, checkin streak math, generate-day Hallowtide 'soul cakes' present.
+- Frontend: (1) hub renders 3 tracks, (2) toggle Switch enrolls + flips Home/Calendar overlays, (3) detail screen shows opening prayer + soul-cake prep (Hallowtide), (4) day cards expand+check-in, (5) admin generate-missing + edit + publish/unpublish flow, (6) calendar stripe + tap-tile work for an enrolled challenge in current month, (7) profile admin link routes to /admin/challenges.
+

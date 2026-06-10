@@ -4,7 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
-import { api, JournalEntry, LiturgicalDay } from "@/src/api";
+import { api, ChallengeSummary, JournalEntry, LiturgicalDay, listChallenges } from "@/src/api";
 import LiturgicalBadge from "@/src/components/LiturgicalBadge";
 import { colorForLiturgical, colors, fonts, radius, shadow, spacing } from "@/src/theme";
 import { formatLongFromISO, monthName, todayISO } from "@/src/date-utils";
@@ -22,6 +22,19 @@ export default function CalendarScreen() {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [entriesLoading, setEntriesLoading] = useState(false);
   const [entryDates, setEntryDates] = useState<Set<string>>(new Set());
+  const [challenges, setChallenges] = useState<ChallengeSummary[]>([]);
+
+  // Pull enrolled challenges so we can decorate calendar cells (and the
+  // selected-day detail card) — only enrolled tracks count toward overlays,
+  // per the toggle-driven contract.
+  const loadChallenges = useCallback(async () => {
+    try {
+      const r = await listChallenges();
+      setChallenges((r.items || []).filter((c) => c.enrolled));
+    } catch {
+      setChallenges([]);
+    }
+  }, []);
 
   const load = useCallback(async () => {
     const res = await api<{ days: LiturgicalDay[] }>(`/liturgical/month?year=${year}&month=${month}`);
@@ -63,7 +76,7 @@ export default function CalendarScreen() {
     setLoading(true);
     (async () => {
       try {
-        await Promise.all([load(), loadEntryDates()]);
+        await Promise.all([load(), loadEntryDates(), loadChallenges()]);
       } finally {
         if (!cancel) setLoading(false);
       }
@@ -71,7 +84,7 @@ export default function CalendarScreen() {
     return () => {
       cancel = true;
     };
-  }, [load, loadEntryDates]);
+  }, [load, loadEntryDates, loadChallenges]);
 
   useEffect(() => {
     void loadEntriesFor(selected);
@@ -89,6 +102,30 @@ export default function CalendarScreen() {
   }, [days, year, month]);
 
   const sel = days.find((d) => d.date === selected);
+
+  // Lookup: which enrolled challenge does this date belong to (if any)?
+  const challengeFor = useCallback(
+    (dStr: string): ChallengeSummary | null => {
+      for (const c of challenges) {
+        const s = (c.start_date || "").slice(0, 10);
+        const e = (c.end_date || "").slice(0, 10);
+        if (!s || !e) continue;
+        if (s <= dStr && dStr <= e) return c;
+      }
+      return null;
+    },
+    [challenges],
+  );
+
+  const selChallenge = sel ? challengeFor(sel.date) : null;
+  const selDayIndex = useMemo(() => {
+    if (!sel || !selChallenge) return null;
+    const start = (selChallenge.start_date || "").slice(0, 10);
+    if (!start) return null;
+    const sD = new Date(`${start}T00:00:00`);
+    const dD = new Date(`${sel.date}T00:00:00`);
+    return Math.floor((dD.getTime() - sD.getTime()) / 86_400_000) + 1;
+  }, [sel, selChallenge]);
 
   const prev = () => {
     if (month === 1) {
@@ -143,6 +180,7 @@ export default function CalendarScreen() {
                 const isSel = cell.date === selected;
                 const isToday = cell.date === todayISO();
                 const c = colorForLiturgical(cell.color);
+                const cellChallenge = challengeFor(cell.date);
                 return (
                   <Pressable
                     key={cell.date}
@@ -161,6 +199,15 @@ export default function CalendarScreen() {
                     {entryDates.has(cell.date) && (
                       <View style={styles.entryDot} testID={`entry-dot-${cell.date}`} />
                     )}
+                    {cellChallenge ? (
+                      <View
+                        style={[
+                          styles.cellChallengeBar,
+                          { backgroundColor: cellChallenge.color || colors.gold },
+                        ]}
+                        testID={`cal-challenge-${cell.date}`}
+                      />
+                    ) : null}
                   </Pressable>
                 );
               })}
@@ -205,6 +252,39 @@ export default function CalendarScreen() {
                     A weekday in {sel.season}. Plans flow with the rhythm of the season.
                   </Text>
                 )}
+
+                {selChallenge ? (
+                  <Pressable
+                    testID={`cal-challenge-tile-${selChallenge.slug}`}
+                    onPress={() =>
+                      router.push({
+                        pathname: "/challenges/[slug]",
+                        params: { slug: selChallenge.slug },
+                      })
+                    }
+                    style={({ pressed }) => [
+                      styles.challengeTile,
+                      { borderColor: selChallenge.color || colors.gold },
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <Ionicons
+                      name={(selChallenge.icon as keyof typeof Ionicons.glyphMap) || "flame-outline"}
+                      size={18}
+                      color={selChallenge.color || colors.gold}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.challengeTileTitle}>
+                        {selChallenge.name}
+                      </Text>
+                      <Text style={styles.challengeTileMeta}>
+                        Day {selDayIndex} of {selChallenge.total_days}
+                        {selChallenge.patron_saint ? ` · ${selChallenge.patron_saint}` : ""}
+                      </Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                  </Pressable>
+                ) : null}
               </View>
             ) : null}
 
@@ -347,6 +427,31 @@ const styles = StyleSheet.create({
     height: 5,
     borderRadius: 3,
     backgroundColor: colors.gold,
+  },
+  cellChallengeBar: {
+    position: "absolute",
+    bottom: 0,
+    left: 6,
+    right: 6,
+    height: 3,
+    borderRadius: 2,
+  },
+  challengeTile: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginTop: spacing.md,
+    padding: spacing.sm + 2,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    backgroundColor: colors.background,
+  },
+  challengeTileTitle: { fontFamily: fonts.uiSemi, fontSize: 13, color: colors.textPrimary },
+  challengeTileMeta: {
+    fontFamily: fonts.uiMedium,
+    fontSize: 11,
+    color: colors.textMuted,
+    marginTop: 2,
   },
   journalSection: {
     marginTop: spacing.lg,

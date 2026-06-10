@@ -1022,3 +1022,197 @@ export async function adminDeleteCharityQuote(quoteId: string): Promise<{ ok: bo
 }
 
 
+// ===== Liturgical Challenges =====
+
+export type ChallengeSlug = "hallowtide" | "advent" | "lent" | string;
+export type ChallengeStatus = "draft" | "published" | "archived";
+
+export type ChallengePrayerItem = {
+  item_id?: string;
+  kind: string;
+  title: string;
+  detail?: string | null;
+};
+
+export type ChallengePrepRecipe = {
+  yield?: string;
+  ingredients?: string[];
+  steps?: string[];
+};
+
+export type ChallengePrepContent = {
+  title?: string;
+  intro?: string;
+  recipe?: ChallengePrepRecipe;
+  encouragement?: string;
+} | null;
+
+export type ChallengeSummary = {
+  challenge_id: string;
+  slug: ChallengeSlug;
+  name: string;
+  subtitle?: string | null;
+  season?: string | null;
+  color?: string | null;
+  icon?: string | null;
+  patron_saint?: string | null;
+  blurb?: string | null;
+  opening_prayer?: string | null;
+  closing_prayer?: string | null;
+  preparation_content?: ChallengePrepContent;
+  start_date: string | null; // ISO datetime
+  end_date: string | null;
+  status: ChallengeStatus;
+  total_days: number;
+  published_days: number;
+  enrolled?: boolean;
+  completed_days?: number;
+  streak?: number;
+};
+
+export type ChallengeDay = {
+  day_id: string;
+  challenge_id: string;
+  day_index: number;
+  date: string | null;
+  title?: string | null;
+  theme?: string | null;
+  patron_saint?: string | null;
+  patron_blurb?: string | null;
+  reflection?: string | null;
+  prayer_items: ChallengePrayerItem[];
+  status: "draft" | "published";
+};
+
+export type ChallengeEnrollment = {
+  joined_at?: string | null;
+  current_streak: number;
+  total_days_completed: number;
+  last_checkin_date?: string | null;
+};
+
+export type ChallengeTodayCheckin = {
+  items_done: string[];
+  reflection: string | null;
+  completed: boolean;
+};
+
+export type ChallengeDetail = ChallengeSummary & {
+  days: ChallengeDay[];
+  enrolled: boolean;
+  enrollment?: ChallengeEnrollment;
+  today_checkin?: ChallengeTodayCheckin | null;
+};
+
+export type AdminChallenge = ChallengeSummary & {
+  ai_generation_notes?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+export async function listChallenges(): Promise<{ items: ChallengeSummary[] }> {
+  return await api(`/challenges`);
+}
+
+export async function getChallenge(slug: string): Promise<ChallengeDetail> {
+  return await api(`/challenges/${encodeURIComponent(slug)}`);
+}
+
+export async function enrollChallenge(slug: string): Promise<{ ok: boolean; already?: boolean }> {
+  return await api(`/challenges/${encodeURIComponent(slug)}/enroll`, { method: "POST" });
+}
+
+export async function unenrollChallenge(slug: string): Promise<{ ok: boolean; removed?: number }> {
+  return await api(`/challenges/${encodeURIComponent(slug)}/enroll`, { method: "DELETE" });
+}
+
+export async function checkinChallenge(
+  slug: string,
+  payload: { date: string; items_done?: string[]; reflection?: string | null; completed?: boolean },
+): Promise<{ ok: boolean; current_streak: number; total_days_completed: number }> {
+  return await api(`/challenges/${encodeURIComponent(slug)}/checkin`, {
+    method: "POST",
+    body: {
+      date: payload.date,
+      items_done: payload.items_done ?? [],
+      reflection: payload.reflection ?? null,
+      completed: payload.completed !== false,
+    },
+  });
+}
+
+export async function getChallengeProgress(slug: string): Promise<{
+  enrolled: boolean;
+  current_streak: number;
+  longest_streak: number;
+  total_days_completed: number;
+  checkins: Array<{ date_str: string; items_done: string[]; completed: boolean; reflection?: string | null }>;
+}> {
+  return await api(`/challenges/${encodeURIComponent(slug)}/my-progress`);
+}
+
+// ---- Admin ----
+
+export async function adminListChallenges(): Promise<{ items: AdminChallenge[] }> {
+  return await api(`/challenges/admin/all`);
+}
+
+export async function adminPatchChallenge(
+  slug: string,
+  body: Partial<{
+    name: string;
+    subtitle: string;
+    blurb: string;
+    patron_saint: string;
+    opening_prayer: string;
+    closing_prayer: string;
+    preparation_content: ChallengePrepContent;
+    start_date: string;
+    end_date: string;
+    status: ChallengeStatus;
+  }>,
+): Promise<AdminChallenge> {
+  return await api(`/challenges/admin/${encodeURIComponent(slug)}`, { method: "PATCH", body });
+}
+
+export async function adminListChallengeDays(slug: string): Promise<{ items: ChallengeDay[] }> {
+  return await api(`/challenges/admin/${encodeURIComponent(slug)}/days`);
+}
+
+export async function adminPatchChallengeDay(
+  dayId: string,
+  body: Partial<{
+    title: string;
+    theme: string;
+    patron_saint: string;
+    patron_blurb: string;
+    reflection: string;
+    prayer_items: ChallengePrayerItem[];
+    status: "draft" | "published";
+  }>,
+): Promise<ChallengeDay> {
+  return await api(`/challenges/admin/days/${encodeURIComponent(dayId)}`, { method: "PATCH", body });
+}
+
+export async function adminGenerateChallengeDays(
+  slug: string,
+  body: { overwrite?: boolean; days?: string[] } = {},
+): Promise<{
+  ok: boolean;
+  results: Array<{ day_index: number; date: string; day_id?: string; skipped?: boolean }>;
+  failures: Array<{ day_index: number; date: string; error: string }>;
+}> {
+  return await api(`/challenges/admin/${encodeURIComponent(slug)}/generate-days`, {
+    method: "POST",
+    body,
+  });
+}
+
+export async function adminPublishChallenge(slug: string): Promise<AdminChallenge> {
+  return await api(`/challenges/admin/${encodeURIComponent(slug)}/publish`, { method: "POST" });
+}
+
+export async function adminUnpublishChallenge(slug: string): Promise<AdminChallenge> {
+  return await api(`/challenges/admin/${encodeURIComponent(slug)}/unpublish`, { method: "POST" });
+}
+

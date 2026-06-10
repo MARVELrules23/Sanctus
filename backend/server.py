@@ -220,6 +220,9 @@ async def ensure_indexes():
     # Charity hub
     from charity import ensure_indexes as _charity_indexes
     await _charity_indexes(db)
+    # Liturgical challenges (Hallowtide / Advent / Lent)
+    from challenges import ensure_indexes as _challenges_indexes
+    await _challenges_indexes(db)
     # Support tickets created via /api/legal/support/contact
     await db.support_tickets.create_index("ticket_id", unique=True)
     await db.support_tickets.create_index([("status", 1), ("created_at", -1)])
@@ -2934,6 +2937,7 @@ from daily_practices import build_router as build_daily_practice_router
 from catechism import build_router as build_catechism_router
 from parish_events import build_router as build_parish_events_router
 from saints import build_router as build_saints_router
+from challenges import build_router as build_challenges_router
 from shop import build_router as build_shop_router
 from charity import build_router as build_charity_router
 from legal import build_legal_router
@@ -2942,6 +2946,7 @@ api.include_router(build_daily_practice_router(db, get_current_user))
 api.include_router(build_catechism_router(db, get_current_user, EMERGENT_LLM_KEY))
 api.include_router(build_parish_events_router(db, get_current_user))
 api.include_router(build_saints_router(db, get_current_user, EMERGENT_LLM_KEY))
+api.include_router(build_challenges_router(db, get_current_user, EMERGENT_LLM_KEY))
 api.include_router(build_shop_router(db, get_current_user))
 api.include_router(build_charity_router(db, get_current_user))
 

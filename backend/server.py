@@ -1868,10 +1868,20 @@ async def root():
 # COMMUNITY — Phase 3: global parish feed, topical rooms, 1-on-1 DMs
 # =====================================================================
 
+class CommunityChallengeRef(BaseModel):
+    slug: str
+    name: Optional[str] = None
+    day_index: Optional[int] = None
+    day_title: Optional[str] = None
+    color: Optional[str] = None
+    icon: Optional[str] = None
+
+
 class CommunityPostRequest(BaseModel):
     body: str
     topic: Optional[str] = None  # None => Global parish feed
     image: Optional[str] = None  # base64 data URI (optional)
+    challenge: Optional[CommunityChallengeRef] = None  # optional pinned ref to a Liturgical Challenge day
 
 
 class CommunityReplyRequest(BaseModel):
@@ -2011,6 +2021,16 @@ async def community_create_post(payload: CommunityPostRequest,
         lit_season = None
 
     post_id = f"post_{uuid.uuid4().hex[:14]}"
+    challenge_ref = None
+    if payload.challenge and payload.challenge.slug:
+        challenge_ref = {
+            "slug": payload.challenge.slug,
+            "name": payload.challenge.name,
+            "day_index": payload.challenge.day_index,
+            "day_title": payload.challenge.day_title,
+            "color": payload.challenge.color,
+            "icon": payload.challenge.icon,
+        }
     doc = {
         "post_id": post_id,
         "author_id": user.user_id,
@@ -2019,6 +2039,7 @@ async def community_create_post(payload: CommunityPostRequest,
         "image": (payload.image or None),
         "liturgical_color": lit_color,
         "liturgical_season": lit_season,
+        "challenge": challenge_ref,
         "created_at": community_svc.now_utc(),
         "like_count": 0,
         "reply_count": 0,

@@ -1,0 +1,36 @@
+{
+  "summary": "Iteration_31 — Frontend-only verification of Challenges Phase 2 (friends-walking-with-you avatar stack + Share-to-Feed quote-card modal + community chip). All 5 acceptance points PASS on mobile viewport (390x844) with the admin (philipwils13@gmail.com) authenticated via the seeded session token `TEST_iter30_admin_tok` (injected into localStorage as JSON-stringified per iter_29 contract).\n\nResults:\n  (a) `challenge-companions` visible on /challenges/hallowtide hero — shows the seeded TEST friend avatar with label 'TEST is walking with you'.\n  (b) `challenge-day-share-6` (today, Day 6) visible alongside check-in button. 6 share buttons total (Days 1-5 past + Day 6 today), Days 7-9 future correctly hide the Share button.\n  (c) Tapping it opens `challenge-share-modal` — header reads 'Day 6 · HALLOWTIDE', day title 'In Hope We Wait: The Patience of Purgatory', and scripture/blurb in quotes. `challenge-share-input` present and editable.\n  (d) Typed 'Lord, increase my faith today. TEST_iter30' and tapped `challenge-share-submit` — modal closed cleanly. POST /api/community/posts succeeded; Mongo shows the created post with body starting with '> Day 6 · ...' and a `challenge` payload `{slug, name, day_index:6, day_title, color, icon}`.\n  (e) On /community the post is the most recent and contains a single gold chip with testID `community-post-challenge-post_16084796fb2746` rendering '🔥 Hallowtide · Day 6'. The post body contains the literal '> Day 6 · …' quote header above the user's reflection.\n\nIMPORTANT SEED CORRECTION: iter30_setup.py only patches the hallowtide window dates (start_date/end_date on the `liturgical_challenges` doc) but does NOT patch the per-day `date` fields on `challenge_days` rows. The Share button visibility logic in the screen compares `d.date` against `todayISO()`, so with un-patched day rows (Oct 31..Nov 8) every day is in the future and zero Share buttons render. I worked around this by additionally setting Day1..Day9 = 2026-06-05..06-13 (so Day 6 = today 2026-06-10), snapshotted the originals to /tmp/iter31_day_snap.json, and restored them in teardown. The main agent should either: (i) fix iter30_setup.py to also patch challenge_days.date when it shifts the window, or (ii) document this caveat in the helper. Without this fix, the Share button cannot be exercised against the dev clock.\n\nNo new React Native warnings beyond the pre-existing shadow* / pointerEvents deprecations.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "global (carry-over)", "issue": "Deprecated 'shadow*' style props on RN-web 0.19+ — should be 'boxShadow'. Console warns. Reference: /app/frontend/src/theme.ts shadow tokens used across challenge cards, day cards, calendar cells, etc."},
+      {"component": "global (carry-over)", "issue": "Deprecated `props.pointerEvents` — should be `style.pointerEvents` on web."}
+    ]
+  },
+  "test_report_links": [
+    "/app/test_reports/iter30_setup.py"
+  ],
+  "action_items": [
+    "(seed/QA helper) Update /app/test_reports/iter30_setup.py so that when it patches the challenge window it ALSO updates `challenge_days.date` for each day_index to fall on (start_date + day_index - 1). Without this, Phase 2 acceptance criteria (b) and (c) cannot be exercised — the Share button is suppressed because day dates remain in their original liturgical-year slot (Oct/Nov). I worked around this in-test (snapshot to /tmp/iter31_day_snap.json + restore on teardown) and the underlying app behavior is correct.",
+    "OPTIONAL: migrate shadow* / props.pointerEvents to RN-web 0.19+ API to silence deprecation warnings (carry-over from iter_27)."
+  ],
+  "critical_code_review_comments": [
+    "challenges/[slug].tsx hero correctly hides `challenge-companions` block when no friends are enrolled (companions.length === 0 short-circuit at L300) — good empty state.",
+    "Share-modal header derives its label from `(data?.name || '').toUpperCase()` plus the day_index — renders 'Day 6 · HALLOWTIDE'. Scripture fallback chain (dayScripture(shareDay) → shareDay.theme → null) is clean.",
+    "ChallengeDay.date is consumed both for `isToday`/`isPast` AND for the quoted header in createCommunityPost body. Centralised parsing via the `iso()` helper at L42 avoids drift.",
+    "community.tsx renders the chip only when `post.challenge && post.challenge.slug` is truthy (L523) — won't crash on legacy posts. testID is correctly post-scoped: `community-post-challenge-${post.post_id}` so multiple chips coexist."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (skipped per request — iter_30 had 100%)", "frontend": "100% (5/5 acceptance points)"},
+  "seed_data_creation": "Ran /app/test_reports/iter30_setup.py setup (admin token TEST_iter30_admin_tok + TEST friend enrolled in hallowtide + friendship accepted + window 2026-06-05..06-20). Additionally patched challenge_days.date so Day1..9 = 06-05..06-13 (Day6=today). Snapshot at /tmp/iter31_day_snap.json. Created one community post `post_16084796fb2746` during the share-flow test. Teardown ran cleanly: day_dates restored, hallowtide window restored, TEST friend + session + admin TEST token deleted, the TEST_iter30 post deleted (iter30_setup.teardown deletes admin posts whose body starts with 'TEST_iter30' — our post body started with '> Day 6 …' so it survived teardown; I manually deleted it via Mongo as part of cleanup — verify on next iteration if you see a lingering post).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Token storage MUST be JSON-stringified: localStorage.setItem('sanctus_session_token', JSON.stringify('<token>')). The Share-to-Feed flow depends on challenge_days.date matching today; if you reuse iter30_setup.py you must also patch challenge_days.date (see action_items). RN-web's Alert.alert does NOT raise a window.alert that Playwright's dialog event captures in this build — the modal-close + DB post creation are the sole functional indicators of success. The challenge-share-modal contains the quote-card header AS PART OF THE POST BODY (the post body literally begins with '> Day N · Title\\n> \"scripture\"\\n\\n<user reflection>'), and the chip on /community is a separate UI element driven by the `challenge` field on the post document.",
+  "rca_of_issue": "No app-level bug. Only a seed helper completeness issue (iter30_setup.py does not patch challenge_days.date). Once day rows align with today, all Phase 2 UI affordances behave exactly as designed."
+}

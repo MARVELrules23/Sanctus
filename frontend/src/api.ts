@@ -333,6 +333,15 @@ export type ParishEvent = {
 export type CommunityTopic = { slug: string | null; label: string; icon: string };
 export type CommunityUserPublic = { user_id: string; name: string; picture: string | null | undefined };
 
+export type CommunityChallengeRef = {
+  slug: string;
+  name?: string | null;
+  day_index?: number | null;
+  day_title?: string | null;
+  color?: string | null;
+  icon?: string | null;
+};
+
 export type CommunityPost = {
   post_id: string;
   author: CommunityUserPublic;
@@ -346,6 +355,7 @@ export type CommunityPost = {
   liked_by_me: boolean;
   image?: string | null;
   is_pinned?: boolean;
+  challenge?: CommunityChallengeRef | null;
 };
 
 export type CommunityReply = {
@@ -1216,3 +1226,40 @@ export async function adminUnpublishChallenge(slug: string): Promise<AdminChalle
   return await api(`/challenges/admin/${encodeURIComponent(slug)}/unpublish`, { method: "POST" });
 }
 
+
+
+// ---- Companions (Phase 2: friends walking with you) ----
+export type ChallengeCompanion = {
+  user_id: string;
+  name: string | null;
+  picture: string | null;
+  current_streak: number;
+  total_days_completed: number;
+};
+
+export async function getChallengeCompanions(
+  slug: string,
+  limit: number = 20,
+): Promise<{ items: ChallengeCompanion[]; total: number }> {
+  return await api(
+    `/challenges/${encodeURIComponent(slug)}/companions?limit=${limit}`,
+  );
+}
+
+// ---- Share to Feed (Phase 2) ----
+export async function createCommunityPost(payload: {
+  body: string;
+  topic?: string | null;
+  image?: string | null;
+  challenge?: CommunityChallengeRef | null;
+}): Promise<CommunityPost> {
+  return await api(`/community/posts`, {
+    method: "POST",
+    body: {
+      body: payload.body,
+      topic: payload.topic ?? null,
+      image: payload.image ?? null,
+      challenge: payload.challenge ?? null,
+    },
+  });
+}

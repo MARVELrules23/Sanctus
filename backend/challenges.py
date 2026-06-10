@@ -17,6 +17,7 @@ check in day-by-day.
 """
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import logging
@@ -353,9 +354,17 @@ def _parse_date(v: str) -> date:
 
 
 def _public_challenge(doc: Dict[str, Any], include_prep: bool = True) -> Dict[str, Any]:
+    # total_days is the calendar window length (end-start+1) — NOT the number
+    # of day_doc rows in the DB. published_days is how many of those have
+    # actually been written + marked status=published.
+    start = doc.get("start_date")
+    end = doc.get("end_date")
+    window_days = 0
+    if isinstance(start, datetime) and isinstance(end, datetime):
+        window_days = (end.date() - start.date()).days + 1
     return {
-        "challenge_id": doc["challenge_id"],
-        "slug": doc["slug"],
+        "challenge_id": doc.get("challenge_id"),
+        "slug": doc.get("slug"),
         "name": doc.get("name"),
         "subtitle": doc.get("subtitle"),
         "season": doc.get("season"),
@@ -369,7 +378,7 @@ def _public_challenge(doc: Dict[str, Any], include_prep: bool = True) -> Dict[st
         "start_date": _iso(doc.get("start_date")),
         "end_date": _iso(doc.get("end_date")),
         "status": doc.get("status", "draft"),
-        "total_days": doc.get("total_days") or 0,
+        "total_days": window_days or (doc.get("total_days") or 0),
         "published_days": doc.get("published_days") or 0,
     }
 
@@ -418,7 +427,21 @@ def _extract_json(text: str) -> Dict[str, Any]:
     j = text.rfind("}")
     if i == -1 or j == -1 or j <= i:
         raise ValueError("no JSON object found")
-    return json.loads(text[i : j + 1])
+    raw = text[i : j + 1]
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        # Claude occasionally emits trailing commas or unescaped quotes inside
+        # a string. Try a couple of forgiving repairs before bailing.
+        cleaned = re.sub(r",\s*([}\]])", r"\1", raw)  # strip trailing commas
+        try:
+            return json.loads(cleaned)
+        except json.JSONDecodeError:
+            pass
+        # Last resort: drop any C-style /* ... */ comments and bare control chars.
+        cleaned2 = re.sub(r"/\*.*?\*/", "", cleaned, flags=re.S)
+        cleaned2 = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", " ", cleaned2)
+        return json.loads(cleaned2)
 
 
 # ---------------------------------------------------------------------------
@@ -761,6 +784,55 @@ def build_router(
             "checkins": cks,
         }
 
+    @router.get("/{slug}/companions")
+    async def companions(slug: str, limit: int = 20, user=Depends(get_current_user)):
+        """Friends of the current user who are enrolled in this challenge —
+        powers the 'walking with you' avatar stack on the detail screen."""
+        doc = await _get_challenge_or_404(slug, allow_drafts=True)
+        # 1. accepted friendships → friend_ids
+        cur = db["community_friendships"].find(
+            {"members": user.user_id, "status": "accepted"},
+            {"_id": 0, "members": 1},
+        )
+        friend_ids: list[str] = []
+        async for f in cur:
+            for m in (f.get("members") or []):
+                if m != user.user_id:
+                    friend_ids.append(m)
+        if not friend_ids:
+            return {"items": [], "total": 0}
+        # 2. enrolled friends
+        cur = enrollments.find(
+            {"challenge_id": doc["challenge_id"], "user_id": {"$in": friend_ids}},
+            {"_id": 0},
+        ).sort([("current_streak", -1), ("joined_at", 1)])
+        rows: list[Dict[str, Any]] = await cur.to_list(length=max(1, min(limit, 50)))
+        total = await enrollments.count_documents(
+            {"challenge_id": doc["challenge_id"], "user_id": {"$in": friend_ids}},
+        )
+        if not rows:
+            return {"items": [], "total": 0}
+        # 3. profile lookup via users collection
+        user_ids = [r["user_id"] for r in rows]
+        u_cur = db["users"].find(
+            {"user_id": {"$in": user_ids}},
+            {"_id": 0, "user_id": 1, "name": 1, "picture": 1},
+        )
+        u_by_id: Dict[str, Dict[str, Any]] = {}
+        async for u in u_cur:
+            u_by_id[u["user_id"]] = u
+        items: list[Dict[str, Any]] = []
+        for r in rows:
+            u = u_by_id.get(r["user_id"]) or {}
+            items.append({
+                "user_id": r["user_id"],
+                "name": u.get("name"),
+                "picture": u.get("picture"),
+                "current_streak": r.get("current_streak", 0),
+                "total_days_completed": r.get("total_days_completed", 0),
+            })
+        return {"items": items, "total": total}
+
     # ----------------------------- Admin ------------------------------------
 
     @router.get("/admin/all")
@@ -869,20 +941,50 @@ def build_router(
         results: list[Dict[str, Any]] = []
         failures: list[Dict[str, Any]] = []
 
-        for d in target_dates:
+        # Process in parallel with a small concurrency cap to keep AI calls
+        # snappy while respecting rate limits. Hallowtide (~9 days) finishes
+        # in ~15s instead of ~2min serial; Lent stays under ~100s.
+        sem = asyncio.Semaphore(5)
+        existing_docs = await days_col.find(
+            {"challenge_id": doc["challenge_id"]}
+        ).to_list(length=None)
+        existing_by_idx = {e["day_index"]: e for e in existing_docs}
+
+        async def _gen_one(d):
             day_index = (d - start).days + 1
             if day_index < 1 or day_index > total:
-                continue
-            existing = await days_col.find_one({"challenge_id": doc["challenge_id"], "day_index": day_index})
+                return None
+            existing = existing_by_idx.get(day_index)
             if existing and not payload.overwrite:
-                results.append({"day_index": day_index, "date": d.isoformat(), "skipped": True, "day_id": existing["day_id"]})
-                continue
-            try:
-                ai = await _generate_day_with_claude(emergent_llm_key, doc, day_index, total, d)
-            except Exception as e:  # noqa: BLE001
-                logger.warning("challenge day gen failed (%s day %d): %s", slug, day_index, e)
-                failures.append({"day_index": day_index, "date": d.isoformat(), "error": str(e)[:200]})
-                continue
+                return ("skip", {
+                    "day_index": day_index,
+                    "date": d.isoformat(),
+                    "skipped": True,
+                    "day_id": existing["day_id"],
+                })
+            async with sem:
+                ai = None
+                last_err: Exception | None = None
+                # One automatic retry on AI parse/error to smooth out Claude's
+                # occasional malformed JSON — saves the admin from having to
+                # hit "Generate missing" twice.
+                for attempt in range(2):
+                    try:
+                        ai = await _generate_day_with_claude(emergent_llm_key, doc, day_index, total, d)
+                        break
+                    except Exception as e:  # noqa: BLE001
+                        last_err = e
+                        logger.warning(
+                            "challenge day gen failed (%s day %d attempt %d): %s",
+                            slug, day_index, attempt + 1, e,
+                        )
+                        await asyncio.sleep(0.5)
+                if ai is None:
+                    return ("fail", {
+                        "day_index": day_index,
+                        "date": d.isoformat(),
+                        "error": str(last_err)[:200] if last_err else "unknown",
+                    })
             now = datetime.now(timezone.utc)
             day_doc = {
                 "day_id": existing["day_id"] if existing else f"chd_{uuid.uuid4().hex[:10]}",
@@ -902,7 +1004,23 @@ def build_router(
             else:
                 day_doc["created_at"] = now
                 await days_col.insert_one(day_doc)
-            results.append({"day_index": day_index, "date": d.isoformat(), "day_id": day_doc["day_id"], "skipped": False})
+            return ("ok", {
+                "day_index": day_index,
+                "date": d.isoformat(),
+                "day_id": day_doc["day_id"],
+                "skipped": False,
+            })
+
+        outs = await asyncio.gather(*[_gen_one(d) for d in target_dates], return_exceptions=False)
+        for o in outs:
+            if not o:
+                continue
+            kind, payload_ = o
+            if kind == "fail":
+                failures.append(payload_)
+            else:
+                results.append(payload_)
+        results.sort(key=lambda r: r["day_index"])
 
         await _recount(doc["challenge_id"])
         return {"ok": True, "results": results, "failures": failures}

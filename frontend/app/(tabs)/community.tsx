@@ -520,6 +520,19 @@ export function PostCard({
           {post.body}
         </Text>
 
+        {post.challenge && post.challenge.slug ? (
+          <View
+            style={styles.challengeChip}
+            testID={`community-post-challenge-${post.post_id}`}
+          >
+            <Ionicons name="flame-outline" size={11} color={colors.gold} />
+            <Text style={styles.challengeChipText}>
+              {post.challenge.name || "Challenge"}
+              {post.challenge.day_index ? ` · Day ${post.challenge.day_index}` : ""}
+            </Text>
+          </View>
+        ) : null}
+
         <View style={styles.postFooter}>
           <Pressable
             onPress={(e) => { e.stopPropagation?.(); onLike?.(); }}
@@ -692,6 +705,25 @@ const styles = StyleSheet.create({
   authorName: { fontFamily: fonts.uiSemi, fontSize: 14, color: colors.textPrimary },
   postMeta: { fontFamily: fonts.uiMedium, fontSize: 11, color: colors.textMuted, marginTop: 1 },
   postBody: { fontFamily: fonts.bodyRegular, fontSize: 15, lineHeight: 22, color: colors.textPrimary, marginTop: spacing.sm },
+  challengeChip: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: radius.round,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.gold,
+    marginTop: spacing.sm,
+  },
+  challengeChipText: {
+    fontFamily: fonts.uiSemi,
+    fontSize: 11,
+    color: colors.gold,
+    letterSpacing: 0.4,
+  },
   postFooter: { flexDirection: "row", alignItems: "center", gap: spacing.lg, marginTop: spacing.md },
   footerBtn: { flexDirection: "row", alignItems: "center", gap: 4 },
   footerCount: { fontFamily: fonts.uiMedium, fontSize: 12, color: colors.textSecondary },

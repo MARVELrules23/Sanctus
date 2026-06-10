@@ -9,11 +9,15 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Switch,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -21,13 +25,17 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 
 import {
+  ChallengeCompanion,
   ChallengeDay,
   ChallengeDetail,
   checkinChallenge,
+  createCommunityPost,
   enrollChallenge,
   getChallenge,
+  getChallengeCompanions,
   unenrollChallenge,
 } from "@/src/api";
+import { Avatar } from "@/src/components/Avatar";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 import { todayISO, formatLongFromISO } from "@/src/date-utils";
 
@@ -45,6 +53,12 @@ export default function ChallengeDetailScreen() {
   const [busyDay, setBusyDay] = useState<string | null>(null);
   const [doneDays, setDoneDays] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<string | null>(null);
+  // Phase 2 — friends walking with you + share to feed
+  const [companions, setCompanions] = useState<ChallengeCompanion[]>([]);
+  const [companionsTotal, setCompanionsTotal] = useState(0);
+  const [shareDay, setShareDay] = useState<ChallengeDay | null>(null);
+  const [shareBody, setShareBody] = useState("");
+  const [sharing, setSharing] = useState(false);
   const today = todayISO();
 
   const load = useCallback(async () => {
@@ -67,7 +81,23 @@ export default function ChallengeDetailScreen() {
     }
   }, [slug, today]);
 
+  // Companions: friends enrolled in this challenge. Fetched once detail loads
+  // so we can render an avatar stack in the hero.
+  const loadCompanions = useCallback(async () => {
+    if (!slug) return;
+    try {
+      const r = await getChallengeCompanions(slug, 20);
+      setCompanions(r.items || []);
+      setCompanionsTotal(r.total || 0);
+    } catch {
+      // Soft-fail: companions are non-critical decoration.
+      setCompanions([]);
+      setCompanionsTotal(0);
+    }
+  }, [slug]);
+
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => { void loadCompanions(); }, [loadCompanions]);
 
   // Auto-expand today's day on first load.
   useEffect(() => {
@@ -122,6 +152,67 @@ export default function ChallengeDetailScreen() {
 
   const visibleDays = useMemo(() => data?.days || [], [data]);
   const prep = data?.preparation_content;
+
+  // ---- Phase 2: Share to Feed ---------------------------------------------
+  // Pick a scripture reference from prayer items if present so we can quote it
+  // as the post header. Falls back to theme/title.
+  const dayScripture = (d: ChallengeDay): string | null => {
+    const items = d.prayer_items || [];
+    const scrip = items.find(
+      (it) => (it.kind || "").toLowerCase() === "scripture",
+    );
+    if (scrip) return scrip.detail || scrip.title || null;
+    return null;
+  };
+
+  const openShare = (d: ChallengeDay) => {
+    setShareDay(d);
+    setShareBody("");
+  };
+
+  const closeShare = () => {
+    if (sharing) return;
+    setShareDay(null);
+    setShareBody("");
+  };
+
+  const submitShare = async () => {
+    if (!shareDay || !data || !slug) return;
+    const reflection = shareBody.trim();
+    if (!reflection) {
+      Alert.alert("Share something", "Add a short reflection before posting.");
+      return;
+    }
+    const title = (shareDay.title || `Day ${shareDay.day_index}`).trim();
+    const scripture = dayScripture(shareDay);
+    const headerLines = [
+      `> Day ${shareDay.day_index} · ${title}`,
+      scripture ? `> “${scripture}”` : null,
+    ].filter(Boolean) as string[];
+    const composed = `${headerLines.join("\n")}\n\n${reflection}`;
+    setSharing(true);
+    try {
+      await createCommunityPost({
+        body: composed,
+        topic: null, // share to Global Parish feed
+        challenge: {
+          slug,
+          name: data.name,
+          day_index: shareDay.day_index,
+          day_title: title,
+          color: data.color || null,
+          icon: data.icon || null,
+        },
+      });
+      setShareDay(null);
+      setShareBody("");
+      Alert.alert("Shared", "Your reflection is on the parish feed.");
+    } catch (e: any) {
+      Alert.alert("Couldn't share", e?.message || "Try again.");
+    } finally {
+      setSharing(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]} testID={`challenge-detail-${slug}`}>
@@ -202,6 +293,41 @@ export default function ChallengeDetailScreen() {
                     {data.enrollment.total_days_completed} / {data.total_days} days
                   </Text>
                 </View>
+              </View>
+            ) : null}
+
+            {/* Phase 2: friends-walking-with-you avatar stack */}
+            {companions.length > 0 ? (
+              <View style={styles.companionsRow} testID="challenge-companions">
+                <View style={styles.avatarStack}>
+                  {companions.slice(0, 5).map((c, idx) => (
+                    <View
+                      key={c.user_id}
+                      style={[
+                        styles.avatarRing,
+                        { borderColor: accent, marginLeft: idx === 0 ? 0 : -10, zIndex: 10 - idx },
+                      ]}
+                    >
+                      <Avatar name={c.name || "?"} picture={c.picture} size={26} />
+                    </View>
+                  ))}
+                  {companionsTotal > 5 ? (
+                    <View
+                      style={[
+                        styles.avatarRing,
+                        styles.avatarMore,
+                        { borderColor: accent, marginLeft: -10 },
+                      ]}
+                    >
+                      <Text style={styles.avatarMoreText}>+{companionsTotal - 5}</Text>
+                    </View>
+                  ) : null}
+                </View>
+                <Text style={styles.companionsLabel} numberOfLines={2}>
+                  {companionsTotal === 1
+                    ? `${companions[0].name?.split(" ")[0] || "A friend"} is walking with you`
+                    : `${companionsTotal} friends walking with you`}
+                </Text>
               </View>
             ) : null}
           </View>
@@ -318,50 +444,68 @@ export default function ChallengeDetailScreen() {
                   {/* Always render the check-in row (testID stays in the DOM
                       so flows can locate it even when the day card is
                       collapsed). The button is disabled for future days. */}
-                  {!isDone ? (
-                    <Pressable
-                      testID={`challenge-day-checkin-${d.day_index}`}
-                      disabled={busyDay === d.day_id || (!isToday && !isPast)}
-                      onPress={() => onCheckIn(d)}
-                      style={({ pressed }) => [
-                        styles.checkBtnSmall,
-                        { backgroundColor: !isToday && !isPast ? colors.borderSoft : accent },
-                        (pressed || busyDay === d.day_id) && { opacity: 0.7 },
-                      ]}
-                    >
-                      {busyDay === d.day_id ? (
-                        <ActivityIndicator color={colors.gold} size="small" />
-                      ) : (
-                        <>
-                          <Ionicons
-                            name={
-                              !isToday && !isPast
-                                ? "lock-closed-outline"
-                                : "checkmark-circle-outline"
-                            }
-                            size={14}
-                            color={!isToday && !isPast ? colors.textMuted : colors.gold}
-                          />
-                          <Text
-                            style={[
-                              styles.checkBtnSmallText,
-                              !isToday && !isPast && { color: colors.textMuted },
-                            ]}
-                          >
-                            {!isToday && !isPast ? "Not yet" : isToday ? "Mark today complete" : "Mark complete"}
-                          </Text>
-                        </>
-                      )}
-                    </Pressable>
-                  ) : (
-                    <View
-                      testID={`challenge-day-checkin-${d.day_index}`}
-                      style={[styles.checkBtnSmall, { backgroundColor: colors.background, borderWidth: 1, borderColor: accent }]}
-                    >
-                      <Ionicons name="checkmark-circle" size={14} color={accent} />
-                      <Text style={[styles.checkBtnSmallText, { color: accent }]}>Completed</Text>
-                    </View>
-                  )}
+                  <View style={styles.actionRow}>
+                    {!isDone ? (
+                      <Pressable
+                        testID={`challenge-day-checkin-${d.day_index}`}
+                        disabled={busyDay === d.day_id || (!isToday && !isPast)}
+                        onPress={() => onCheckIn(d)}
+                        style={({ pressed }) => [
+                          styles.checkBtnSmall,
+                          { backgroundColor: !isToday && !isPast ? colors.borderSoft : accent },
+                          (pressed || busyDay === d.day_id) && { opacity: 0.7 },
+                        ]}
+                      >
+                        {busyDay === d.day_id ? (
+                          <ActivityIndicator color={colors.gold} size="small" />
+                        ) : (
+                          <>
+                            <Ionicons
+                              name={
+                                !isToday && !isPast
+                                  ? "lock-closed-outline"
+                                  : "checkmark-circle-outline"
+                              }
+                              size={14}
+                              color={!isToday && !isPast ? colors.textMuted : colors.gold}
+                            />
+                            <Text
+                              style={[
+                                styles.checkBtnSmallText,
+                                !isToday && !isPast && { color: colors.textMuted },
+                              ]}
+                            >
+                              {!isToday && !isPast ? "Not yet" : isToday ? "Mark today complete" : "Mark complete"}
+                            </Text>
+                          </>
+                        )}
+                      </Pressable>
+                    ) : (
+                      <View
+                        testID={`challenge-day-checkin-${d.day_index}`}
+                        style={[styles.checkBtnSmall, { backgroundColor: colors.background, borderWidth: 1, borderColor: accent }]}
+                      >
+                        <Ionicons name="checkmark-circle" size={14} color={accent} />
+                        <Text style={[styles.checkBtnSmallText, { color: accent }]}>Completed</Text>
+                      </View>
+                    )}
+
+                    {/* Phase 2: Share to Feed — past + today only */}
+                    {(isToday || isPast) ? (
+                      <Pressable
+                        testID={`challenge-day-share-${d.day_index}`}
+                        onPress={() => openShare(d)}
+                        style={({ pressed }) => [
+                          styles.shareBtn,
+                          { borderColor: accent },
+                          pressed && { opacity: 0.7 },
+                        ]}
+                      >
+                        <Ionicons name="share-outline" size={14} color={accent} />
+                        <Text style={[styles.shareBtnText, { color: accent }]}>Share to feed</Text>
+                      </Pressable>
+                    ) : null}
+                  </View>
 
                   {isOpen ? (
                     <View style={styles.dayBody}>
@@ -404,6 +548,85 @@ export default function ChallengeDetailScreen() {
           <View style={{ height: spacing.xxl }} />
         </ScrollView>
       )}
+
+      {/* Phase 2: Share to Feed modal */}
+      <Modal
+        visible={!!shareDay}
+        animationType="slide"
+        transparent
+        onRequestClose={closeShare}
+      >
+        <KeyboardAvoidingView
+          style={styles.modalBackdrop}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+          <Pressable style={StyleSheet.absoluteFill} onPress={closeShare} />
+          <View style={styles.modalSheet} testID="challenge-share-modal">
+            <View style={styles.modalHandle} />
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Share to feed</Text>
+              <Pressable hitSlop={12} onPress={closeShare} disabled={sharing}>
+                <Ionicons name="close" size={22} color={colors.textMuted} />
+              </Pressable>
+            </View>
+
+            {shareDay ? (
+              <View style={[styles.quoteCard, { borderLeftColor: accent }]}>
+                <Text style={[styles.quoteLabel, { color: accent }]}>
+                  Day {shareDay.day_index} · {(data?.name || "").toUpperCase()}
+                </Text>
+                <Text style={styles.quoteTitle}>
+                  {shareDay.title || `Day ${shareDay.day_index}`}
+                </Text>
+                {(() => {
+                  const s = dayScripture(shareDay);
+                  return s ? (
+                    <Text style={styles.quoteScripture}>“{s}”</Text>
+                  ) : shareDay.theme ? (
+                    <Text style={styles.quoteScripture}>{shareDay.theme}</Text>
+                  ) : null;
+                })()}
+              </View>
+            ) : null}
+
+            <TextInput
+              testID="challenge-share-input"
+              style={styles.shareInput}
+              placeholder="What stirred your heart today?"
+              placeholderTextColor={colors.textMuted}
+              value={shareBody}
+              onChangeText={setShareBody}
+              multiline
+              autoFocus
+              maxLength={2000}
+              editable={!sharing}
+            />
+            <Text style={styles.charCount}>{shareBody.length}/2000</Text>
+
+            <Pressable
+              testID="challenge-share-submit"
+              onPress={submitShare}
+              disabled={sharing || !shareBody.trim()}
+              style={({ pressed }) => [
+                styles.shareSubmit,
+                {
+                  backgroundColor: accent,
+                  opacity: sharing || !shareBody.trim() ? 0.5 : pressed ? 0.85 : 1,
+                },
+              ]}
+            >
+              {sharing ? (
+                <ActivityIndicator color={colors.gold} size="small" />
+              ) : (
+                <>
+                  <Ionicons name="paper-plane" size={14} color={colors.gold} />
+                  <Text style={styles.shareSubmitText}>Share to parish feed</Text>
+                </>
+              )}
+            </Pressable>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -621,9 +844,155 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: radius.round,
-    marginTop: spacing.sm,
-    alignSelf: "flex-start",
-    marginLeft: 42,
   },
   checkBtnSmallText: { fontFamily: fonts.uiSemi, fontSize: 12, color: colors.gold, letterSpacing: 0.4 },
+
+  // ---- Phase 2 (companions + share to feed) -------------------------------
+  actionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+    marginLeft: 42,
+  },
+  shareBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderRadius: radius.round,
+    borderWidth: 1,
+    backgroundColor: colors.background,
+  },
+  shareBtnText: { fontFamily: fonts.uiSemi, fontSize: 12, letterSpacing: 0.4 },
+  companionsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderSoft,
+  },
+  avatarStack: { flexDirection: "row", alignItems: "center" },
+  avatarRing: {
+    borderWidth: 2,
+    borderRadius: 17,
+    padding: 1,
+    backgroundColor: colors.surface,
+  },
+  avatarMore: {
+    width: 30,
+    height: 30,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarMoreText: {
+    fontFamily: fonts.uiSemi,
+    fontSize: 10,
+    color: colors.textPrimary,
+  },
+  companionsLabel: {
+    flex: 1,
+    fontFamily: fonts.uiMedium,
+    fontSize: 12,
+    color: colors.textSecondary,
+    lineHeight: 16,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "flex-end",
+  },
+  modalSheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+    padding: spacing.lg,
+    paddingBottom: spacing.xl,
+    gap: spacing.md,
+    ...shadow.card,
+  },
+  modalHandle: {
+    alignSelf: "center",
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.borderSoft,
+    marginBottom: spacing.sm,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  modalTitle: {
+    fontFamily: fonts.headingSemi,
+    fontSize: 18,
+    color: colors.textPrimary,
+  },
+  quoteCard: {
+    borderLeftWidth: 3,
+    paddingLeft: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.background,
+    borderRadius: radius.sm,
+  },
+  quoteLabel: {
+    fontFamily: fonts.uiSemi,
+    fontSize: 10,
+    letterSpacing: 1.4,
+  },
+  quoteTitle: {
+    fontFamily: fonts.headingSemi,
+    fontSize: 15,
+    color: colors.textPrimary,
+    marginTop: 4,
+  },
+  quoteScripture: {
+    fontFamily: fonts.bodyItalic,
+    fontStyle: "italic",
+    fontSize: 13,
+    lineHeight: 20,
+    color: colors.textSecondary,
+    marginTop: 4,
+  },
+  shareInput: {
+    minHeight: 120,
+    maxHeight: 200,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    fontFamily: fonts.bodyRegular,
+    fontSize: 15,
+    color: colors.textPrimary,
+    textAlignVertical: "top",
+    backgroundColor: colors.background,
+  },
+  charCount: {
+    alignSelf: "flex-end",
+    fontFamily: fonts.uiMedium,
+    fontSize: 10,
+    color: colors.textMuted,
+    marginTop: -spacing.sm,
+  },
+  shareSubmit: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: radius.round,
+    marginTop: spacing.sm,
+  },
+  shareSubmitText: {
+    fontFamily: fonts.uiSemi,
+    fontSize: 14,
+    color: colors.gold,
+    letterSpacing: 0.6,
+  },
 });

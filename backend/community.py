@@ -72,6 +72,7 @@ def post_public(p: Dict[str, Any], author: Optional[Dict[str, Any]],
         "liked_by_me": bool(liked_by_me),
         "image": p.get("image"),
         "is_pinned": bool(p.get("is_pinned")),
+        "challenge": p.get("challenge"),
     }
 
 

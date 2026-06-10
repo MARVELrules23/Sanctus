@@ -642,7 +642,7 @@ SEED_FILMS: List[Dict[str, Any]] = [
     {
         "slug": "ccc-bernadette-anim",
         "title": "Lady of Guadeloupe",
-        "blurb": "The story of Our Lady's apparition to St. Juan Diego at Tepeyac — the roses, the tilma, and the conversion of a continent. A full-length feature.",
+        "blurb": "Skeptical of modern-day Christianity, a young reporter investigates the legend of Juan Diego and Our Lady of Guadalupe.",
         "youtube_id": "ACBWU4ug-rc",
         "duration_label": "Feature",
         "category": "saints",

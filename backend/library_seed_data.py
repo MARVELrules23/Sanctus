@@ -287,7 +287,7 @@ SEED_BOOKS: List[Dict[str, Any]] = [
         "cover_color": "#7F1D1D",
         "cover_icon": "shield-outline",
         "type": "embedded",
-        "source_url": "https://www.ccel.org/ccel/scupoli/combat.html",
+        "source_url": "https://en.wikisource.org/wiki/The_Spiritual_Combat",
         "chapters": [
             {
                 "title": "Ch. 1 — Wherein Christian Perfection Consists",
@@ -311,7 +311,7 @@ SEED_BOOKS: List[Dict[str, Any]] = [
         "cover_color": "#831843",
         "cover_icon": "diamond-outline",
         "type": "embedded",
-        "source_url": "https://www.ccel.org/ccel/teresa/castle.html",
+        "source_url": "https://www.ewtn.com/catholicism/library/interior-castle-12568",
         "chapters": [
             {
                 "title": "First Mansions, Ch. 1 — The Castle Within",
@@ -346,7 +346,7 @@ SEED_BOOKS: List[Dict[str, Any]] = [
         "cover_color": "#1E3A8A",
         "cover_icon": "star-outline",
         "type": "embedded",
-        "source_url": "https://www.ewtn.com/catholicism/library/true-devotion-to-mary-7197",
+        "source_url": "https://www.ewtn.com/catholicism/library/treatise-on-true-devotion-to-the-blessed-virgin-6064",
         "chapters": [
             {
                 "title": "Introduction — Why Through Mary?",
@@ -371,7 +371,7 @@ SEED_BOOKS: List[Dict[str, Any]] = [
         "cover_color": "#EA580C",
         "cover_icon": "flame",
         "type": "embedded",
-        "source_url": "https://www.ccel.org/ccel/catherine_g/purgatory.html",
+        "source_url": "https://www.ewtn.com/catholicism/library/treatise-on-purgatory-9820",
         "chapters": [
             {
                 "title": "Ch. 2 — The State of Souls in Purgatory",

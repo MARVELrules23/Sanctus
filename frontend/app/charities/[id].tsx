@@ -26,6 +26,7 @@ import {
 } from "@/src/api";
 import { useAuth } from "@/src/auth-context";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
+import { pickCharityQuote } from "@/src/utils/charity-quotes";
 
 export default function CharityDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -126,6 +127,8 @@ export default function CharityDetail() {
             ) : null}
           </View>
         ) : null}
+
+        <CharityQuoteCard charityId={charity.charity_id} />
       </ScrollView>
 
       <InterestModal
@@ -239,6 +242,40 @@ function ClaimModal({ open, charity, onClose }: { open: boolean; charity: Charit
   );
 }
 
+/** Reverent quote card on the Charity detail page — rotates a curated set of
+ * Catholic teachings on charity from Saints, Blesseds, and Venerables.
+ * Tap to draw a different quote. Stable per-charity on first render. */
+function CharityQuoteCard({ charityId }: { charityId: string }) {
+  const [seed, setSeed] = useState<string>(charityId);
+  const quote = pickCharityQuote(seed);
+  const shuffle = () => setSeed(`${charityId}-${Date.now()}-${Math.random()}`);
+  return (
+    <View testID="charity-quote-card" style={styles.quoteCard}>
+      <View style={styles.quoteOrnamentRow}>
+        <View style={styles.quoteRule} />
+        <Ionicons name="rose-outline" size={14} color={colors.gold} />
+        <View style={styles.quoteRule} />
+      </View>
+      <Text style={styles.quoteLabel}>From the saints on charity</Text>
+      <Text style={styles.quoteOpen}>&ldquo;</Text>
+      <Text style={styles.quoteText}>{quote.text}</Text>
+      <Text style={styles.quoteAttrib}>— {quote.source}</Text>
+      {quote.context ? (
+        <Text style={styles.quoteContext}>{quote.context}</Text>
+      ) : null}
+      <Pressable
+        testID="charity-quote-shuffle"
+        onPress={shuffle}
+        hitSlop={10}
+        style={({ pressed }) => [styles.quoteShuffle, pressed && { opacity: 0.6 }]}
+      >
+        <Ionicons name="refresh" size={14} color={colors.gold} />
+        <Text style={styles.quoteShuffleText}>Another</Text>
+      </Pressable>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   header: { flexDirection: "row", alignItems: "center", paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border, backgroundColor: colors.surface },
@@ -266,4 +303,87 @@ const styles = StyleSheet.create({
   modalTitle: { fontFamily: fonts.headingBold, fontSize: 20, color: colors.primary, textAlign: "center" },
   modalHint: { fontFamily: fonts.bodyRegular, fontSize: 14, color: colors.textSecondary, lineHeight: 20, textAlign: "center" },
   input: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: 12, fontFamily: fonts.bodyRegular, fontSize: 14, color: colors.textPrimary, backgroundColor: colors.surface, textAlignVertical: "top" },
+
+  // Quote card (bottom of detail page)
+  quoteCard: {
+    marginTop: spacing.xl,
+    marginBottom: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.gold + "33",
+    alignItems: "center",
+    ...shadow.card,
+  },
+  quoteOrnamentRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    width: "60%",
+    marginBottom: spacing.xs,
+  },
+  quoteRule: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.gold + "55",
+  },
+  quoteLabel: {
+    fontFamily: fonts.uiSemi,
+    fontSize: 10,
+    letterSpacing: 1.5,
+    textTransform: "uppercase",
+    color: colors.gold,
+    marginBottom: spacing.sm,
+    textAlign: "center",
+  },
+  quoteOpen: {
+    fontFamily: fonts.headingBold,
+    fontSize: 42,
+    lineHeight: 42,
+    color: colors.gold,
+    marginBottom: -8,
+  },
+  quoteText: {
+    fontFamily: fonts.bodyItalic,
+    fontSize: 16,
+    lineHeight: 24,
+    color: colors.textPrimary,
+    textAlign: "center",
+    paddingHorizontal: spacing.xs,
+  },
+  quoteAttrib: {
+    marginTop: spacing.sm,
+    fontFamily: fonts.uiSemi,
+    fontSize: 13,
+    color: colors.primary,
+    textAlign: "center",
+  },
+  quoteContext: {
+    marginTop: 2,
+    fontFamily: fonts.uiMedium,
+    fontSize: 11,
+    color: colors.textMuted,
+    textAlign: "center",
+  },
+  quoteShuffle: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: spacing.md,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: radius.round,
+    borderWidth: 1,
+    borderColor: colors.gold + "55",
+    backgroundColor: colors.gold + "0F",
+  },
+  quoteShuffleText: {
+    fontFamily: fonts.uiSemi,
+    fontSize: 11,
+    color: colors.gold,
+    letterSpacing: 0.5,
+  },
 });

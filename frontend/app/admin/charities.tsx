@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -7,6 +7,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -25,8 +26,9 @@ import {
 } from "@/src/api";
 import { useAuth } from "@/src/auth-context";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
+import { CHARITY_QUOTES } from "@/src/utils/charity-quotes";
 
-type Tab = "pending" | "approved" | "rejected" | "claims";
+type Tab = "pending" | "approved" | "rejected" | "claims" | "quotes";
 
 export default function AdminCharitiesScreen() {
   const router = useRouter();
@@ -35,9 +37,15 @@ export default function AdminCharitiesScreen() {
   const [items, setItems] = useState<Charity[]>([]);
   const [claims, setClaims] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [quoteSearch, setQuoteSearch] = useState("");
 
   const load = useCallback(async () => {
     if (!user?.is_admin) return;
+    if (tab === "quotes") {
+      // Static data — nothing to fetch.
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       if (tab === "claims") {
@@ -53,6 +61,17 @@ export default function AdminCharitiesScreen() {
   }, [tab, user]);
 
   useEffect(() => { load(); }, [load]);
+
+  const filteredQuotes = useMemo(() => {
+    const q = quoteSearch.trim().toLowerCase();
+    if (!q) return CHARITY_QUOTES;
+    return CHARITY_QUOTES.filter(
+      (item) =>
+        item.text.toLowerCase().includes(q) ||
+        item.source.toLowerCase().includes(q) ||
+        (item.context || "").toLowerCase().includes(q),
+    );
+  }, [quoteSearch]);
 
   if (!user?.is_admin) {
     return (
@@ -84,18 +103,64 @@ export default function AdminCharitiesScreen() {
       </View>
 
       <View style={styles.tabs}>
-        {(["pending", "approved", "rejected", "claims"] as Tab[]).map((t) => (
+        {(["pending", "approved", "rejected", "claims", "quotes"] as Tab[]).map((t) => (
           <Pressable key={t} onPress={() => setTab(t)} style={({ pressed }) => [styles.tab, tab === t && styles.tabActive, pressed && { opacity: 0.7 }]}>
-            <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>{t === "claims" ? "Claims" : t[0].toUpperCase() + t.slice(1)}</Text>
+            <Text style={[styles.tabText, tab === t && styles.tabTextActive]} numberOfLines={1}>{t === "claims" ? "Claims" : t === "quotes" ? "Quotes" : t[0].toUpperCase() + t.slice(1)}</Text>
           </Pressable>
         ))}
       </View>
+
+      {tab === "quotes" ? (
+        <View style={styles.quoteSearchWrap}>
+          <Ionicons name="search" size={16} color={colors.textMuted} />
+          <TextInput
+            testID="admin-quote-search"
+            value={quoteSearch}
+            onChangeText={setQuoteSearch}
+            placeholder="Search saints, quotes, or sources…"
+            placeholderTextColor={colors.textMuted}
+            style={styles.quoteSearchInput}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          {quoteSearch ? (
+            <Pressable onPress={() => setQuoteSearch("")} hitSlop={10}>
+              <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
 
       {loading ? (
         <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>
       ) : (
         <ScrollView contentContainerStyle={styles.list}>
-          {tab === "claims" ? (
+          {tab === "quotes" ? (
+            <>
+              <View style={styles.quoteHeader}>
+                <Ionicons name="rose-outline" size={14} color={colors.gold} />
+                <Text style={styles.quoteHeaderText}>
+                  {filteredQuotes.length}
+                  {quoteSearch ? ` / ${CHARITY_QUOTES.length}` : ""}
+                  {" "}quote{filteredQuotes.length === 1 ? "" : "s"} on charity — Saints, Blesseds &amp; Venerables
+                </Text>
+              </View>
+              {filteredQuotes.length === 0 ? (
+                <Text style={styles.empty}>No quotes match &ldquo;{quoteSearch}&rdquo;.</Text>
+              ) : (
+                filteredQuotes.map((q, i) => (
+                  <View key={`${q.source}-${i}`} style={styles.quoteRow}>
+                    <Text style={styles.quoteMark}>&ldquo;</Text>
+                    <Text style={styles.quoteBody}>{q.text}</Text>
+                    <Text style={styles.quoteSource}>— {q.source}</Text>
+                    {q.context ? (
+                      <Text style={styles.quoteCtx}>{q.context}</Text>
+                    ) : null}
+                  </View>
+                ))
+              )}
+            </>
+          ) : tab === "claims" ? (
             claims.length === 0 ? (
               <Text style={styles.empty}>No pending claim requests.</Text>
             ) : (
@@ -173,4 +238,76 @@ const styles = StyleSheet.create({
   archiveBtn: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.borderSoft },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   gateText: { fontFamily: fonts.bodyRegular, fontSize: 16, color: colors.textSecondary },
+
+  // Quote review tab
+  quoteSearchWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: colors.surface,
+    borderRadius: radius.round,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  quoteSearchInput: {
+    flex: 1,
+    fontFamily: fonts.bodyRegular,
+    fontSize: 14,
+    color: colors.textPrimary,
+    paddingVertical: 0,
+  },
+  quoteHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: spacing.xs,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.sm,
+  },
+  quoteHeaderText: {
+    fontFamily: fonts.uiSemi,
+    fontSize: 11,
+    color: colors.gold,
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+    flex: 1,
+  },
+  quoteRow: {
+    padding: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.gold + "22",
+    marginBottom: spacing.sm,
+    ...shadow.card,
+  },
+  quoteMark: {
+    fontFamily: fonts.headingBold,
+    fontSize: 28,
+    lineHeight: 28,
+    color: colors.gold,
+    marginBottom: -4,
+  },
+  quoteBody: {
+    fontFamily: fonts.bodyItalic,
+    fontSize: 14,
+    lineHeight: 21,
+    color: colors.textPrimary,
+  },
+  quoteSource: {
+    marginTop: spacing.sm,
+    fontFamily: fonts.uiSemi,
+    fontSize: 12,
+    color: colors.primary,
+  },
+  quoteCtx: {
+    marginTop: 2,
+    fontFamily: fonts.uiMedium,
+    fontSize: 11,
+    color: colors.textMuted,
+  },
 });

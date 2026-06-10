@@ -226,11 +226,16 @@ export default function CommunityScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={["top"]} testID="community-screen">
       <View style={styles.header}>
-        <View>
-          <Text style={styles.headerTitle}>Community</Text>
-          <Text style={styles.headerSub}>The parish gathers — speak in charity.</Text>
+        <View style={styles.headerTextWrap}>
+          <Text style={styles.headerTitle} numberOfLines={1}>Community</Text>
+          <Text style={styles.headerSub} numberOfLines={1}>The parish gathers — speak in charity.</Text>
         </View>
-        <View style={styles.headerActions}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.headerActions}
+          style={styles.headerActionsScroll}
+        >
           <Pressable
             testID="community-library-btn"
             onPress={() => router.push("/library")}
@@ -263,7 +268,7 @@ export default function CommunityScreen() {
           >
             <Ionicons name="chatbubbles-outline" size={20} color={colors.primary} />
           </Pressable>
-        </View>
+        </ScrollView>
       </View>
 
       {/* Topic chips */}
@@ -646,9 +651,11 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.sm,
     gap: spacing.md,
   },
+  headerTextWrap: { flexShrink: 1, minWidth: 0, maxWidth: "55%" },
   headerTitle: { fontFamily: fonts.headingBold, fontSize: 26, color: colors.textPrimary },
   headerSub: { fontFamily: fonts.bodyItalic, fontStyle: "italic", fontSize: 12, color: colors.textMuted, marginTop: 2 },
-  headerActions: { marginLeft: "auto", flexDirection: "row", gap: spacing.sm },
+  headerActionsScroll: { marginLeft: "auto", flexGrow: 0, flexShrink: 0 },
+  headerActions: { flexDirection: "row", gap: spacing.sm, alignItems: "center", paddingRight: spacing.xs },
   iconBtn: {
     width: 38,
     height: 38,

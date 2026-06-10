@@ -792,3 +792,172 @@ export async function adminSetOrderTracking(
   });
 }
 
+
+// ===== Charity Hub =====
+
+export type CharityCategory =
+  | "food_bank" | "homeless" | "pro_life" | "education" | "missions"
+  | "youth" | "elderly" | "refugees" | "healthcare" | "disability"
+  | "addiction_recovery" | "prison_ministry" | "general";
+
+export type CharityStatus = "pending" | "approved" | "archived" | "rejected";
+
+export type Charity = {
+  charity_id: string;
+  name: string;
+  mission: string;
+  category: CharityCategory;
+  city: string;
+  state: string;
+  country: string;
+  website?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  logo_url?: string | null;
+  status: CharityStatus;
+  claimed_by?: string | null;
+  created_at?: string | null;
+  approved_at?: string | null;
+  submitted_by?: string | null;
+  approved_by?: string | null;
+  claim_status?: string | null;
+  updated_at?: string | null;
+};
+
+export type CharityCategoryLabel = { key: CharityCategory; label: string };
+
+export async function listCharities(params?: {
+  q?: string;
+  category?: string;
+  state?: string;
+  country?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<{ items: Charity[]; total: number; categories: CharityCategory[] }> {
+  const qs = new URLSearchParams();
+  if (params?.q) qs.set("q", params.q);
+  if (params?.category) qs.set("category", params.category);
+  if (params?.state) qs.set("state", params.state);
+  if (params?.country) qs.set("country", params.country);
+  if (params?.limit) qs.set("limit", String(params.limit));
+  if (params?.offset) qs.set("offset", String(params.offset));
+  const s = qs.toString();
+  return await api(`/charities${s ? `?${s}` : ""}`);
+}
+
+export async function getCharityCategories(): Promise<{ categories: CharityCategoryLabel[] }> {
+  return await api(`/charities/categories`);
+}
+
+export async function getCharity(charityId: string): Promise<Charity> {
+  return await api(`/charities/${encodeURIComponent(charityId)}`);
+}
+
+export async function submitCharity(body: {
+  name: string;
+  mission: string;
+  category: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  website?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  logo_url?: string | null;
+}): Promise<Charity> {
+  return await api(`/charities/submit`, { method: "POST", body });
+}
+
+export async function listMyCharitySubmissions(): Promise<{ items: Charity[] }> {
+  return await api(`/charities/mine/submissions`);
+}
+
+export async function requestCharityClaim(
+  charityId: string,
+  message: string,
+): Promise<{ ok: boolean; claim_id: string; status: string }> {
+  return await api(`/charities/${encodeURIComponent(charityId)}/claim`, {
+    method: "POST",
+    body: { message },
+  });
+}
+
+export async function contactCharity(
+  charityId: string,
+  message: string,
+): Promise<{ ok: boolean; contact_id: string; charity_email?: string | null; note: string }> {
+  return await api(`/charities/${encodeURIComponent(charityId)}/contact`, {
+    method: "POST",
+    body: { message },
+  });
+}
+
+// ----- Admin -----
+
+export async function adminListCharities(status?: string): Promise<{ items: Charity[] }> {
+  const qs = status ? `?status=${encodeURIComponent(status)}` : "";
+  return await api(`/charities/admin/list${qs}`);
+}
+
+export async function adminApproveCharity(charityId: string): Promise<Charity> {
+  return await api(`/charities/admin/${encodeURIComponent(charityId)}/approve`, { method: "POST" });
+}
+
+export async function adminRejectCharity(charityId: string): Promise<{ ok: boolean }> {
+  return await api(`/charities/admin/${encodeURIComponent(charityId)}/reject`, { method: "POST" });
+}
+
+export async function adminPatchCharity(
+  charityId: string,
+  body: Partial<Charity>,
+): Promise<Charity> {
+  return await api(`/charities/admin/${encodeURIComponent(charityId)}`, {
+    method: "PATCH",
+    body,
+  });
+}
+
+export async function adminArchiveCharity(charityId: string): Promise<{ ok: boolean }> {
+  return await api(`/charities/admin/${encodeURIComponent(charityId)}`, { method: "DELETE" });
+}
+
+export async function adminListCharityClaims(status: string = "pending"): Promise<{
+  items: Array<{
+    claim_id: string;
+    charity_id: string;
+    charity_name?: string | null;
+    charity_location?: string | null;
+    user_id: string;
+    user_email?: string | null;
+    user_name?: string | null;
+    message?: string | null;
+    status: string;
+    requested_at?: string | null;
+  }>;
+}> {
+  return await api(`/charities/admin/claims?status=${encodeURIComponent(status)}`);
+}
+
+export async function adminApproveClaim(claimId: string): Promise<{ ok: boolean }> {
+  return await api(`/charities/admin/claims/${encodeURIComponent(claimId)}/approve`, { method: "POST" });
+}
+
+export async function adminRejectClaim(claimId: string): Promise<{ ok: boolean }> {
+  return await api(`/charities/admin/claims/${encodeURIComponent(claimId)}/reject`, { method: "POST" });
+}
+
+export async function adminListCharityContacts(charityId?: string): Promise<{
+  items: Array<{
+    contact_id: string;
+    charity_id: string;
+    user_id: string;
+    user_email?: string | null;
+    user_name?: string | null;
+    message?: string | null;
+    created_at?: string | null;
+  }>;
+}> {
+  const qs = charityId ? `?charity_id=${encodeURIComponent(charityId)}` : "";
+  return await api(`/charities/admin/contacts${qs}`);
+}
+

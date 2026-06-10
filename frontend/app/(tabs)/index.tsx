@@ -217,6 +217,12 @@ export default function TodayScreen() {
             label="Self-Defense"
             onPress={() => router.push("/self-defense")}
           />
+          <QuickTile
+            testID="quick-charities"
+            icon="heart-circle-outline"
+            label="Charities"
+            onPress={() => router.push("/charities")}
+          />
         </View>
 
         {/* Mass Readings */}

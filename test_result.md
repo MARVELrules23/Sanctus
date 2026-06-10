@@ -136,6 +136,34 @@
 - Grocery screen: PDF and Text share actions both fire without errors.
 - Journal list: Add new, edit, delete works. Long-press delete on list also works.
 
+## Backend test plan (Charity Hub — this iteration)
+
+### `/api/charities` (Catholic Charity Hub directory)
+- All endpoints require authenticated user (Bearer token from `user_sessions`).
+- `POST /api/charities/submit` with `{name, mission, category?, city?, state?, country?, website?, email?, phone?, logo_url?}` creates a charity. **Admin** submissions auto-approve (`status: "approved"`). Non-admin submissions land as `status: "pending"`. Duplicate name+city in same status pool returns 409.
+- `GET /api/charities` returns ONLY `status: "approved"` items; supports `q` (regex match on name/mission/city), `category` (filtered against `ALLOWED_CATEGORIES`), `state` (case-insensitive), `country`, plus `limit`/`offset`. Sorted by approved_at desc.
+- `GET /api/charities/categories` returns the 13 allowed categories with friendly labels.
+- `GET /api/charities/{id}` returns approved charities to all users, but pending/rejected ONLY to the submitter or admin (else 404).
+- `POST /api/charities/{id}/claim {message}` queues a claim request (pending). Idempotent for same user — returns existing claim if pending. 409 if already claimed by another user. Updates `claim_status: "pending"` on charity.
+- `POST /api/charities/{id}/contact {message}` records volunteer interest in `charity_contacts`. Returns `charity_email` (if set) so frontend can fall back to mailto.
+- `GET /api/charities/mine/submissions` returns the current user's submissions (any status).
+- Admin: `GET /api/charities/admin/list?status=`, `POST /api/charities/admin/{id}/approve`, `POST /api/charities/admin/{id}/reject`, `PATCH /api/charities/admin/{id}`, `DELETE /api/charities/admin/{id}` (archive). All return 403 to non-admins.
+- Admin claims: `GET /api/charities/admin/claims?status=pending|approved|rejected`, `POST /api/charities/admin/claims/{claim_id}/approve` (sets `claimed_by` on charity, supersedes other pending claims), `POST /api/charities/admin/claims/{claim_id}/reject`.
+- Admin contacts: `GET /api/charities/admin/contacts?charity_id=` lists volunteer interests.
+
+## Frontend test plan (Charity Hub)
+- Profile (admin) → "Charities · Review" link visible only for admin user → routes to `/admin/charities`.
+- Home (Today) → quick tile "Charities" → routes to `/charities` (list).
+- Parish (Community) tab header → heart-circle button (testID `community-charities-btn`) → routes to `/charities`.
+- `/charities` index: search box + filters (category chips + state filter) work; empty state shows "Add a charity" CTA.
+- `/charities` index → "+" header button → `/charities/submit`.
+- Submit form: name + mission required; submitting as admin shows "Published" alert; submitting as non-admin shows "Submitted" alert; returns to `/charities` list.
+- Detail `/charities/{id}`: shows mission, contact buttons (website/email/phone), "I'm interested in volunteering" + "I represent this charity · Claim" buttons. Pending charities show "Awaiting admin approval" tag and HIDE action buttons.
+- "I'm interested" modal: sends contact, shows confirmation, opens mailto if charity_email exists.
+- Claim modal: submits claim and shows "Claim request received" confirmation.
+- Admin `/admin/charities`: 4 tabs (Pending / Approved / Rejected / Claims). Approve/reject buttons mutate items; archive on approved tab works. Claims tab approves a claim → charity in DB shows `claimed_by` set.
+- Non-admin user visiting `/admin/charities` directly sees "Admins only." gate.
+
 ## agent_communication
 
 main_agent: "Added live Mass readings (Universalis JSONP, USCCB scrape fallback, AI citations as last resort), Catholic journal with mood tagging (create/edit/delete + list), wired all previously-orphaned screens (rosary, grocery, edit-meal, edit-workout) into navigation, and added real PDF export for the weekly grocery list via expo-print + expo-sharing. Backend extended with `/api/readings` (uses USCCB scraper module) and `/api/journal` CRUD endpoints. Please run backend tests for the new endpoints and a smoke pass over the existing ones."

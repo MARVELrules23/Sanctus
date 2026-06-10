@@ -1,0 +1,48 @@
+{
+  "summary": "Charity Hub end-to-end test (backend + frontend). Backend 27/27 pytest pass: auth gating (401/403), non-admin submissions land pending, admin submissions auto-approve, public list returns only approved with search/category/state filters, pending detail visibility restricted to submitter/admin, claim flow idempotent + 409-on-other-claimed, contact records persisted, admin approve/reject and claim-approval-supersedes-others all work, duplicate (name+city) prevention returns 409, validation errors at 422. Frontend (Expo web preview, 390x844, admin + non-admin sessions minted via Mongo + injected into localStorage): all navigation entry points work (Home tile quick-charities, Community header community-charities-btn, Profile admin profile-admin-charities-link). /charities list loads & searches, /charities/submit submits to API successfully (POST 200), /charities/[id] renders with i-am-interested-btn, Interest modal sends and shows a custom Sent confirmation screen, /admin/charities renders Pending/Approved/Rejected/Claims tabs and approving moves a pending charity to Approved (POST .../approve 200). Non-admin correctly sees 'Admins only.' gate. One web-only UX bug: Alert.alert on the submit screen does not fire on react-native-web -> after a successful submission the user gets NO feedback and stays on the form (POST already succeeded). Several interactive elements (submit form inputs, approve/reject icon buttons in admin row) are missing testID props, making automated testing fragile.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "charities/submit.tsx", "issue": "Alert.alert success/error never appears on web. After POST /api/charities/submit returns 200 the user remains on the submit form with no feedback (router.replace inside Alert OK callback never runs because react-native-web's Alert.alert is effectively a no-op). Same risk for all error Alerts on this screen.", "testID": "n/a", "priority": "HIGH"},
+      {"component": "charities/submit.tsx", "issue": "TextInput fields (name, mission, city, state, country, website, email, phone) and the bottom 'Submit for review' Pressable have no testID. Form-fill automation has to fall back to placeholder selectors.", "testID": "MISSING", "priority": "MEDIUM"},
+      {"component": "admin/charities.tsx", "issue": "Approve / Reject / Archive icon Pressables in each row have no testID and no accessibilityLabel. Hard to target without coordinate hacks.", "testID": "MISSING", "priority": "MEDIUM"},
+      {"component": "charities/index.tsx", "issue": "Charity list rows (cards), the search TextInput, category chips, state filter, and back button have no testID.", "testID": "MISSING", "priority": "LOW"},
+      {"component": "charities/[id].tsx", "issue": "Claim button, interest-modal textarea, 'Send interest' button, 'Done' button, and 'Submit claim' button have no testID. (i-am-interested-btn IS present.)", "testID": "MISSING", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "Submit charity (web)", "issue": "Backend POST /api/charities/submit returns 200 (status pending or approved depending on role), but the web client never navigates back to /charities and shows no toast/alert. Result: a confused user may resubmit and hit the 409 duplicate guard.", "affected_testIDs": ["submit-charity"]}
+    ],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_charity.py",
+    "/app/test_reports/pytest/iteration_26_charity.xml"
+  ],
+  "action_items": [
+    "Replace Alert.alert calls on /charities/submit (and any other web-facing flows) with either Platform.select to use window.alert/window.confirm on web, or a custom in-app toast/modal that runs the OK callback synchronously. Easiest fix: do router.replace('/charities') BEFORE Alert.alert so success-redirect works on both web and native.",
+    "Add testID props: submit-charity-name, submit-charity-mission, submit-charity-city, submit-charity-state, submit-charity-country, submit-charity-website, submit-charity-email, submit-charity-phone, submit-charity-button.",
+    "Add testID props on admin row buttons: admin-charity-approve-<id>, admin-charity-reject-<id>, admin-charity-archive-<id>, and the same for claim-row buttons.",
+    "Add testID props on /charities list: charity-search-input, charity-filter-toggle, charity-category-chip-<key>, charity-state-input, charity-card-<id>.",
+    "Add testID props on charity detail: charity-claim-btn, interest-modal-message, interest-modal-send, claim-modal-message, claim-modal-submit, interest-sent-done."
+  ],
+  "critical_code_review_comments": [
+    "charity.py submit_charity duplicate detection: the city-regex branch uses `'$regex': f'^{re.escape(body.city)}$'` for the city only when body.city is provided; when city is empty, dup detection is skipped entirely. Consider also enforcing name-uniqueness within a country, otherwise two distinct submitters can create the same charity with no city.",
+    "charity.py admin_patch: when patching status to 'approved', `approved_by` / `approved_at` are NOT set (only the public approve endpoint does this). This will leave approved-via-patch charities with null approved_at, breaking the public list sort.",
+    "charity.py request_claim: claim_status is only marked 'pending' if the charity has no claimed_by yet; idempotent re-claim by same user does not refresh updated_at — fine, but admin dashboard may not surface it.",
+    "All endpoints use Depends(get_current_user) with no rate-limit or anti-spam on /submit or /contact — a logged-in user could spam contacts. Acceptable for Phase 1 but worth flagging.",
+    "_public_charity exposes `email`/`phone` on the public listing — confirm this is intentional (these are submitter-provided org contacts, but consider hiding on the public list response and only returning on detail)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_charity.py (new)"
+  ],
+  "success_rate": {"backend": "100% (27/27)", "frontend": "≈92% (12/13 — submit-success UX broken on web)"},
+  "seed_data_creation": "Minted one admin session_token for user_ade7a898e281 and one non-admin test user (TEST_charity_uitest_*) with its own session for UI tests. All sessions, the test user, and any charity/claim/contact rows created with the TEST_QA_/QA_UI_/QA_NA_ prefix have been cleaned up. Pre-seeded admin user and real charities were NOT touched.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Auth is mintable: insert into user_sessions {session_token, user_id, expires_at} and on the web preview run localStorage.setItem('sanctus_session_token', JSON.stringify(token)) before navigating. RN-web Alert.alert is effectively a no-op for success callbacks; rely on either custom modals (the interest modal already does this correctly) or perform the side effect before showing the Alert. Approve/reject row icons in /admin/charities currently must be located by background color until testIDs are added.",
+  "rca_of_issue": "Why Alert.alert OK-callback fails on web: react-native-web maps Alert.alert to a window.alert/confirm-style invocation that does not invoke the buttons array's onPress handlers when the dialog is dismissed (only the first button text is sometimes used as the message). Therefore `router.replace('/charities')` placed inside the success Alert's onPress is never executed. Reproduction: open /charities/submit on web preview, fill name + 10+ char mission, tap Submit; observe POST /api/charities/submit returns 200 but the form stays mounted and no toast/alert is visible. Mitigation: call router.replace('/charities') (and any state cleanup) outside the Alert.alert callback, or guard with Platform.OS === 'web' to use window.alert + immediate redirect."
+}

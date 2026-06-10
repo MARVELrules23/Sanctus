@@ -232,6 +232,14 @@ export default function CommunityScreen() {
         </View>
         <View style={styles.headerActions}>
           <Pressable
+            testID="community-charities-btn"
+            onPress={() => router.push("/charities")}
+            hitSlop={8}
+            style={({ pressed }) => [styles.iconBtn, pressed && styles.pressed]}
+          >
+            <Ionicons name="heart-circle-outline" size={20} color={colors.primary} />
+          </Pressable>
+          <Pressable
             testID="community-people-btn"
             onPress={() => router.push("/community/people")}
             hitSlop={8}

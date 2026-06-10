@@ -312,3 +312,41 @@ main_agent_iteration_27_fix_2026-06-10: "Fixed three HIGH-priority bugs from tes
 3. Day-card check-in testID was only rendered inside the collapsed body. Moved the check-in row outside the `isOpen` block so testID `challenge-day-checkin-{day_index}` is always in the DOM (button is properly disabled with 'Not yet' for future days, shows 'Completed' chip when isDone).
 4. Home card day index now clamps via memoized displayDayIndex (falls back to computed-from-start when today.day_index is missing, and clamps within 1..total_days).
 "
+
+
+main_agent_iteration_36_2026-06-10: "Two focused changes resuming the last working item:
+
+1) BERNADETTE FILM FIX — user reported 'ccc-bernadette-anim' was still only a 3-minute trailer. Updated `library_seed_data.py` (entry now: title='Bernadette — Princess of Lourdes', youtube_id='ACBWU4ug-rc', category='saints', duration_label='Feature') AND directly patched the existing MongoDB document (db.library_films.update_one slug=ccc-bernadette-anim) so the change is live without re-seed. Before: zdYxJIsNSqs / 'St. Bernadette — Princess of Lourdes (CCC)' / animated. After: ACBWU4ug-rc / 'Bernadette — Princess of Lourdes' / saints. New video is the full feature 'The Best Movie Based on True Events! The Legend of the Virgin Mary Changed His Life!'.
+
+2) FULL-TEXT BOOK READER POLISH — last session bulk-loaded 5 Catholic classics via Gutenberg; some chapters are now 60–86 KB each (e.g. Confessions Bk X ≈ 86,523 chars). To keep the reader smooth on web/Android the body is now split on blank lines and rendered as separate `<Text>` paragraphs (each with marginBottom) instead of one giant Text node — much faster layout and a real paragraph rhythm. Reader also now displays chapter `subtitle` (e.g. 'Earliest Memories' for Story of a Soul Ch. I) — required updating both the FastAPI chapter response (`subtitle: c.get('subtitle','')`) and the TS type `LibraryChapterDetail.subtitle?`.
+
+3) ORTHODOXY (CHESTERTON) NOW EMBEDDED — added `parse_orthodoxy` to `/app/backend/scripts/load_full_books.py` (Gutenberg #130). Ran loader → 10 chapters / ~63,750 words. Flipped that book's `type` from `external` → `embedded` in BOTH `library_seed_data.py` AND the live DB. So Orthodoxy is now a full in-app read instead of just a Gutenberg redirect.
+
+DB SUMMARY post-changes (embedded books with full text):
+- imitation-of-christ      114 ch / ~328K chars
+- confessions-augustine     13 ch / ~602K chars
+- story-of-a-soul           11 ch / ~319K chars
+- abandonment-divine-prov.   4 ch / ~195K chars
+- practice-presence-of-god  19 ch /  ~53K chars
+- orthodoxy-chesterton      10 ch / ~376K chars (NEW)
+Still 'external'-by-design (deep-link out): catechism-catholic-church, summa-theologica, apologia-pro-vita-sua, everlasting-man.
+Still embedded with stub-length sample chapters (Gutenberg not available in English): devout-life, spiritual-combat, interior-castle, true-devotion-mary, treatise-purgatory. (Pending user direction: convert these 5 to external, or source from CCEL.)
+
+FILES TOUCHED:
+- /app/backend/library_seed_data.py        (Bernadette block + Orthodoxy type=embedded)
+- /app/backend/library.py                  (chapter response now returns subtitle)
+- /app/backend/scripts/load_full_books.py  (added parse_orthodoxy + PARSERS entry)
+- /app/frontend/app/library/books/[slug]/read.tsx (paragraph splitting + subtitle render + chapterSubtitle style)
+- /app/frontend/src/api.ts                 (LibraryChapterDetail.subtitle optional)
+
+NEEDS TESTING:
+Backend:
+- GET /api/library/films/ccc-bernadette-anim → expect youtube_id 'ACBWU4ug-rc' and title containing 'Bernadette — Princess of Lourdes'.
+- GET /api/library/books/orthodoxy-chesterton → expect type 'embedded' and chapters length 10.
+- GET /api/library/books/orthodoxy-chesterton/chapters/0 → expect non-empty body_md (~10K+ chars), subtitle present, title 'Preface'.
+- GET /api/library/books/confessions-augustine/chapters/0 → expect body_md length > 10000 chars and subtitle field present in response (may be empty string).
+Frontend:
+- Library tab → Films sub-tab → tap 'Bernadette — Princess of Lourdes' card → film viewer opens for youtube_id ACBWU4ug-rc (not zdYxJIsNSqs). Card no longer says 'CCC'.
+- Library tab → Books sub-tab → tap Orthodoxy → detail screen now shows 'Start Reading' (NOT 'Open full work' external button); chapter list shows 10 chapters incl. 'Preface', 'Chapter I', 'Chapter II'.
+- Open Confessions Bk I in reader → text renders smoothly (no freeze >2s, scrollable, paragraphs visually separated). Verify subtitle is visible if non-empty. Resume + chapter nav still work.
+"

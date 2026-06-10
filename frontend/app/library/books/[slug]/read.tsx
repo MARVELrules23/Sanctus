@@ -191,12 +191,38 @@ export default function ReaderScreen() {
           >
             {chapter.title}
           </Text>
-          <Text
-            style={[styles.bodyText, { color: theme.text, fontSize: fz, lineHeight: lh }]}
-            testID="reader-chapter-body"
-          >
-            {chapter.body_md}
-          </Text>
+          {chapter.subtitle ? (
+            <Text
+              style={[
+                styles.chapterSubtitle,
+                { color: theme.muted, fontSize: fz - 2, lineHeight: lh - 4 },
+              ]}
+              testID="reader-chapter-subtitle"
+            >
+              {chapter.subtitle}
+            </Text>
+          ) : null}
+          {(chapter.body_md || "")
+            .split(/\n{2,}/)
+            .map((para, idx) =>
+              para.trim() ? (
+                <Text
+                  key={idx}
+                  style={[
+                    styles.bodyText,
+                    {
+                      color: theme.text,
+                      fontSize: fz,
+                      lineHeight: lh,
+                      marginBottom: spacing.md,
+                    },
+                  ]}
+                  testID={idx === 0 ? "reader-chapter-body" : undefined}
+                >
+                  {para.replace(/\n/g, " ")}
+                </Text>
+              ) : null,
+            )}
           <View style={styles.navRow}>
             <Pressable
               testID="reader-prev"
@@ -314,6 +340,12 @@ const styles = StyleSheet.create({
   centerFill: { flex: 1, alignItems: "center", justifyContent: "center" },
   body: { paddingHorizontal: spacing.lg, paddingVertical: spacing.lg },
   chapterTitle: { fontFamily: fonts.headingBold, marginBottom: spacing.lg },
+  chapterSubtitle: {
+    fontFamily: fonts.uiSemi,
+    marginTop: -spacing.md,
+    marginBottom: spacing.lg,
+    fontStyle: "italic",
+  },
   bodyText: { fontFamily: fonts.bodyRegular },
   navRow: {
     flexDirection: "row", justifyContent: "space-between", alignItems: "center",

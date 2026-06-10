@@ -415,7 +415,7 @@ SEED_BOOKS: List[Dict[str, Any]] = [
         "chapters": [],
     },
 
-    # ---------- EXTERNAL: Orthodoxy ----------
+    # ---------- EMBEDDED: Orthodoxy (full text via Gutenberg #130) ----------
     {
         "slug": "orthodoxy-chesterton",
         "title": "Orthodoxy",
@@ -425,7 +425,7 @@ SEED_BOOKS: List[Dict[str, Any]] = [
         "tradition": "apologist",
         "cover_color": "#581C87",
         "cover_icon": "umbrella-outline",
-        "type": "external",
+        "type": "embedded",
         "source_url": "https://www.gutenberg.org/files/130/130-h/130-h.htm",
         "chapters": [],
     },
@@ -641,11 +641,11 @@ SEED_FILMS: List[Dict[str, Any]] = [
     },
     {
         "slug": "ccc-bernadette-anim",
-        "title": "St. Bernadette — Princess of Lourdes (CCC)",
-        "blurb": "CCC of America's beloved animated retelling of St. Bernadette's encounter with Our Lady at the grotto.",
-        "youtube_id": "zdYxJIsNSqs",
-        "duration_label": "45m",
-        "category": "animated",
+        "title": "Bernadette — Princess of Lourdes",
+        "blurb": "The full-length feature on St. Bernadette Soubirous and the apparitions of Our Lady at Lourdes — a true story that changed countless lives.",
+        "youtube_id": "ACBWU4ug-rc",
+        "duration_label": "Feature",
+        "category": "saints",
         "accent_color": "#0EA5E9",
     },
     {

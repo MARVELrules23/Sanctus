@@ -355,6 +355,7 @@ def build_router(db: AsyncIOMotorDatabase, get_current_user) -> APIRouter:
             "slug": doc["slug"],
             "chapter_index": idx,
             "title": c.get("title", f"Chapter {idx + 1}"),
+            "subtitle": c.get("subtitle", "") or "",
             "body_md": c.get("body_md", ""),
             "is_last": idx == len(chapters) - 1,
             "word_count": _word_count(c.get("body_md", "")),

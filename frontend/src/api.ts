@@ -1302,6 +1302,7 @@ export type LibraryChapterDetail = {
   slug: string;
   chapter_index: number;
   title: string;
+  subtitle?: string;
   body_md: string;
   is_last: boolean;
   word_count: number;

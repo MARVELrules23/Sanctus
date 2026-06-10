@@ -641,8 +641,8 @@ SEED_FILMS: List[Dict[str, Any]] = [
     },
     {
         "slug": "ccc-bernadette-anim",
-        "title": "Bernadette — Princess of Lourdes",
-        "blurb": "The full-length feature on St. Bernadette Soubirous and the apparitions of Our Lady at Lourdes — a true story that changed countless lives.",
+        "title": "Lady of Guadeloupe",
+        "blurb": "The story of Our Lady's apparition to St. Juan Diego at Tepeyac — the roses, the tilma, and the conversion of a continent. A full-length feature.",
         "youtube_id": "ACBWU4ug-rc",
         "duration_label": "Feature",
         "category": "saints",

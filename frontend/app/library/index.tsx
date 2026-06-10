@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -10,9 +11,18 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Stack, useRouter } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 
-import { LibraryBook, listLibraryBooks } from "@/src/api";
+import {
+  LibraryBook,
+  LibraryFilm,
+  LibraryFilmCategory,
+  LibraryStation,
+  listLibraryBooks,
+  listLibraryFilms,
+  listLibraryStations,
+} from "@/src/api";
+import { useRadioPlayer } from "@/src/audio/RadioPlayerContext";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 
 type Tab = "books" | "radio" | "films";
@@ -24,33 +34,107 @@ const TRADITION_LABEL: Record<string, string> = {
   apologist: "Apologist",
 };
 
+const FILM_CATEGORIES: { value: LibraryFilmCategory | "all"; label: string; icon: any }[] = [
+  { value: "all", label: "All", icon: "apps-outline" },
+  { value: "saints", label: "Saints", icon: "rose-outline" },
+  { value: "doctrine", label: "Doctrine", icon: "book-outline" },
+  { value: "animated", label: "For Kids", icon: "color-palette-outline" },
+  { value: "documentary", label: "Documentary", icon: "videocam-outline" },
+];
+
 export default function LibraryIndexScreen() {
   const router = useRouter();
-  const [tab, setTab] = useState<Tab>("books");
-  const [books, setBooks] = useState<LibraryBook[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const params = useLocalSearchParams<{ tab?: string }>();
+  const initialTab: Tab =
+    params.tab === "radio" || params.tab === "films" ? params.tab : "books";
 
-  const load = useCallback(async () => {
+  const [tab, setTab] = useState<Tab>(initialTab);
+  const [books, setBooks] = useState<LibraryBook[]>([]);
+  const [stations, setStations] = useState<LibraryStation[]>([]);
+  const [films, setFilms] = useState<LibraryFilm[]>([]);
+  const [loading, setLoading] = useState<{ books: boolean; radio: boolean; films: boolean }>({
+    books: true,
+    radio: true,
+    films: true,
+  });
+  const [refreshing, setRefreshing] = useState(false);
+  const [filmCategory, setFilmCategory] = useState<LibraryFilmCategory | "all">("all");
+
+  const radio = useRadioPlayer();
+
+  // Reactively switch when deep-linked with ?tab=
+  useEffect(() => {
+    if (params.tab === "radio" || params.tab === "films" || params.tab === "books") {
+      setTab(params.tab as Tab);
+    }
+  }, [params.tab]);
+
+  const loadBooks = useCallback(async () => {
+    setLoading((l) => ({ ...l, books: true }));
     try {
       const r = await listLibraryBooks();
       setBooks(r.items || []);
+    } catch (_e) {
+      setBooks([]);
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      setLoading((l) => ({ ...l, books: false }));
     }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  const loadStations = useCallback(async () => {
+    setLoading((l) => ({ ...l, radio: true }));
+    try {
+      const r = await listLibraryStations();
+      setStations(r.items || []);
+    } catch (_e) {
+      setStations([]);
+    } finally {
+      setLoading((l) => ({ ...l, radio: false }));
+    }
+  }, []);
+
+  const loadFilms = useCallback(async () => {
+    setLoading((l) => ({ ...l, films: true }));
+    try {
+      const r = await listLibraryFilms();
+      setFilms(r.items || []);
+    } catch (_e) {
+      setFilms([]);
+    } finally {
+      setLoading((l) => ({ ...l, films: false }));
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadBooks();
+    void loadStations();
+    void loadFilms();
+  }, [loadBooks, loadStations, loadFilms]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    if (tab === "books") await loadBooks();
+    else if (tab === "radio") await loadStations();
+    else await loadFilms();
+    setRefreshing(false);
+  }, [tab, loadBooks, loadStations, loadFilms]);
 
   const grouped = useMemo(() => {
-    const inProgress = books.filter((b) => b.progress && (b.progress.chapter_index > 0 || b.progress.scroll_pct > 0.01));
+    const inProgress = books.filter(
+      (b) => b.progress && (b.progress.chapter_index > 0 || b.progress.scroll_pct > 0.01),
+    );
     const embedded = books.filter((b) => b.type === "embedded" && !inProgress.includes(b));
     const external = books.filter((b) => b.type === "external");
     return { inProgress, embedded, external };
   }, [books]);
 
-  const renderCard = (b: LibraryBook) => {
+  const filteredFilms = useMemo(() => {
+    if (filmCategory === "all") return films;
+    return films.filter((f) => f.category === filmCategory);
+  }, [films, filmCategory]);
+
+  /* ------------------------- BOOK CARD --------------------------------- */
+  const renderBookCard = (b: LibraryBook) => {
     const accent = b.cover_color || colors.gold;
     const progress = b.progress;
     const hasProgress = !!progress && (progress.chapter_index > 0 || progress.scroll_pct > 0.01);
@@ -65,11 +149,7 @@ export default function LibraryIndexScreen() {
         style={({ pressed }) => [styles.bookCard, pressed && { opacity: 0.85 }]}
       >
         <View style={[styles.cover, { backgroundColor: accent }]}>
-          <Ionicons
-            name={(b.cover_icon as any) || "book-outline"}
-            size={28}
-            color={colors.gold}
-          />
+          <Ionicons name={(b.cover_icon as any) || "book-outline"} size={28} color={colors.gold} />
           {b.type === "external" ? (
             <View style={styles.externalBadge}>
               <Ionicons name="open-outline" size={10} color={colors.surface} />
@@ -77,9 +157,12 @@ export default function LibraryIndexScreen() {
           ) : null}
         </View>
         <View style={styles.bookMeta}>
-          <Text style={styles.bookTitle} numberOfLines={2}>{b.title}</Text>
+          <Text style={styles.bookTitle} numberOfLines={2}>
+            {b.title}
+          </Text>
           <Text style={styles.bookAuthor} numberOfLines={1}>
-            {b.author}{b.year ? ` · ${b.year}` : ""}
+            {b.author}
+            {b.year ? ` · ${b.year}` : ""}
           </Text>
           {b.tradition && TRADITION_LABEL[b.tradition] ? (
             <Text style={[styles.bookTrad, { color: accent }]} numberOfLines={1}>
@@ -88,7 +171,12 @@ export default function LibraryIndexScreen() {
           ) : null}
           {hasProgress ? (
             <View style={styles.progressTrack}>
-              <View style={[styles.progressFill, { width: `${Math.max(6, pct * 100)}%`, backgroundColor: accent }]} />
+              <View
+                style={[
+                  styles.progressFill,
+                  { width: `${Math.max(6, pct * 100)}%`, backgroundColor: accent },
+                ]}
+              />
             </View>
           ) : null}
         </View>
@@ -96,6 +184,111 @@ export default function LibraryIndexScreen() {
     );
   };
 
+  /* ------------------------- STATION CARD ------------------------------ */
+  const renderStationCard = (s: LibraryStation) => {
+    const accent = s.accent_color || colors.gold;
+    const isCurrent = radio.current?.station_id === s.station_id;
+    const showPause = isCurrent && (radio.isPlaying || radio.isBuffering);
+
+    return (
+      <Pressable
+        key={s.station_id}
+        testID={`library-station-card-${s.slug}`}
+        onPress={() => {
+          if (isCurrent) {
+            radio.toggle();
+          } else {
+            radio.play(s);
+          }
+        }}
+        style={({ pressed }) => [
+          styles.stationCard,
+          pressed && { opacity: 0.92 },
+          isCurrent && { borderColor: accent, borderWidth: 1.5 },
+        ]}
+      >
+        <View style={[styles.stationIcon, { backgroundColor: accent }]}>
+          <Ionicons name={(s.icon as any) || "radio-outline"} size={24} color={colors.gold} />
+        </View>
+        <View style={{ flex: 1, paddingHorizontal: spacing.md }}>
+          <Text style={styles.stationName} numberOfLines={1}>
+            {s.name}
+          </Text>
+          {s.blurb ? (
+            <Text style={styles.stationBlurb} numberOfLines={2}>
+              {s.blurb}
+            </Text>
+          ) : null}
+          <View style={styles.stationMetaRow}>
+            {s.country ? <Text style={styles.stationMetaTag}>{s.country}</Text> : null}
+            {s.language ? (
+              <Text style={[styles.stationMetaTag, { color: colors.textMuted }]}>{s.language}</Text>
+            ) : null}
+            {isCurrent ? (
+              <View style={[styles.liveDot, { backgroundColor: accent }]} />
+            ) : null}
+            {isCurrent ? (
+              <Text style={[styles.stationMetaTag, { color: accent, fontFamily: fonts.uiSemi }]}>
+                {radio.isBuffering ? "BUFFERING" : radio.isPlaying ? "ON AIR" : "PAUSED"}
+              </Text>
+            ) : null}
+          </View>
+        </View>
+        <View style={[styles.playBtn, { backgroundColor: accent }]}>
+          {radio.isBuffering && isCurrent ? (
+            <ActivityIndicator size="small" color={colors.gold} />
+          ) : (
+            <Ionicons
+              name={showPause ? "pause" : "play"}
+              size={20}
+              color={colors.gold}
+            />
+          )}
+        </View>
+      </Pressable>
+    );
+  };
+
+  /* ------------------------- FILM CARD --------------------------------- */
+  const renderFilmCard = (f: LibraryFilm) => {
+    const accent = f.accent_color || colors.gold;
+    const thumb = `https://i.ytimg.com/vi/${f.youtube_id}/hqdefault.jpg`;
+    return (
+      <Pressable
+        key={f.film_id}
+        testID={`library-film-card-${f.slug}`}
+        onPress={() => router.push(`/library/films/${f.slug}`)}
+        style={({ pressed }) => [styles.filmCard, pressed && { opacity: 0.92 }]}
+      >
+        <View style={styles.filmThumbWrap}>
+          <Image source={{ uri: thumb }} style={styles.filmThumb} resizeMode="cover" />
+          <View style={[styles.filmCategoryPill, { backgroundColor: accent }]}>
+            <Text style={styles.filmCategoryText}>{f.category.toUpperCase()}</Text>
+          </View>
+          <View style={styles.filmPlayOverlay}>
+            <Ionicons name="play-circle" size={48} color={"rgba(255,255,255,0.92)"} />
+          </View>
+          {f.duration_label ? (
+            <View style={styles.filmDuration}>
+              <Text style={styles.filmDurationText}>{f.duration_label}</Text>
+            </View>
+          ) : null}
+        </View>
+        <View style={{ padding: spacing.md }}>
+          <Text style={styles.filmTitle} numberOfLines={2}>
+            {f.title}
+          </Text>
+          {f.blurb ? (
+            <Text style={styles.filmBlurb} numberOfLines={2}>
+              {f.blurb}
+            </Text>
+          ) : null}
+        </View>
+      </Pressable>
+    );
+  };
+
+  /* ------------------------- RENDER ------------------------------------ */
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -127,61 +320,113 @@ export default function LibraryIndexScreen() {
         ))}
       </View>
 
-      {tab === "books" ? (
-        loading ? (
-          <View style={styles.centerFill}>
-            <ActivityIndicator color={colors.gold} />
-          </View>
-        ) : (
-          <ScrollView
-            contentContainerStyle={styles.scrollBody}
-            refreshControl={
-              <RefreshControl
-                tintColor={colors.gold}
-                refreshing={refreshing}
-                onRefresh={() => { setRefreshing(true); void load(); }}
-              />
-            }
-          >
-            {grouped.inProgress.length > 0 ? (
-              <>
-                <Text style={styles.section}>Continue Reading</Text>
-                {grouped.inProgress.map(renderCard)}
-              </>
-            ) : null}
-
-            <Text style={styles.section}>In-App Reader</Text>
-            <Text style={styles.sectionHint}>
-              Public-domain classics with full text inside Sanctus.
-            </Text>
-            {grouped.embedded.map(renderCard)}
-
-            <Text style={styles.section}>External Library</Text>
-            <Text style={styles.sectionHint}>
-              Opens the work in a clean in-app browser.
-            </Text>
-            {grouped.external.map(renderCard)}
-
-            <View style={{ height: spacing.xxl }} />
-          </ScrollView>
-        )
-      ) : (
-        <View style={styles.placeholder} testID={`library-${tab}-placeholder`}>
-          <Ionicons
-            name={tab === "radio" ? "radio-outline" : "film-outline"}
-            size={48}
-            color={colors.gold}
+      <ScrollView
+        contentContainerStyle={styles.scrollBody}
+        refreshControl={
+          <RefreshControl
+            tintColor={colors.gold}
+            refreshing={refreshing}
+            onRefresh={onRefresh}
           />
-          <Text style={styles.placeholderTitle}>
-            {tab === "radio" ? "Catholic Radio" : "Catholic Films"}
-          </Text>
-          <Text style={styles.placeholderText}>
-            {tab === "radio"
-              ? "Live Catholic stations are arriving in the next Sanctus update — EWTN Radio, Relevant Radio, Ave Maria, and more, with background playback."
-              : "Curated Catholic films & animated series from YouTube are on the way — Lives of the Saints, doctrine, and animated stories for children."}
-          </Text>
-        </View>
-      )}
+        }
+      >
+        {tab === "books" ? (
+          loading.books ? (
+            <View style={styles.centerPad}>
+              <ActivityIndicator color={colors.gold} />
+            </View>
+          ) : (
+            <>
+              {grouped.inProgress.length > 0 ? (
+                <>
+                  <Text style={styles.section}>Continue Reading</Text>
+                  {grouped.inProgress.map(renderBookCard)}
+                </>
+              ) : null}
+              <Text style={styles.section}>In-App Reader</Text>
+              <Text style={styles.sectionHint}>
+                Public-domain classics with full text inside Sanctus.
+              </Text>
+              {grouped.embedded.map(renderBookCard)}
+
+              <Text style={styles.section}>External Library</Text>
+              <Text style={styles.sectionHint}>Opens the work in a clean in-app browser.</Text>
+              {grouped.external.map(renderBookCard)}
+            </>
+          )
+        ) : null}
+
+        {tab === "radio" ? (
+          loading.radio ? (
+            <View style={styles.centerPad}>
+              <ActivityIndicator color={colors.gold} />
+            </View>
+          ) : (
+            <>
+              <Text style={styles.section}>Catholic Stations</Text>
+              <Text style={styles.sectionHint}>
+                Tap a station to start streaming. Use the mini-player to pause or close.
+              </Text>
+              {radio.error ? (
+                <View style={styles.errorBox} testID="library-radio-warning">
+                  <Ionicons name="information-circle-outline" size={16} color={colors.textSecondary} />
+                  <Text style={styles.errorText}>{radio.error}</Text>
+                </View>
+              ) : null}
+              {stations.map(renderStationCard)}
+              <View style={styles.nativeNote}>
+                <Ionicons name="phone-portrait-outline" size={14} color={colors.textMuted} />
+                <Text style={styles.nativeNoteText}>
+                  Background playback (locked screen) is enabled on the iOS/Android build.
+                </Text>
+              </View>
+            </>
+          )
+        ) : null}
+
+        {tab === "films" ? (
+          loading.films ? (
+            <View style={styles.centerPad}>
+              <ActivityIndicator color={colors.gold} />
+            </View>
+          ) : (
+            <>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.filmCatRow}
+              >
+                {FILM_CATEGORIES.map((c) => {
+                  const active = filmCategory === c.value;
+                  return (
+                    <Pressable
+                      key={c.value}
+                      testID={`library-film-cat-${c.value}`}
+                      onPress={() => setFilmCategory(c.value)}
+                      style={[styles.filmCatChip, active && styles.filmCatChipActive]}
+                    >
+                      <Ionicons
+                        name={c.icon}
+                        size={13}
+                        color={active ? colors.surface : colors.textSecondary}
+                      />
+                      <Text style={[styles.filmCatChipText, active && { color: colors.surface }]}>
+                        {c.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+              {filteredFilms.length === 0 ? (
+                <Text style={styles.empty}>No films in this category yet.</Text>
+              ) : null}
+              {filteredFilms.map(renderFilmCard)}
+            </>
+          )
+        ) : null}
+
+        <View style={{ height: 120 }} />
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -189,58 +434,255 @@ export default function LibraryIndexScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   header: {
-    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
   },
   headerTitle: { fontFamily: fonts.headingBold, fontSize: 20, color: colors.textPrimary },
   segmentRow: {
-    flexDirection: "row", gap: spacing.sm, paddingHorizontal: spacing.lg,
+    flexDirection: "row",
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
   },
   segment: {
-    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
-    gap: 6, paddingVertical: 8, borderRadius: radius.round,
-    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderSoft,
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 8,
+    borderRadius: radius.round,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
   },
   segmentActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  segmentText: { fontFamily: fonts.uiSemi, fontSize: 12, color: colors.textSecondary, letterSpacing: 0.3 },
+  segmentText: {
+    fontFamily: fonts.uiSemi,
+    fontSize: 12,
+    color: colors.textSecondary,
+    letterSpacing: 0.3,
+  },
   scrollBody: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl },
-  centerFill: { flex: 1, alignItems: "center", justifyContent: "center" },
+  centerPad: { paddingVertical: spacing.xl, alignItems: "center" },
   section: {
-    fontFamily: fonts.headingSemi, fontSize: 16, color: colors.textPrimary,
-    marginTop: spacing.lg, marginBottom: spacing.xs, letterSpacing: 0.2,
+    fontFamily: fonts.headingSemi,
+    fontSize: 16,
+    color: colors.textPrimary,
+    marginTop: spacing.lg,
+    marginBottom: spacing.xs,
+    letterSpacing: 0.2,
   },
   sectionHint: {
-    fontFamily: fonts.bodyRegular, fontSize: 12, color: colors.textMuted, marginBottom: spacing.md,
+    fontFamily: fonts.bodyRegular,
+    fontSize: 12,
+    color: colors.textMuted,
+    marginBottom: spacing.md,
   },
+  empty: {
+    fontFamily: fonts.bodyRegular,
+    fontSize: 13,
+    color: colors.textMuted,
+    textAlign: "center",
+    marginVertical: spacing.xl,
+  },
+  // Books
   bookCard: {
-    flexDirection: "row", gap: spacing.md, padding: spacing.md,
-    backgroundColor: colors.surface, borderRadius: radius.lg, marginBottom: spacing.sm,
-    borderWidth: 1, borderColor: colors.borderSoft, ...shadow.card,
+    flexDirection: "row",
+    gap: spacing.md,
+    padding: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    ...shadow.card,
   },
   cover: {
-    width: 64, height: 88, borderRadius: radius.md,
-    alignItems: "center", justifyContent: "center", position: "relative",
+    width: 64,
+    height: 88,
+    borderRadius: radius.md,
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
   },
   externalBadge: {
-    position: "absolute", top: 4, right: 4,
-    backgroundColor: "rgba(0,0,0,0.35)", borderRadius: radius.round, padding: 3,
+    position: "absolute",
+    top: 4,
+    right: 4,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    borderRadius: radius.round,
+    padding: 3,
   },
   bookMeta: { flex: 1, justifyContent: "center" },
   bookTitle: { fontFamily: fonts.headingSemi, fontSize: 16, color: colors.textPrimary, lineHeight: 20 },
   bookAuthor: { fontFamily: fonts.bodyRegular, fontSize: 12, color: colors.textSecondary, marginTop: 4 },
-  bookTrad: { fontFamily: fonts.uiSemi, fontSize: 10, letterSpacing: 1.4, marginTop: 6, textTransform: "uppercase" },
+  bookTrad: {
+    fontFamily: fonts.uiSemi,
+    fontSize: 10,
+    letterSpacing: 1.4,
+    marginTop: 6,
+    textTransform: "uppercase",
+  },
   progressTrack: {
-    marginTop: spacing.sm, height: 4, backgroundColor: colors.borderSoft, borderRadius: 2, overflow: "hidden",
+    marginTop: spacing.sm,
+    height: 4,
+    backgroundColor: colors.borderSoft,
+    borderRadius: 2,
+    overflow: "hidden",
   },
   progressFill: { height: 4, borderRadius: 2 },
-  placeholder: {
-    flex: 1, alignItems: "center", justifyContent: "center",
-    paddingHorizontal: spacing.xl, gap: spacing.md,
+  // Radio
+  stationCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    ...shadow.card,
   },
-  placeholderTitle: { fontFamily: fonts.headingBold, fontSize: 20, color: colors.textPrimary },
-  placeholderText: {
-    fontFamily: fonts.bodyRegular, fontSize: 14, color: colors.textSecondary,
-    textAlign: "center", lineHeight: 20,
+  stationIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: radius.md,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stationName: { fontFamily: fonts.headingSemi, fontSize: 15, color: colors.textPrimary },
+  stationBlurb: {
+    fontFamily: fonts.bodyRegular,
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 4,
+    lineHeight: 16,
+  },
+  stationMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  stationMetaTag: {
+    fontFamily: fonts.uiMedium,
+    fontSize: 10,
+    color: colors.textSecondary,
+    letterSpacing: 0.8,
+  },
+  liveDot: { width: 6, height: 6, borderRadius: 3 },
+  playBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  errorBox: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    padding: spacing.md,
+    backgroundColor: "rgba(184, 134, 11, 0.08)",
+    borderRadius: radius.md,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: "rgba(184, 134, 11, 0.25)",
+  },
+  errorText: {
+    flex: 1,
+    fontFamily: fonts.bodyRegular,
+    fontSize: 12,
+    color: colors.textSecondary,
+    lineHeight: 16,
+  },
+  nativeNote: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    alignItems: "center",
+    marginTop: spacing.lg,
+    paddingHorizontal: spacing.sm,
+  },
+  nativeNoteText: {
+    flex: 1,
+    fontFamily: fonts.bodyRegular,
+    fontSize: 11,
+    color: colors.textMuted,
+    fontStyle: "italic",
+  },
+  // Films
+  filmCatRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+  },
+  filmCatChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 7,
+    borderRadius: radius.round,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+  },
+  filmCatChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  filmCatChipText: {
+    fontFamily: fonts.uiSemi,
+    fontSize: 11,
+    color: colors.textSecondary,
+    letterSpacing: 0.3,
+  },
+  filmCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    overflow: "hidden",
+    ...shadow.card,
+  },
+  filmThumbWrap: { width: "100%", aspectRatio: 16 / 9, position: "relative" },
+  filmThumb: { width: "100%", height: "100%", backgroundColor: colors.borderSoft },
+  filmCategoryPill: {
+    position: "absolute",
+    top: 10,
+    left: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radius.round,
+  },
+  filmCategoryText: {
+    fontFamily: fonts.uiSemi,
+    fontSize: 9,
+    color: colors.gold,
+    letterSpacing: 1.2,
+  },
+  filmDuration: {
+    position: "absolute",
+    bottom: 10,
+    right: 10,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radius.sm,
+  },
+  filmDurationText: { fontFamily: fonts.uiSemi, fontSize: 10, color: "#FFF" },
+  filmPlayOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  filmTitle: { fontFamily: fonts.headingSemi, fontSize: 15, color: colors.textPrimary },
+  filmBlurb: {
+    fontFamily: fonts.bodyRegular,
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 4,
+    lineHeight: 16,
   },
 });

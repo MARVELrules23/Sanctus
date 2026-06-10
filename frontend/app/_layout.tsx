@@ -17,6 +17,8 @@ import { Inter_500Medium, Inter_600SemiBold } from "@expo-google-fonts/inter";
 
 import { useIconFonts } from "@/src/hooks/use-icon-fonts";
 import { AuthProvider, useAuth } from "@/src/auth-context";
+import { RadioPlayerProvider } from "@/src/audio/RadioPlayerContext";
+import RadioMiniPlayer from "@/src/components/RadioMiniPlayer";
 
 // Keep the native splash visible from cold start until icon fonts register.
 // Required because @expo/vector-icons' componentDidMount fallback fires
@@ -50,6 +52,15 @@ function RootGate() {
   return <Stack screenOptions={{ headerShown: false }} />;
 }
 
+function AppShell() {
+  return (
+    <>
+      <RootGate />
+      <RadioMiniPlayer />
+    </>
+  );
+}
+
 export default function RootLayout() {
   const [iconsLoaded, iconsError] = useIconFonts();
   const [fontsLoaded] = useCormorant({
@@ -75,7 +86,9 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <StatusBar style="dark" />
       <AuthProvider>
-        <RootGate />
+        <RadioPlayerProvider>
+          <AppShell />
+        </RadioPlayerProvider>
       </AuthProvider>
     </SafeAreaProvider>
   );

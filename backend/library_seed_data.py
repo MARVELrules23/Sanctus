@@ -460,3 +460,229 @@ SEED_BOOKS: List[Dict[str, Any]] = [
         "chapters": [],
     },
 ]
+
+
+
+# ---------------------------------------------------------------------------
+# Phase 2 — Radio stations
+# ---------------------------------------------------------------------------
+# Each entry:
+#   slug, name, blurb, country, language, stream_url, website_url,
+#   accent_color, icon
+#
+# Stream URLs are public HLS/MP3 endpoints published by each station.
+# Update via /api/library/admin/radio if a station rotates a URL.
+
+SEED_STATIONS: List[Dict[str, Any]] = [
+    {
+        "slug": "ewtn-radio",
+        "name": "EWTN Radio",
+        "blurb": "The flagship 24/7 English-language Catholic network — Mass, rosary, talk shows, and catechesis from Mother Angelica's broadcast family.",
+        "country": "US",
+        "language": "English",
+        "stream_url": "https://playerservices.streamtheworld.com/api/livestream-redirect/EWTN.mp3",
+        "website_url": "https://www.ewtn.com/radio",
+        "accent_color": "#1E40AF",
+        "icon": "radio-outline",
+    },
+    {
+        "slug": "relevant-radio",
+        "name": "Relevant Radio",
+        "blurb": "Talk radio with a Catholic worldview — daily rosary, Drew Mariani, Father Rocky, and 24-hour spiritual companionship.",
+        "country": "US",
+        "language": "English",
+        "stream_url": "https://playerservices.streamtheworld.com/api/livestream-redirect/RELEVANTRADIO.mp3",
+        "website_url": "https://relevantradio.com/listen/",
+        "accent_color": "#7C3AED",
+        "icon": "mic-outline",
+    },
+    {
+        "slug": "ave-maria-radio",
+        "name": "Ave Maria Radio",
+        "blurb": "Ann Arbor-based apostolate featuring Al Kresta, Teresa Tomeo, and a deep formation library.",
+        "country": "US",
+        "language": "English",
+        "stream_url": "https://playerservices.streamtheworld.com/api/livestream-redirect/WDEOFM.mp3",
+        "website_url": "https://avemariaradio.net/",
+        "accent_color": "#B45309",
+        "icon": "musical-notes-outline",
+    },
+    {
+        "slug": "sacred-heart-radio",
+        "name": "Sacred Heart Radio",
+        "blurb": "Cincinnati's Catholic voice — devotionals, papal teaching, and family-friendly Catholic talk.",
+        "country": "US",
+        "language": "English",
+        "stream_url": "https://playerservices.streamtheworld.com/api/livestream-redirect/WHSSAMAAC.aac",
+        "website_url": "https://sacredheartradio.com/",
+        "accent_color": "#9E1B1B",
+        "icon": "heart-outline",
+    },
+    {
+        "slug": "guadalupe-radio",
+        "name": "Guadalupe Radio Network",
+        "blurb": "Texas-rooted bilingual Catholic network with strong devotion to Our Lady of Guadalupe.",
+        "country": "US",
+        "language": "English / Spanish",
+        "stream_url": "https://playerservices.streamtheworld.com/api/livestream-redirect/KSFV_FM.aac",
+        "website_url": "https://grnonline.com/",
+        "accent_color": "#059669",
+        "icon": "star-outline",
+    },
+    {
+        "slug": "veritas-radio-uk",
+        "name": "Radio Maria England",
+        "blurb": "Part of the World Family of Radio Maria — prayer, music, and catechesis from the UK.",
+        "country": "UK",
+        "language": "English",
+        "stream_url": "https://dreamsiteradiocp4.com/proxy/rmaria3?mp=/stream",
+        "website_url": "https://radiomariaengland.uk/",
+        "accent_color": "#0EA5E9",
+        "icon": "rose-outline",
+    },
+    {
+        "slug": "vatican-radio-english",
+        "name": "Vatican News — English",
+        "blurb": "Official voice of the Holy See in English — Pope's homilies, Angelus, and Catholic news from Rome.",
+        "country": "Vatican",
+        "language": "English",
+        "stream_url": "https://radio.vaticannews.va/itaussie",
+        "website_url": "https://www.vaticannews.va/en/podcast.html",
+        "accent_color": "#374151",
+        "icon": "earth-outline",
+    },
+    {
+        "slug": "radio-maria-usa",
+        "name": "Radio Maria USA",
+        "blurb": "The U.S. station of the World Family of Radio Maria — Marian devotion and a contemplative tone.",
+        "country": "US",
+        "language": "English",
+        "stream_url": "https://dreamsiteradiocp4.com/proxy/rmusa1?mp=/stream",
+        "website_url": "https://radiomaria.us/",
+        "accent_color": "#831843",
+        "icon": "flower-outline",
+    },
+]
+
+
+# ---------------------------------------------------------------------------
+# Phase 3 — Catholic films (YouTube only)
+# ---------------------------------------------------------------------------
+# Each entry:
+#   slug, title, blurb, youtube_id, duration_label, category, accent_color
+# category ∈ saints | doctrine | animated | documentary
+
+SEED_FILMS: List[Dict[str, Any]] = [
+    # ---- Saints ----
+    {
+        "slug": "molokai-damien",
+        "title": "Molokai: The Story of Father Damien",
+        "blurb": "The award-winning 1999 film portraying St. Damien of Molokai's heroic ministry to lepers in the Hawaiian Islands.",
+        "youtube_id": "iqJSp5Ph2Vg",
+        "duration_label": "1h 58m",
+        "category": "saints",
+        "accent_color": "#0EA5E9",
+    },
+    {
+        "slug": "padre-pio-miracle",
+        "title": "Padre Pio: Miracle Man",
+        "blurb": "The life of the stigmatic Capuchin friar of San Giovanni Rotondo, canonized by John Paul II.",
+        "youtube_id": "kvkLwxhU7tg",
+        "duration_label": "1h 38m",
+        "category": "saints",
+        "accent_color": "#7C3AED",
+    },
+    {
+        "slug": "bernadette-1943",
+        "title": "The Song of Bernadette",
+        "blurb": "The classic 1943 film of St. Bernadette Soubirous and the apparitions at Lourdes — full feature.",
+        "youtube_id": "Z90ZdT5dVoY",
+        "duration_label": "2h 36m",
+        "category": "saints",
+        "accent_color": "#1E40AF",
+    },
+    # ---- Doctrine ----
+    {
+        "slug": "barron-mass",
+        "title": "Bishop Robert Barron — The Mass",
+        "blurb": "A lucid walk through the structure, meaning, and beauty of the Catholic Mass.",
+        "youtube_id": "RuTQg77kCxA",
+        "duration_label": "55m",
+        "category": "doctrine",
+        "accent_color": "#B45309",
+    },
+    {
+        "slug": "barron-eucharist",
+        "title": "Bishop Barron on the Eucharist",
+        "blurb": "Why the Real Presence stands at the heart of Catholic life and worship.",
+        "youtube_id": "1FYKL3PnRpY",
+        "duration_label": "27m",
+        "category": "doctrine",
+        "accent_color": "#9A3412",
+    },
+    {
+        "slug": "scott-hahn-conversion",
+        "title": "Scott Hahn — From Calvinist to Catholic",
+        "blurb": "Hahn's now-famous conversion story and how the Scriptures led him home to Rome.",
+        "youtube_id": "vR8L4Mhh4UE",
+        "duration_label": "1h 27m",
+        "category": "doctrine",
+        "accent_color": "#7F1D1D",
+    },
+    # ---- Animated ----
+    {
+        "slug": "brother-francis-mass",
+        "title": "Brother Francis — The Mass: Heaven on Earth",
+        "blurb": "A beautiful animated children's introduction to what happens at every Catholic Mass.",
+        "youtube_id": "MROPMA0vFEs",
+        "duration_label": "30m",
+        "category": "animated",
+        "accent_color": "#EA580C",
+    },
+    {
+        "slug": "ccc-bernadette-anim",
+        "title": "Bernadette — The Princess of Lourdes (CCC)",
+        "blurb": "CCC of America's beloved animated retelling of St. Bernadette's encounter with Our Lady.",
+        "youtube_id": "MdK2c1n6lzs",
+        "duration_label": "45m",
+        "category": "animated",
+        "accent_color": "#0EA5E9",
+    },
+    {
+        "slug": "ccc-juan-diego-anim",
+        "title": "Juan Diego — Messenger of Guadalupe (CCC)",
+        "blurb": "The miracle of Tepeyac brought to life for children, from CCC of America.",
+        "youtube_id": "B2VTuVZbz3o",
+        "duration_label": "45m",
+        "category": "animated",
+        "accent_color": "#059669",
+    },
+    # ---- Documentary ----
+    {
+        "slug": "catholicism-barron-trailer",
+        "title": "Catholicism — Bishop Barron's Series (Trailer)",
+        "blurb": "The acclaimed Word on Fire documentary series spanning the global Catholic faith.",
+        "youtube_id": "i7tDwgPa3JI",
+        "duration_label": "3m",
+        "category": "documentary",
+        "accent_color": "#374151",
+    },
+    {
+        "slug": "shroud-of-turin-doc",
+        "title": "The Shroud of Turin — Mystery & Science",
+        "blurb": "An examination of the most studied artifact in human history and what it tells us about the Passion.",
+        "youtube_id": "GBzdJjkOBM4",
+        "duration_label": "53m",
+        "category": "documentary",
+        "accent_color": "#831843",
+    },
+    {
+        "slug": "john-paul-ii-papacy",
+        "title": "John Paul II — The Pope Who Changed History",
+        "blurb": "A documentary on the pontificate of St. John Paul II and the events that defined his ministry.",
+        "youtube_id": "wbqv2pY94S0",
+        "duration_label": "1h 30m",
+        "category": "documentary",
+        "accent_color": "#1E40AF",
+    },
+]

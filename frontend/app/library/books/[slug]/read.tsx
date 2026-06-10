@@ -125,14 +125,21 @@ export default function ReaderScreen() {
     }
   };
 
-  // Final save on unmount.
+  // Keep latest values in refs so the true-unmount cleanup uses the freshest
+  // chapter index + scroll position (not a stale closure capture).
+  const chapterRef = useRef<LibraryChapterDetail | null>(null);
+  useEffect(() => { chapterRef.current = chapter; }, [chapter]);
+
+  // Final save on TRUE unmount only (empty deps).
   useEffect(() => {
     return () => {
-      if (chapter) {
-        void saveLibraryProgress(slug, chapter.chapter_index, scrollPctRef.current);
+      const c = chapterRef.current;
+      if (c) {
+        void saveLibraryProgress(slug, c.chapter_index, scrollPctRef.current);
       }
     };
-  }, [slug, chapter]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const theme = MODES[mode];
   const fz = FONT_SCALE[fontSize];

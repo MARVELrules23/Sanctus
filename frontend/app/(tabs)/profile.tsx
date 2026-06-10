@@ -300,7 +300,25 @@ export default function ProfileScreen() {
                 style={({ pressed }) => [styles.linkCard, pressed && styles.pressed]}
               >
                 <Ionicons name="library-outline" size={18} color={colors.gold} />
-                <Text style={styles.linkLabel}>Library · Manage</Text>
+                <Text style={styles.linkLabel}>Library · Books</Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+              </Pressable>
+              <Pressable
+                testID="profile-admin-library-radio-link"
+                onPress={() => router.push("/admin/library-radio")}
+                style={({ pressed }) => [styles.linkCard, pressed && styles.pressed]}
+              >
+                <Ionicons name="radio-outline" size={18} color={colors.gold} />
+                <Text style={styles.linkLabel}>Library · Radio</Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+              </Pressable>
+              <Pressable
+                testID="profile-admin-library-films-link"
+                onPress={() => router.push("/admin/library-films")}
+                style={({ pressed }) => [styles.linkCard, pressed && styles.pressed]}
+              >
+                <Ionicons name="film-outline" size={18} color={colors.gold} />
+                <Text style={styles.linkLabel}>Library · Films</Text>
                 <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
               </Pressable>
             </View>

@@ -1390,3 +1390,122 @@ export async function adminDeleteLibraryChapter(
   });
 }
 
+// ============================================================
+// Sanctus Library — Phase 2: Radio
+// ============================================================
+
+export type LibraryStation = {
+  station_id: string;
+  slug: string;
+  name: string;
+  blurb?: string | null;
+  country?: string | null;
+  language?: string | null;
+  stream_url: string;
+  website_url?: string | null;
+  accent_color?: string | null;
+  icon?: string | null;
+  status: string;
+};
+
+export type LibraryStationCreate = {
+  slug: string;
+  name: string;
+  blurb?: string | null;
+  country?: string | null;
+  language?: string | null;
+  stream_url: string;
+  website_url?: string | null;
+  accent_color?: string | null;
+  icon?: string | null;
+  status?: "draft" | "published";
+};
+
+export async function listLibraryStations(): Promise<{ items: LibraryStation[]; total: number }> {
+  return await api(`/library/radio`);
+}
+
+export async function adminListLibraryStations(): Promise<{ items: LibraryStation[]; total: number }> {
+  return await api(`/library/admin/radio`);
+}
+
+export async function adminCreateLibraryStation(payload: LibraryStationCreate): Promise<LibraryStation> {
+  return await api(`/library/admin/radio`, { method: "POST", body: payload });
+}
+
+export async function adminPatchLibraryStation(
+  slug: string,
+  patch: Partial<LibraryStationCreate>,
+): Promise<LibraryStation> {
+  return await api(`/library/admin/radio/${encodeURIComponent(slug)}`, {
+    method: "PATCH",
+    body: patch,
+  });
+}
+
+export async function adminDeleteLibraryStation(slug: string): Promise<{ ok: boolean }> {
+  return await api(`/library/admin/radio/${encodeURIComponent(slug)}`, { method: "DELETE" });
+}
+
+// ============================================================
+// Sanctus Library — Phase 3: Films
+// ============================================================
+
+export type LibraryFilmCategory = "saints" | "doctrine" | "animated" | "documentary";
+
+export type LibraryFilm = {
+  film_id: string;
+  slug: string;
+  title: string;
+  blurb?: string | null;
+  youtube_id: string;
+  duration_label?: string | null;
+  category: LibraryFilmCategory;
+  accent_color?: string | null;
+  status: string;
+};
+
+export type LibraryFilmCreate = {
+  slug: string;
+  title: string;
+  blurb?: string | null;
+  youtube_id: string;
+  duration_label?: string | null;
+  category: LibraryFilmCategory;
+  accent_color?: string | null;
+  status?: "draft" | "published";
+};
+
+export async function listLibraryFilms(
+  category?: LibraryFilmCategory,
+): Promise<{ items: LibraryFilm[]; total: number }> {
+  const qs = category ? `?category=${encodeURIComponent(category)}` : "";
+  return await api(`/library/films${qs}`);
+}
+
+export async function getLibraryFilm(slug: string): Promise<LibraryFilm> {
+  return await api(`/library/films/${encodeURIComponent(slug)}`);
+}
+
+export async function adminListLibraryFilms(): Promise<{ items: LibraryFilm[]; total: number }> {
+  return await api(`/library/admin/films`);
+}
+
+export async function adminCreateLibraryFilm(payload: LibraryFilmCreate): Promise<LibraryFilm> {
+  return await api(`/library/admin/films`, { method: "POST", body: payload });
+}
+
+export async function adminPatchLibraryFilm(
+  slug: string,
+  patch: Partial<LibraryFilmCreate>,
+): Promise<LibraryFilm> {
+  return await api(`/library/admin/films/${encodeURIComponent(slug)}`, {
+    method: "PATCH",
+    body: patch,
+  });
+}
+
+export async function adminDeleteLibraryFilm(slug: string): Promise<{ ok: boolean }> {
+  return await api(`/library/admin/films/${encodeURIComponent(slug)}`, { method: "DELETE" });
+}
+

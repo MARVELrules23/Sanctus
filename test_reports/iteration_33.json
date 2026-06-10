@@ -1,0 +1,51 @@
+{
+  "summary": "Iteration_33 — Sanctus Library Phase 2 (Radio) + Phase 3 (Films) verification on real backend + real Mongo + real seed (no mocks). BACKEND: 22/22 pytest tests PASS (test_library_phase23.py). FRONTEND: All key UI flows verified — three Books/Radio/Films segmented tabs render, 8 stations + 12 films seeded and listed, station card tap shows the floating mini-player, mini-player persists across SPA tab navigation (verified via in-app push), film detail screen loads with YouTube iframe + Watch / Open on YouTube buttons. expo-audio is correctly used (no deprecated expo-av). Auth gates work (401 unauth, 403 non-admin). Admin CRUD round-trip exercised end-to-end for both /admin/radio and /admin/films, including 409 on duplicate slug and 422 on invalid film category. No HIGH-priority blockers.\n\nMinor cosmetic notes: (1) mini-player labels read 'Live · On air' / 'Paused' / 'Buffering…' rather than the 'ON AIR' / 'BUFFERING' wording cited in the review spec — non-blocking, but worth aligning. (2) Some YouTube videos in the seed display 'Video unavailable' inside the embed (e.g. ccc-bernadette-anim → MdK2c1n6lzs) — the embed itself loads but the video is restricted; users can still use the 'Open on YouTube' button. (3) 12 console 404s during films listing came from hqdefault.jpg requests; some YouTube IDs in the seed lack an hqdefault asset. Consider falling back to mqdefault.jpg or 0.jpg. (4) On a HARD page reload (page.goto), the audio session is lost and the mini-player disappears — this is expected web behaviour (expo-audio Player is mounted in JS memory), and SPA in-app navigation correctly preserves it.\n\nNo deprecated packages detected (expo-audio is the new, correct package; no expo-av). No SafeAreaView issues. Pre-existing 'shadow*' style props warning carries over from iter32 (already tracked).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "RadioMiniPlayer", "issue": "Status label wording diverges from spec ('Live · On air' / 'Paused' / 'Buffering…' vs spec's 'ON AIR' / 'BUFFERING'). Cosmetic only. Reference: /app/frontend/src/components/RadioMiniPlayer.tsx:65-70", "testID": "radio-mini-player", "priority": "LOW"},
+      {"component": "library/films/[slug]", "issue": "Some seeded YouTube videos render 'Video unavailable' inside the embed (e.g. MdK2c1n6lzs for ccc-bernadette-anim). The 'Open on YouTube' button still works, but the in-app player is broken for those titles. Consider curating youtube_id values that allow embedding, or surfacing an 'unavailable' state and auto-prompting the external link.", "testID": "film-player-ccc-bernadette-anim", "priority": "MEDIUM"},
+      {"component": "library/index (films thumbnails)", "issue": "12 console 404s observed loading https://i.ytimg.com/vi/{id}/hqdefault.jpg for several seed films. Some YouTube IDs don't have an hqdefault thumbnail. Consider falling back to mqdefault.jpg / 0.jpg, or pre-validating youtube_id at seed time.", "testID": "library-film-card-*", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "global (carry-over from iter32)", "issue": "Deprecated 'shadow*' style props on RN-web 0.19+ still warn in console. Reference: /app/frontend/src/theme.ts (shadow tokens)."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_library_phase23.py",
+    "/app/test_reports/pytest/iteration_33_library_phase23.xml",
+    "/app/test_reports/iter32_setup.py"
+  ],
+  "action_items": [
+    "(LOW) Align mini-player status text with the spec ('ON AIR' / 'BUFFERING') or update the spec to match the warmer 'Live · On air' wording.",
+    "(MED) Audit YouTube IDs in /app/backend/library_seed_data.py SEED_FILMS — at least one (MdK2c1n6lzs for ccc-bernadette-anim) returns 'Video unavailable' when embedded. Either replace with an embeddable upload or detect and pre-route those titles directly to YouTube.",
+    "(LOW) Fall back to https://i.ytimg.com/vi/{id}/mqdefault.jpg (or 0.jpg) when hqdefault.jpg returns 404. Reduces the 12 console errors on /library?tab=films.",
+    "(carry-over) Migrate 'shadow*' style props to 'boxShadow' to silence RN-web 0.19 deprecation warnings."
+  ],
+  "critical_code_review_comments": [
+    "library.py L82-131: Pydantic models for radio + films use the same pattern-validated 'status' / 'category' enums — clean and fails closed on bad input (verified: invalid category returns 422 on both POST and PATCH).",
+    "library.py L215-258: _seed_stations_if_missing / _seed_films_if_missing are slug-keyed and idempotent — safe to re-run on every startup and on every public list call (matches the books pattern from Phase 1).",
+    "library.py L514-580 (Radio CRUD) and L587-658 (Films CRUD): mirror the books admin contract — _ensure_admin gate, status hidden from public list when 'draft', _id always stripped in projections. Looks correct.",
+    "library.py L597 films sort is [('category', 1), ('title', 1)] which gives a stable grouped order — good for UX.",
+    "library.py L599: category filter only applies if value is in the whitelist {saints, doctrine, animated, documentary}; otherwise the parameter is silently ignored (returns all). Acceptable, but consider returning 400 for explicitly bad categories rather than silently returning everything.",
+    "library.py L668-693 ensure_indexes: unique indexes on station_id/slug and film_id/slug, composite (status, name) / (status, category, title) — solid index hygiene.",
+    "RadioPlayerContext.tsx imports from 'expo-audio' (new API), not the deprecated 'expo-av' — good.",
+    "RadioMiniPlayer.tsx L33-38: positioning logic uses segments[0] === '(tabs)' to anchor above the bottom tab bar — clean and effective; confirmed via SPA navigation that the mini-player remains visible on Today/(tabs) routes.",
+    "RadioMiniPlayer.tsx L44: pointerEvents='box-none' is the prop form, which logs a 'props.pointerEvents is deprecated. Use style.pointerEvents' warning on RN-web 0.19. Trivial to migrate.",
+    "library/films/[slug].tsx: clean — testIDs film-player-{slug}, film-toggle-play, film-open-youtube, film-back all present and clickable; YouTube embed renders inside the page even when the video itself is restricted."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_library_phase23.py (new)"
+  ],
+  "success_rate": {"backend": "100% (22/22)", "frontend": "All Phase 2/3 flows verified: tabs, station list, station tap → mini-player, films list, category chips, film detail with YouTube embed, mini-player persistence via SPA nav"},
+  "seed_data_creation": "Re-ran /app/test_reports/iter32_setup.py setup which reuses admin session token TEST_iter32_admin_tok (philipwils13@gmail.com) and non-admin token TEST_iter32_user_tok. Library radio + films were seeded automatically by the backend on startup (verified via /var/log/supervisor/backend.err.log → 'library: seeded 8 radio stations on startup', 'library: seeded 12 films on startup'). Test sweep deletes any TEST-prefixed rows in library_radio_stations and library_films collections.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Phase 2/3 backend regression tests live in /app/backend/tests/test_library_phase23.py and reuse the same TEST_iter32_admin_tok / TEST_iter32_user_tok session tokens minted by iter32_setup.py. Frontend authentication requires localStorage.setItem('sanctus_session_token', JSON.stringify('<token>')) before navigating. Mini-player persistence works correctly on SPA navigation (router.push / Pressable taps) — a HARD page reload (page.goto / window.location) will reset the audio session, which is expected web behaviour and NOT a bug. Testing mini-player persistence with playwright requires either (a) using bottom-tab Pressables (icons, not text) or (b) injecting router.push via window dispatch. The tab bar labels are short ('Today', 'Meals', 'Work…', 'Welln…', 'Sanct…', 'Parish', 'Profile') and may not match exact text selectors due to truncation. Some seeded YouTube videos are not embeddable on third-party origins — surfaced as 'Video unavailable' inside the iframe; the Open on YouTube button is the reliable escape hatch. Films thumbnail URLs (hqdefault.jpg) return 404 for ~all 12 entries in the console — non-blocking but cosmetic; mqdefault.jpg / 0.jpg are reliable fallbacks.",
+  "rca_of_issue": "No HIGH bugs found. The one functional concern surfaced (YouTube 'Video unavailable' inside the embed) is a content-side issue with specific YouTube videos that disallow third-party embeds; the cure is curating SEED_FILMS to use embeddable youtube_ids or routing those titles directly to YouTube. Thumbnail 404s are cosmetic — switching to mqdefault.jpg eliminates them. The mini-player persistence works as designed via the global RadioPlayerProvider wrapping the app in /app/frontend/app/_layout.tsx; tested live via in-app navigation."
+}

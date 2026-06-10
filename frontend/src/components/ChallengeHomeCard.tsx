@@ -83,6 +83,19 @@ export default function ChallengeHomeCard({ date }: { date: string }) {
     return detail.days.find((d) => iso(d.date) === date) || null;
   }, [detail, date]);
 
+  // Clamp the day index so it never exceeds the total days available.
+  const displayDayIndex = useMemo(() => {
+    if (today?.day_index) return today.day_index;
+    if (!summary?.start_date) return null;
+    const start = iso(summary.start_date);
+    if (!start) return null;
+    const s = new Date(`${start}T00:00:00`);
+    const t = new Date(`${date}T00:00:00`);
+    const diff = Math.floor((t.getTime() - s.getTime()) / 86_400_000) + 1;
+    if (!summary.total_days) return diff > 0 ? diff : null;
+    return Math.max(1, Math.min(diff, summary.total_days));
+  }, [today, summary, date]);
+
   const completedToday = !!detail?.today_checkin?.completed;
 
   const onMarkDone = async () => {
@@ -106,7 +119,6 @@ export default function ChallengeHomeCard({ date }: { date: string }) {
   if (!summary) return null;
 
   const totalDays = summary.total_days || 0;
-  const dayIndex = today?.day_index ?? null;
   const accent = summary.color || colors.gold;
 
   return (
@@ -118,7 +130,7 @@ export default function ChallengeHomeCard({ date }: { date: string }) {
           color={accent}
         />
         <Text style={[styles.headerLabel, { color: accent }]}>
-          {summary.name.toUpperCase()} · DAY {dayIndex ?? "—"}{totalDays ? ` OF ${totalDays}` : ""}
+          {summary.name.toUpperCase()} · DAY {displayDayIndex ?? "—"}{totalDays ? ` OF ${totalDays}` : ""}
         </Text>
         <View style={{ flex: 1 }} />
         {summary.streak ? (

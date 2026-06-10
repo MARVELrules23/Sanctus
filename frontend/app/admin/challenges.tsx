@@ -44,7 +44,7 @@ function isoDate(s: string | null | undefined): string {
 
 export default function AdminChallengesScreen() {
   const router = useRouter();
-  const { user, ready } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [items, setItems] = useState<AdminChallenge[]>([]);
   const [loading, setLoading] = useState(true);
   const [openSlug, setOpenSlug] = useState<string | null>(null);
@@ -65,10 +65,10 @@ export default function AdminChallengesScreen() {
   }, []);
 
   useEffect(() => {
-    if (!ready) return;
+    if (authLoading) return;
     if (!user?.is_admin) return;
     void load();
-  }, [ready, user, load]);
+  }, [authLoading, user, load]);
 
   const onExpand = async (slug: string) => {
     if (openSlug === slug) {
@@ -150,9 +150,17 @@ export default function AdminChallengesScreen() {
     }
   };
 
-  if (!ready) {
+  if (authLoading) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView style={styles.safe} edges={["top"]} testID="admin-challenges-screen">
+        <Stack.Screen options={{ headerShown: false }} />
+        <View style={styles.header}>
+          <Pressable onPress={() => router.back()} hitSlop={12}>
+            <Ionicons name="chevron-back" size={26} color={colors.primary} />
+          </Pressable>
+          <Text style={styles.headerTitle}>Admin · Challenges</Text>
+          <View style={{ width: 26 }} />
+        </View>
         <View style={styles.center}><ActivityIndicator color={colors.gold} /></View>
       </SafeAreaView>
     );

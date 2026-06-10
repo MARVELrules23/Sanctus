@@ -1,0 +1,41 @@
+{
+  "summary": "RETEST of iteration_27 HIGH-priority fixes. Backend pytest 13/13 PASS unchanged. Frontend (mobile 390x844, admin user minted in Mongo, token injected via window.localStorage 'sanctus_session_token'). Fix 1 (/admin/challenges blank): the main agent's patch was INCOMPLETE — destructure was updated to `loading: authLoading` but line 153 still referenced an undefined `ready` symbol → ReferenceError → blank screen reproduced exactly. Testing agent applied a one-line typo fix (`!ready` → `authLoading`) and added a proper SafeAreaView+header loading state. After the fix /admin/challenges now renders header 'Admin · Challenges', 3 challenge cards (hallowtide/advent/lent) with status pills + dates, Generate missing/Regen all/Unpublish buttons, and expanding hallowtide reveals day rows with edit + LIVE/DRAFT pill. Fix 2 (advent icon): GET /api/challenges returns advent with icon='moon-outline'; no 'candle-outline'/'is not a valid icon name' console warnings observed on /challenges hub. Fix 3 (per-day testIDs always in DOM): /challenges/hallowtide now exposes `challenge-day-checkin-1` testID in the DOM at all times even when the day card is collapsed — verified via DOM query. Hallowtide currently has only 1 seeded day row so only one testID is present (1 challenge-day-1 + 1 challenge-day-checkin-1). Regression PASS: /challenges hub renders 3 cards; enrolling hallowtide (with patched dates 2026-06-05→06-20) makes challenge-home-card appear on Home AND adds 15 cal-challenge-* stripes on /calendar including cal-challenge-2026-06-10; un-enrolling removes home card AND all cal stripes (count → 0); backend checkin streak verified by pytest. Home card now reads 'HALLOWTIDE · DAY 1 OF 1' (clamped) — bonus clamp working. Deprecated shadow*/pointerEvents RN-web warnings still present (carry-over from iter_27).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "app/admin/challenges.tsx", "issue": "INCOMPLETE FIX FROM ITERATION 27 — destructure became `loading: authLoading` but the early-return on line 153 still referenced undefined `ready`, causing a runtime ReferenceError and the original blank-screen bug to reproduce. Testing agent applied a one-line fix in this iteration. Main agent should review whether the partial-rename pattern recurs elsewhere.", "testID": "admin-challenges-screen", "priority": "HIGH (now fixed by testing agent)"},
+      {"component": "app/calendar/* preview card", "issue": "On the Calendar day-preview card, the hallowtide entry still shows 'Day 6 of 1' for a patched window with sparse seed days (only 1 challenge_day exists vs 15-day window). Home card was clamped to 'DAY 1 OF 1' but the calendar's preview list was not. Cosmetic.", "testID": "n/a", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "global", "issue": "Deprecated 'shadow*' style props on web — React Native Web 0.19+ wants boxShadow. Console still warns repeatedly. Reference: shared theme/shadow tokens (src/theme.ts) used across challenge cards and other surfaces."},
+      {"component": "global", "issue": "Deprecated 'props.pointerEvents' — should be style.pointerEvents on web. Console still warns repeatedly."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_challenges.py",
+    "/app/test_reports/pytest/iteration_28_challenges.xml"
+  ],
+  "action_items": [
+    "Review the admin/challenges.tsx fix applied by testing agent (1-line: `!ready` → `authLoading`, plus a SafeAreaView loading state). Confirm there's no other lingering `ready` reference and add an ESLint/no-undef rule so this class of bug fails CI.",
+    "Optional: clamp Calendar day-preview card's 'Day X of Y' the same way the Home card was clamped — or backfill the challenge_day records so totals match the window length.",
+    "Migrate 'shadow*' StyleSheet props and `pointerEvents` prop to the new RN-web 0.19+ API (boxShadow / style.pointerEvents) to silence deprecation warnings (carried over from iter_27, not retested again)."
+  ],
+  "critical_code_review_comments": [
+    "Found by RCA: when main agent renamed `ready` → `authLoading` in admin/challenges.tsx destructure, only one usage was updated. The early-return `if (!ready)` still referenced the old name, which would have been caught by `typescript --noEmit` or even `next lint --no-implicit-globals`. Recommend running tsc/eslint pre-commit on the frontend.",
+    "auth-context exposes `loading` and `user`, but no `ready` field. Consider adding an explicit `ready: !loading` alias (or deprecating the term entirely in docs) to prevent the kind of partial-rename mistake that reproduced this bug."
+  ],
+  "updated_files": [
+    "/app/frontend/app/admin/challenges.tsx (replaced `if (!ready) {...}` with `if (authLoading) {...}` + SafeAreaView loading state)"
+  ],
+  "success_rate": {"backend": "100% (13/13)", "frontend": "100% on the three retest items + Home/Calendar enroll/unenroll regression"},
+  "seed_data_creation": "Minted admin user TEST_iter28_admin + session_token TEST_iter28_tok directly in Mongo; PATCHed hallowtide start_date/end_date to 2026-06-05 → 2026-06-20 so today (2026-06-10) falls inside the window. After UI tests, restored hallowtide dates to 2026-10-31 → 2026-11-08 and removed the test user, session, enrollments, and checkins.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "If you re-test admin/challenges, note that hallowtide only has 1 seeded challenge_day row in this env — generating real days via /admin/{slug}/generate-days costs LLM credits. The challenges collection is named `liturgical_challenges` (not `challenges`) in Mongo. Backend EXPO_PUBLIC_BACKEND_URL = https://faithful-fitness-3.preview.emergentagent.com.",
+  "rca_of_issue": "RCA — main agent's iteration_27 fix to admin/challenges.tsx renamed the destructured useAuth() field from `ready` to `loading: authLoading` (line 47) but FORGOT to update the early-return guard on line 153, which still read `if (!ready) {...}`. Because `ready` is no longer in scope, this threw a ReferenceError at render time. React then unmounted the screen, which is why the body was completely blank with no testID anchor. Fix applied by testing agent: replaced the bare returns with a proper SafeAreaView + header + ActivityIndicator loading state keyed on `authLoading`. Reproduction was confirmed before the fix (body empty, no testID) and after the fix (admin-challenges-screen visible, all 3 challenge cards render with their action buttons)."
+}

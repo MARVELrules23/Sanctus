@@ -204,7 +204,7 @@ SEED_CHALLENGES: list[Dict[str, Any]] = [
         "subtitle": "Watching for the Coming of the King",
         "season": "advent",
         "color": "#5f3fb1",  # liturgical violet
-        "icon": "candle-outline",
+        "icon": "moon-outline",
         "patron_saint": "Our Lady of the Annunciation",
         "blurb": (
             "Four weeks of holy preparation for Christmas — keeping vigil with "

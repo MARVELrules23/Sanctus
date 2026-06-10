@@ -305,3 +305,10 @@ NEEDS TESTING:
 - Backend: regression on /api/challenges/* (list/detail/enroll/checkin/progress) and /api/challenges/admin/* (all/list-days/patch/patch-day/generate-days/publish/unpublish) — auth gating, status filtering for non-admins, idempotent enroll/unenroll, checkin streak math, generate-day Hallowtide 'soul cakes' present.
 - Frontend: (1) hub renders 3 tracks, (2) toggle Switch enrolls + flips Home/Calendar overlays, (3) detail screen shows opening prayer + soul-cake prep (Hallowtide), (4) day cards expand+check-in, (5) admin generate-missing + edit + publish/unpublish flow, (6) calendar stripe + tap-tile work for an enrolled challenge in current month, (7) profile admin link routes to /admin/challenges.
 
+
+main_agent_iteration_27_fix_2026-06-10: "Fixed three HIGH-priority bugs from testing_agent report:
+1. /admin/challenges rendered blank — root cause: destructured `ready` from useAuth but auth-context exposes `loading`. Replaced with `const { user, loading: authLoading } = useAuth();` and gated effect on `!authLoading`.
+2. Advent track icon `candle-outline` is not a valid Ionicons glyph → caused console errors and missing icon. Updated seed (challenges.py) AND patched existing DB record (challenges.update_one slug:advent → icon:moon-outline) using motor.
+3. Day-card check-in testID was only rendered inside the collapsed body. Moved the check-in row outside the `isOpen` block so testID `challenge-day-checkin-{day_index}` is always in the DOM (button is properly disabled with 'Not yet' for future days, shows 'Completed' chip when isDone).
+4. Home card day index now clamps via memoized displayDayIndex (falls back to computed-from-start when today.day_index is missing, and clamps within 1..total_days).
+"

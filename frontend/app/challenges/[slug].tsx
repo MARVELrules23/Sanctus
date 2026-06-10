@@ -313,6 +313,54 @@ export default function ChallengeDetailScreen() {
                     ) : null}
                   </Pressable>
 
+                  {/* Always render the check-in row (testID stays in the DOM
+                      so flows can locate it even when the day card is
+                      collapsed). The button is disabled for future days. */}
+                  {!isDone ? (
+                    <Pressable
+                      testID={`challenge-day-checkin-${d.day_index}`}
+                      disabled={busyDay === d.day_id || (!isToday && !isPast)}
+                      onPress={() => onCheckIn(d)}
+                      style={({ pressed }) => [
+                        styles.checkBtnSmall,
+                        { backgroundColor: !isToday && !isPast ? colors.borderSoft : accent },
+                        (pressed || busyDay === d.day_id) && { opacity: 0.7 },
+                      ]}
+                    >
+                      {busyDay === d.day_id ? (
+                        <ActivityIndicator color={colors.gold} size="small" />
+                      ) : (
+                        <>
+                          <Ionicons
+                            name={
+                              !isToday && !isPast
+                                ? "lock-closed-outline"
+                                : "checkmark-circle-outline"
+                            }
+                            size={14}
+                            color={!isToday && !isPast ? colors.textMuted : colors.gold}
+                          />
+                          <Text
+                            style={[
+                              styles.checkBtnSmallText,
+                              !isToday && !isPast && { color: colors.textMuted },
+                            ]}
+                          >
+                            {!isToday && !isPast ? "Not yet" : isToday ? "Mark today complete" : "Mark complete"}
+                          </Text>
+                        </>
+                      )}
+                    </Pressable>
+                  ) : (
+                    <View
+                      testID={`challenge-day-checkin-${d.day_index}`}
+                      style={[styles.checkBtnSmall, { backgroundColor: colors.background, borderWidth: 1, borderColor: accent }]}
+                    >
+                      <Ionicons name="checkmark-circle" size={14} color={accent} />
+                      <Text style={[styles.checkBtnSmallText, { color: accent }]}>Completed</Text>
+                    </View>
+                  )}
+
                   {isOpen ? (
                     <View style={styles.dayBody}>
                       {d.patron_blurb ? (
@@ -334,34 +382,6 @@ export default function ChallengeDetailScreen() {
                               </View>
                             </View>
                           ))}
-                        </View>
-                      ) : null}
-
-                      {!isDone && (isToday || isPast) ? (
-                        <Pressable
-                          testID={`challenge-day-checkin-${d.day_index}`}
-                          disabled={busyDay === d.day_id}
-                          onPress={() => onCheckIn(d)}
-                          style={({ pressed }) => [
-                            styles.checkBtn,
-                            { backgroundColor: accent },
-                            (pressed || busyDay === d.day_id) && { opacity: 0.7 },
-                          ]}
-                        >
-                          {busyDay === d.day_id ? (
-                            <ActivityIndicator color={colors.gold} size="small" />
-                          ) : (
-                            <>
-                              <Ionicons name="checkmark-circle-outline" size={16} color={colors.gold} />
-                              <Text style={styles.checkBtnText}>Mark complete</Text>
-                            </>
-                          )}
-                        </Pressable>
-                      ) : null}
-                      {isDone ? (
-                        <View style={[styles.checkBtn, { backgroundColor: colors.background, borderWidth: 1, borderColor: accent }]}>
-                          <Ionicons name="checkmark-circle" size={16} color={accent} />
-                          <Text style={[styles.checkBtnText, { color: accent }]}>Completed</Text>
                         </View>
                       ) : null}
                     </View>
@@ -591,4 +611,17 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   checkBtnText: { fontFamily: fonts.uiSemi, fontSize: 13, color: colors.gold, letterSpacing: 0.6 },
+  checkBtnSmall: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: radius.round,
+    marginTop: spacing.sm,
+    alignSelf: "flex-start",
+    marginLeft: 42,
+  },
+  checkBtnSmallText: { fontFamily: fonts.uiSemi, fontSize: 12, color: colors.gold, letterSpacing: 0.4 },
 });

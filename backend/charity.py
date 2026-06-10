@@ -241,6 +241,9 @@ def build_router(
     claims = db["charity_claims"]
     contacts = db["charity_contacts"]
 
+    # Attach quote-management routes (admin CRUD + public list).
+    _attach_quote_routes(router, db, get_current_user)
+
     # -------------------- Public listing --------------------
 
     @router.get("")
@@ -293,6 +296,18 @@ def build_router(
         return {
             "categories": [{"key": k, "label": labels.get(k, k.replace("_", " ").title())} for k in ALLOWED_CATEGORIES],
         }
+
+    @router.get("/quotes")
+    async def list_quotes_public(user=Depends(get_current_user), limit: int = Query(100, ge=1, le=300)):
+        """Logged-in users get the full active quote pool; the frontend picks
+        one deterministically per charity_id. Defined here (above
+        `/{charity_id}`) so FastAPI's literal-vs-param route matching doesn't
+        treat "quotes" as a charity_id."""
+        await _seed_quotes_if_empty(db)
+        cursor = db["charity_quotes"].find({"active": True}).sort(
+            [("sort_order", 1), ("created_at", 1)]
+        ).limit(limit)
+        return {"items": [_public_quote(d) async for d in cursor]}
 
     @router.get("/{charity_id}")
     async def get_charity(charity_id: str, user=Depends(get_current_user)):
@@ -598,6 +613,196 @@ def build_router(
 
 
 # ---------------------------------------------------------------------------
+# Charity Quotes (admin-editable content surfaced on the charity detail page)
+# ---------------------------------------------------------------------------
+
+
+# Initial seed — used the first time the `charity_quotes` collection is empty.
+# Admin can edit, deactivate, or add to these freely afterwards.
+SEED_CHARITY_QUOTES: List[Dict[str, Optional[str]]] = [
+    {"text": "Charity is the bond of perfection. Without it, the rich man is poor; with it, the poor man is rich.", "source": "St. Augustine of Hippo", "context": "Sermon 350"},
+    {"text": "Not to enable the poor to share in our goods is to steal from them and deprive them of life. The goods we possess are not ours, but theirs.", "source": "St. John Chrysostom", "context": "Homily on Lazarus"},
+    {"text": "The bread which you do not use is the bread of the hungry; the garment hanging in your wardrobe is the garment of the one who is naked.", "source": "St. Basil the Great", "context": "Sermon to the Rich"},
+    {"text": "If you wish to be perfect, give what you have to the poor and you will have treasure in heaven.", "source": "St. Ambrose of Milan", "context": None},
+    {"text": "Charity is the form of all the virtues. It is the soul of every other virtue.", "source": "St. Thomas Aquinas", "context": "Summa Theologiae II-II, q.23"},
+    {"text": "It is not enough to give bread. We must give the bread of love, the bread of dignity.", "source": "St. Vincent de Paul", "context": None},
+    {"text": "You will find out that charity is a heavy burden to carry, heavier than the bowl of soup and the full basket. But you will keep your gentleness and your smile.", "source": "St. Vincent de Paul", "context": None},
+    {"text": "Spread love everywhere you go. Let no one ever come to you without leaving happier.", "source": "St. Teresa of Calcutta", "context": None},
+    {"text": "Not all of us can do great things. But we can do small things with great love.", "source": "St. Teresa of Calcutta", "context": None},
+    {"text": "The fruit of love is service, which is compassion in action.", "source": "St. Teresa of Calcutta", "context": None},
+    {"text": "Charity is certainly greater than any rule. Moreover, all rules must lead to charity.", "source": "St. Vincent de Paul", "context": None},
+    {"text": "He who distributes the milk of human kindness cannot help but receive it again upon his own lips.", "source": "St. Francis de Sales", "context": "Introduction to the Devout Life"},
+    {"text": "Charity is patient, is kind. Without it, our works are as nothing.", "source": "St. Paul the Apostle", "context": "1 Corinthians 13:4"},
+    {"text": "Remember that you have only one soul; that you have only one death to die; that you have only one life. If you do this, there will be many things about which you care nothing.", "source": "St. Teresa of Ávila", "context": None},
+    {"text": "Whenever a Christian sees a poor person, he must see in him the face of Christ.", "source": "St. John Paul II", "context": "Homily, 1985"},
+    {"text": "Even the smallest act of love is a stone laid in the foundation of God's Kingdom.", "source": "Bl. Pier Giorgio Frassati", "context": None},
+    {"text": "I see Jesus in every human being. I say to myself, this is hungry Jesus, I must feed him.", "source": "St. Teresa of Calcutta", "context": None},
+    {"text": "The measure of love is to love without measure.", "source": "St. Francis de Sales", "context": None},
+    {"text": "The poor are not a problem; they are a resource from which to draw to welcome and live the essence of the Gospel.", "source": "Pope Francis", "context": "Message for the World Day of the Poor"},
+    {"text": "Charity is the cement which binds communities to God and persons to one another.", "source": "Ven. Fulton J. Sheen", "context": None},
+    {"text": "Love is repaid by love alone.", "source": "St. Thérèse of Lisieux", "context": None},
+    {"text": "I have found the paradox, that if you love until it hurts, there can be no more hurt, only more love.", "source": "St. Teresa of Calcutta", "context": None},
+    {"text": "Real charity does the most good to those who receive it, and asks the least in return.", "source": "Ven. Solanus Casey", "context": None},
+    {"text": "Do not be afraid of holiness. It will take away none of your energy, vitality, or joy.", "source": "Pope Francis", "context": "Gaudete et Exsultate"},
+    {"text": "I would rather make mistakes in kindness than work miracles in unkindness.", "source": "St. Teresa of Calcutta", "context": None},
+    {"text": "It is in giving that we receive; it is in pardoning that we are pardoned; it is in dying that we are born to eternal life.", "source": "St. Francis of Assisi", "context": "Peace Prayer"},
+    {"text": "Start by doing what's necessary; then do what's possible; and suddenly you are doing the impossible.", "source": "St. Francis of Assisi", "context": None},
+    {"text": "If you really want to love Jesus, first learn to suffer, because suffering teaches you to love.", "source": "St. Gemma Galgani", "context": None},
+    {"text": "The poor person is a scandal who is also our salvation, for in him Christ comes to meet us.", "source": "Bl. Frédéric Ozanam", "context": "Founder of the Society of St. Vincent de Paul"},
+    {"text": "When you have given alms, you have done nothing. You owe a debt of love which only love can repay.", "source": "St. Augustine of Hippo", "context": None},
+]
+
+
+class QuoteCreateModel(BaseModel):
+    text: str = Field(..., min_length=4, max_length=800)
+    source: str = Field(..., min_length=1, max_length=160)
+    context: Optional[str] = Field(None, max_length=240)
+    active: bool = True
+
+    @field_validator("text", "source")
+    @classmethod
+    def _strip(cls, v: str) -> str:  # noqa: D401
+        v = (v or "").strip()
+        if not v:
+            raise ValueError("required")
+        return v
+
+
+class QuotePatchModel(BaseModel):
+    text: Optional[str] = Field(None, min_length=4, max_length=800)
+    source: Optional[str] = Field(None, min_length=1, max_length=160)
+    context: Optional[str] = Field(None, max_length=240)
+    active: Optional[bool] = None
+
+
+def _public_quote(doc: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "quote_id": doc["quote_id"],
+        "text": doc.get("text") or "",
+        "source": doc.get("source") or "",
+        "context": doc.get("context") or None,
+    }
+
+
+def _admin_quote(doc: Dict[str, Any]) -> Dict[str, Any]:
+    base = _public_quote(doc)
+    base.update({
+        "active": bool(doc.get("active", True)),
+        "created_by": doc.get("created_by"),
+        "created_at": _iso(doc.get("created_at")),
+        "updated_at": _iso(doc.get("updated_at")),
+        "seed": bool(doc.get("seed", False)),
+    })
+    return base
+
+
+async def _seed_quotes_if_empty(db: AsyncIOMotorDatabase) -> int:
+    """One-time seed of the curated quotes the first time the collection is
+    empty. Returns number of quotes inserted (0 if already populated)."""
+    col = db["charity_quotes"]
+    n = await col.count_documents({})
+    if n > 0:
+        return 0
+    now = datetime.now(timezone.utc)
+    docs = []
+    for i, q in enumerate(SEED_CHARITY_QUOTES):
+        docs.append({
+            "quote_id": f"qte_{uuid.uuid4().hex[:10]}",
+            "text": (q.get("text") or "").strip(),
+            "source": (q.get("source") or "").strip(),
+            "context": (q.get("context") or None),
+            "active": True,
+            "seed": True,
+            "created_by": "system",
+            "created_at": now,
+            "updated_at": now,
+            "sort_order": i,
+        })
+    if docs:
+        await col.insert_many(docs)
+    return len(docs)
+
+
+def _attach_quote_routes(router: APIRouter, db: AsyncIOMotorDatabase, get_current_user: Callable) -> None:
+    """Admin CRUD endpoints for `charity_quotes`. The public `GET /quotes`
+    endpoint is registered inline in `build_router` to sit above the
+    parameterized `/{charity_id}` route."""
+    quotes = db["charity_quotes"]
+
+    # --- Admin CRUD ---
+
+    @router.get("/admin/quotes")
+    async def admin_list_quotes(user=Depends(get_current_user)):
+        await _ensure_admin(user)
+        await _seed_quotes_if_empty(db)
+        cursor = quotes.find({}).sort([("sort_order", 1), ("created_at", 1)])
+        return {"items": [_admin_quote(d) async for d in cursor]}
+
+    @router.post("/admin/quotes")
+    async def admin_create_quote(payload: QuoteCreateModel, user=Depends(get_current_user)):
+        await _ensure_admin(user)
+        now = datetime.now(timezone.utc)
+        # Append to the end of the sort order.
+        last = await quotes.find_one(sort=[("sort_order", -1)])
+        next_order = (last.get("sort_order", -1) + 1) if last else 0
+        doc = {
+            "quote_id": f"qte_{uuid.uuid4().hex[:10]}",
+            "text": payload.text.strip(),
+            "source": payload.source.strip(),
+            "context": (payload.context or "").strip() or None,
+            "active": payload.active,
+            "seed": False,
+            "created_by": getattr(user, "user_id", None),
+            "created_at": now,
+            "updated_at": now,
+            "sort_order": next_order,
+        }
+        await quotes.insert_one(doc)
+        return _admin_quote(doc)
+
+    @router.patch("/admin/quotes/{quote_id}")
+    async def admin_patch_quote(quote_id: str, payload: QuotePatchModel, user=Depends(get_current_user)):
+        await _ensure_admin(user)
+        doc = await quotes.find_one({"quote_id": quote_id})
+        if not doc:
+            raise HTTPException(status_code=404, detail="quote not found")
+        updates: Dict[str, Any] = {"updated_at": datetime.now(timezone.utc)}
+        if payload.text is not None:
+            updates["text"] = payload.text.strip()
+        if payload.source is not None:
+            updates["source"] = payload.source.strip()
+        if payload.context is not None:
+            updates["context"] = (payload.context or "").strip() or None
+        if payload.active is not None:
+            updates["active"] = bool(payload.active)
+        await quotes.update_one({"quote_id": quote_id}, {"$set": updates})
+        doc = await quotes.find_one({"quote_id": quote_id})
+        return _admin_quote(doc)  # type: ignore[arg-type]
+
+    @router.post("/admin/quotes/{quote_id}/toggle")
+    async def admin_toggle_quote(quote_id: str, user=Depends(get_current_user)):
+        await _ensure_admin(user)
+        doc = await quotes.find_one({"quote_id": quote_id})
+        if not doc:
+            raise HTTPException(status_code=404, detail="quote not found")
+        new_active = not bool(doc.get("active", True))
+        await quotes.update_one(
+            {"quote_id": quote_id},
+            {"$set": {"active": new_active, "updated_at": datetime.now(timezone.utc)}},
+        )
+        doc["active"] = new_active
+        return _admin_quote(doc)
+
+    @router.delete("/admin/quotes/{quote_id}")
+    async def admin_delete_quote(quote_id: str, user=Depends(get_current_user)):
+        await _ensure_admin(user)
+        r = await quotes.delete_one({"quote_id": quote_id})
+        if r.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="quote not found")
+        return {"ok": True}
+
+
+# ---------------------------------------------------------------------------
 # Indexes
 # ---------------------------------------------------------------------------
 
@@ -612,3 +817,12 @@ async def ensure_indexes(db: AsyncIOMotorDatabase) -> None:
     await db["charity_claims"].create_index([("user_id", 1), ("status", 1)])
     await db["charity_contacts"].create_index("contact_id", unique=True)
     await db["charity_contacts"].create_index([("charity_id", 1), ("created_at", -1)])
+    await db["charity_quotes"].create_index("quote_id", unique=True)
+    await db["charity_quotes"].create_index([("active", 1), ("sort_order", 1)])
+    # Seed default quotes once.
+    try:
+        n = await _seed_quotes_if_empty(db)
+        if n:
+            logger.info("charity_quotes: seeded %d default quotes", n)
+    except Exception as e:  # noqa: BLE001
+        logger.warning("charity_quotes seed skipped: %s", e)

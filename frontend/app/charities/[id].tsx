@@ -20,13 +20,15 @@ import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 
 import {
   Charity,
+  CharityQuoteApi,
   contactCharity,
   getCharity,
+  listCharityQuotes,
   requestCharityClaim,
 } from "@/src/api";
 import { useAuth } from "@/src/auth-context";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
-import { pickCharityQuote } from "@/src/utils/charity-quotes";
+import { pickCharityQuote, pickQuoteFromPool } from "@/src/utils/charity-quotes";
 
 export default function CharityDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -242,12 +244,32 @@ function ClaimModal({ open, charity, onClose }: { open: boolean; charity: Charit
   );
 }
 
-/** Reverent quote card on the Charity detail page — rotates a curated set of
- * Catholic teachings on charity from Saints, Blesseds, and Venerables.
- * Tap to draw a different quote. Stable per-charity on first render. */
+/** Reverent quote card on the Charity detail page — pulls admin-curated
+ * Catholic teachings on charity from the API, falling back to the bundled
+ * static pool when offline or the request fails. Tap "Another" to draw a
+ * different quote. Stable per-charity on first render. */
 function CharityQuoteCard({ charityId }: { charityId: string }) {
   const [seed, setSeed] = useState<string>(charityId);
-  const quote = pickCharityQuote(seed);
+  const [pool, setPool] = useState<CharityQuoteApi[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await listCharityQuotes();
+        if (!cancelled) setPool(r.items || []);
+      } catch {
+        if (!cancelled) setPool([]); // signal failure → fallback below
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Prefer the admin-curated pool; if it's empty or the fetch failed, fall
+  // back to the bundled static list so we never render an empty card.
+  const fromApi = pool && pool.length > 0 ? pickQuoteFromPool(pool, seed) : null;
+  const quote = fromApi ?? pickCharityQuote(seed);
+
   const shuffle = () => setSeed(`${charityId}-${Date.now()}-${Math.random()}`);
   return (
     <View testID="charity-quote-card" style={styles.quoteCard}>

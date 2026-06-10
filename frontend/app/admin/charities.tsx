@@ -3,9 +3,11 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -15,20 +17,35 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useRouter } from "expo-router";
 
 import {
+  AdminCharityQuoteApi,
   Charity,
   adminApproveCharity,
   adminApproveClaim,
   adminArchiveCharity,
+  adminCreateCharityQuote,
+  adminDeleteCharityQuote,
   adminListCharities,
   adminListCharityClaims,
+  adminListCharityQuotes,
   adminRejectCharity,
   adminRejectClaim,
+  adminToggleCharityQuote,
+  adminUpdateCharityQuote,
 } from "@/src/api";
 import { useAuth } from "@/src/auth-context";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
-import { CHARITY_QUOTES } from "@/src/utils/charity-quotes";
 
 type Tab = "pending" | "approved" | "rejected" | "claims" | "quotes";
+
+interface QuoteDraft {
+  quote_id?: string;
+  text: string;
+  source: string;
+  context: string;
+  active: boolean;
+}
+
+const EMPTY_DRAFT: QuoteDraft = { text: "", source: "", context: "", active: true };
 
 export default function AdminCharitiesScreen() {
   const router = useRouter();
@@ -38,17 +55,19 @@ export default function AdminCharitiesScreen() {
   const [claims, setClaims] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [quoteSearch, setQuoteSearch] = useState("");
+  const [quotes, setQuotes] = useState<AdminCharityQuoteApi[]>([]);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [draft, setDraft] = useState<QuoteDraft>(EMPTY_DRAFT);
+  const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
     if (!user?.is_admin) return;
-    if (tab === "quotes") {
-      // Static data — nothing to fetch.
-      setLoading(false);
-      return;
-    }
     setLoading(true);
     try {
-      if (tab === "claims") {
+      if (tab === "quotes") {
+        const r = await adminListCharityQuotes();
+        setQuotes(r.items);
+      } else if (tab === "claims") {
         const r = await adminListCharityClaims("pending");
         setClaims(r.items);
       } else {
@@ -64,14 +83,81 @@ export default function AdminCharitiesScreen() {
 
   const filteredQuotes = useMemo(() => {
     const q = quoteSearch.trim().toLowerCase();
-    if (!q) return CHARITY_QUOTES;
-    return CHARITY_QUOTES.filter(
+    if (!q) return quotes;
+    return quotes.filter(
       (item) =>
         item.text.toLowerCase().includes(q) ||
         item.source.toLowerCase().includes(q) ||
         (item.context || "").toLowerCase().includes(q),
     );
-  }, [quoteSearch]);
+  }, [quoteSearch, quotes]);
+
+  const openNewQuote = () => { setDraft(EMPTY_DRAFT); setEditorOpen(true); };
+  const openEditQuote = (q: AdminCharityQuoteApi) => {
+    setDraft({
+      quote_id: q.quote_id,
+      text: q.text,
+      source: q.source,
+      context: q.context || "",
+      active: q.active,
+    });
+    setEditorOpen(true);
+  };
+
+  const submitQuote = async () => {
+    const text = draft.text.trim();
+    const source = draft.source.trim();
+    if (text.length < 4) { Alert.alert("Quote required", "Please enter the full quote text (at least 4 characters)."); return; }
+    if (!source) { Alert.alert("Attribution required", "Please enter the saint, blessed, or venerable who said this."); return; }
+    setSaving(true);
+    try {
+      if (draft.quote_id) {
+        const updated = await adminUpdateCharityQuote(draft.quote_id, {
+          text, source, context: draft.context.trim() || null, active: draft.active,
+        });
+        setQuotes((prev) => prev.map((q) => q.quote_id === updated.quote_id ? updated : q));
+      } else {
+        const created = await adminCreateCharityQuote({
+          text, source, context: draft.context.trim() || null, active: draft.active,
+        });
+        setQuotes((prev) => [...prev, created]);
+      }
+      setEditorOpen(false);
+    } catch (e: any) {
+      Alert.alert("Couldn't save", e?.message || "Please try again.");
+    } finally { setSaving(false); }
+  };
+
+  const toggleQuote = async (q: AdminCharityQuoteApi) => {
+    try {
+      const updated = await adminToggleCharityQuote(q.quote_id);
+      setQuotes((prev) => prev.map((it) => it.quote_id === updated.quote_id ? updated : it));
+    } catch (e: any) {
+      Alert.alert("Toggle failed", e?.message || "Please try again.");
+    }
+  };
+
+  const deleteQuote = (q: AdminCharityQuoteApi) => {
+    Alert.alert(
+      "Delete quote?",
+      `"${q.text.slice(0, 80)}${q.text.length > 80 ? "…" : ""}"\n— ${q.source}`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await adminDeleteCharityQuote(q.quote_id);
+              setQuotes((prev) => prev.filter((it) => it.quote_id !== q.quote_id));
+            } catch (e: any) {
+              Alert.alert("Delete failed", e?.message || "Please try again.");
+            }
+          },
+        },
+      ],
+    );
+  };
 
   if (!user?.is_admin) {
     return (
@@ -111,23 +197,32 @@ export default function AdminCharitiesScreen() {
       </View>
 
       {tab === "quotes" ? (
-        <View style={styles.quoteSearchWrap}>
-          <Ionicons name="search" size={16} color={colors.textMuted} />
-          <TextInput
-            testID="admin-quote-search"
-            value={quoteSearch}
-            onChangeText={setQuoteSearch}
-            placeholder="Search saints, quotes, or sources…"
-            placeholderTextColor={colors.textMuted}
-            style={styles.quoteSearchInput}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          {quoteSearch ? (
-            <Pressable onPress={() => setQuoteSearch("")} hitSlop={10}>
-              <Ionicons name="close-circle" size={18} color={colors.textMuted} />
-            </Pressable>
-          ) : null}
+        <View style={styles.quoteToolbar}>
+          <View style={styles.quoteSearchWrap}>
+            <Ionicons name="search" size={16} color={colors.textMuted} />
+            <TextInput
+              testID="admin-quote-search"
+              value={quoteSearch}
+              onChangeText={setQuoteSearch}
+              placeholder="Search saints, quotes, or sources…"
+              placeholderTextColor={colors.textMuted}
+              style={styles.quoteSearchInput}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {quoteSearch ? (
+              <Pressable onPress={() => setQuoteSearch("")} hitSlop={10}>
+                <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+              </Pressable>
+            ) : null}
+          </View>
+          <Pressable
+            testID="admin-quote-add"
+            onPress={openNewQuote}
+            style={({ pressed }) => [styles.quoteAddBtn, pressed && { opacity: 0.85 }]}
+          >
+            <Ionicons name="add" size={20} color="#fff" />
+          </Pressable>
         </View>
       ) : null}
 
@@ -141,22 +236,76 @@ export default function AdminCharitiesScreen() {
                 <Ionicons name="rose-outline" size={14} color={colors.gold} />
                 <Text style={styles.quoteHeaderText}>
                   {filteredQuotes.length}
-                  {quoteSearch ? ` / ${CHARITY_QUOTES.length}` : ""}
-                  {" "}quote{filteredQuotes.length === 1 ? "" : "s"} on charity — Saints, Blesseds &amp; Venerables
+                  {quoteSearch ? ` / ${quotes.length}` : ""}
+                  {" "}quote{filteredQuotes.length === 1 ? "" : "s"} · tap to edit
                 </Text>
               </View>
               {filteredQuotes.length === 0 ? (
-                <Text style={styles.empty}>No quotes match &ldquo;{quoteSearch}&rdquo;.</Text>
+                <Text style={styles.empty}>
+                  {quoteSearch
+                    ? `No quotes match "${quoteSearch}".`
+                    : "No quotes yet — tap + to add the first one."}
+                </Text>
               ) : (
-                filteredQuotes.map((q, i) => (
-                  <View key={`${q.source}-${i}`} style={styles.quoteRow}>
+                filteredQuotes.map((q) => (
+                  <Pressable
+                    key={q.quote_id}
+                    testID={`admin-quote-row-${q.quote_id}`}
+                    onPress={() => openEditQuote(q)}
+                    style={({ pressed }) => [
+                      styles.quoteRow,
+                      !q.active && styles.quoteRowHidden,
+                      pressed && { opacity: 0.85 },
+                    ]}
+                  >
+                    {!q.active ? (
+                      <View style={styles.quoteHiddenPill}>
+                        <Ionicons name="eye-off-outline" size={11} color={colors.textMuted} />
+                        <Text style={styles.quoteHiddenPillText}>Hidden</Text>
+                      </View>
+                    ) : null}
                     <Text style={styles.quoteMark}>&ldquo;</Text>
                     <Text style={styles.quoteBody}>{q.text}</Text>
                     <Text style={styles.quoteSource}>— {q.source}</Text>
                     {q.context ? (
                       <Text style={styles.quoteCtx}>{q.context}</Text>
                     ) : null}
-                  </View>
+                    <View style={styles.quoteActions}>
+                      <Pressable
+                        testID={`admin-quote-toggle-${q.quote_id}`}
+                        onPress={(e) => { e.stopPropagation?.(); toggleQuote(q); }}
+                        hitSlop={8}
+                        style={({ pressed }) => [styles.quoteActionBtn, pressed && { opacity: 0.65 }]}
+                      >
+                        <Ionicons
+                          name={q.active ? "eye-outline" : "eye-off-outline"}
+                          size={16}
+                          color={q.active ? colors.primary : colors.textMuted}
+                        />
+                        <Text style={[styles.quoteActionText, !q.active && { color: colors.textMuted }]}>
+                          {q.active ? "Active" : "Hidden"}
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        testID={`admin-quote-edit-${q.quote_id}`}
+                        onPress={(e) => { e.stopPropagation?.(); openEditQuote(q); }}
+                        hitSlop={8}
+                        style={({ pressed }) => [styles.quoteActionBtn, pressed && { opacity: 0.65 }]}
+                      >
+                        <Ionicons name="create-outline" size={16} color={colors.primary} />
+                        <Text style={styles.quoteActionText}>Edit</Text>
+                      </Pressable>
+                      <Pressable
+                        testID={`admin-quote-delete-${q.quote_id}`}
+                        onPress={(e) => { e.stopPropagation?.(); deleteQuote(q); }}
+                        hitSlop={8}
+                        style={({ pressed }) => [styles.quoteActionBtn, pressed && { opacity: 0.65 }]}
+                      >
+                        <Ionicons name="trash-outline" size={16} color="#c0392b" />
+                        <Text style={[styles.quoteActionText, { color: "#c0392b" }]}>Delete</Text>
+                      </Pressable>
+                    </View>
+                  </Pressable>
                 ))
               )}
             </>
@@ -209,6 +358,94 @@ export default function AdminCharitiesScreen() {
           )}
         </ScrollView>
       )}
+
+      {/* ---- Quote editor modal (admin add / edit) ---- */}
+      <Modal
+        visible={editorOpen}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setEditorOpen(false)}
+      >
+        <View style={styles.modalScrim}>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {draft.quote_id ? "Edit quote" : "New quote"}
+              </Text>
+              <Pressable onPress={() => setEditorOpen(false)} hitSlop={10}>
+                <Ionicons name="close" size={22} color={colors.textPrimary} />
+              </Pressable>
+            </View>
+
+            <ScrollView contentContainerStyle={{ paddingBottom: spacing.lg }}>
+              <Text style={styles.fieldLabel}>Quote</Text>
+              <TextInput
+                testID="admin-quote-text-input"
+                value={draft.text}
+                onChangeText={(t) => setDraft((d) => ({ ...d, text: t }))}
+                placeholder='e.g. "Spread love everywhere you go."'
+                placeholderTextColor={colors.textMuted}
+                multiline
+                style={[styles.fieldInput, styles.fieldInputMulti]}
+              />
+
+              <Text style={styles.fieldLabel}>Attribution</Text>
+              <TextInput
+                testID="admin-quote-source-input"
+                value={draft.source}
+                onChangeText={(t) => setDraft((d) => ({ ...d, source: t }))}
+                placeholder="e.g. St. Teresa of Calcutta"
+                placeholderTextColor={colors.textMuted}
+                style={styles.fieldInput}
+                autoCapitalize="words"
+              />
+
+              <Text style={styles.fieldLabel}>Context · optional</Text>
+              <TextInput
+                testID="admin-quote-context-input"
+                value={draft.context}
+                onChangeText={(t) => setDraft((d) => ({ ...d, context: t }))}
+                placeholder="Sermon, encyclical, book, or year"
+                placeholderTextColor={colors.textMuted}
+                style={styles.fieldInput}
+              />
+
+              <View style={styles.activeRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.fieldLabel}>Show on charity pages</Text>
+                  <Text style={styles.fieldHint}>
+                    Turn off to hide this quote from the public pool without deleting it.
+                  </Text>
+                </View>
+                <Switch
+                  testID="admin-quote-active-switch"
+                  value={draft.active}
+                  onValueChange={(v) => setDraft((d) => ({ ...d, active: v }))}
+                  trackColor={{ true: colors.primary, false: colors.borderSoft }}
+                />
+              </View>
+
+              <Pressable
+                testID="admin-quote-save"
+                onPress={submitQuote}
+                disabled={saving}
+                style={({ pressed }) => [styles.saveBtn, (pressed || saving) && { opacity: 0.7 }]}
+              >
+                {saving ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <>
+                    <Ionicons name="checkmark" size={18} color="#fff" />
+                    <Text style={styles.saveBtnText}>
+                      {draft.quote_id ? "Save changes" : "Add quote"}
+                    </Text>
+                  </>
+                )}
+              </Pressable>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -240,12 +477,18 @@ const styles = StyleSheet.create({
   gateText: { fontFamily: fonts.bodyRegular, fontSize: 16, color: colors.textSecondary },
 
   // Quote review tab
-  quoteSearchWrap: {
+  quoteToolbar: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
     marginHorizontal: spacing.md,
     marginTop: spacing.sm,
+  },
+  quoteSearchWrap: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
     backgroundColor: colors.surface,
@@ -259,6 +502,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textPrimary,
     paddingVertical: 0,
+  },
+  quoteAddBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    ...shadow.card,
   },
   quoteHeader: {
     flexDirection: "row",
@@ -285,6 +537,10 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     ...shadow.card,
   },
+  quoteRowHidden: {
+    opacity: 0.55,
+    borderColor: colors.borderSoft,
+  },
   quoteMark: {
     fontFamily: fonts.headingBold,
     fontSize: 28,
@@ -309,5 +565,124 @@ const styles = StyleSheet.create({
     fontFamily: fonts.uiMedium,
     fontSize: 11,
     color: colors.textMuted,
+  },
+  quoteHiddenPill: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    backgroundColor: colors.background,
+    borderRadius: radius.round,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+  },
+  quoteHiddenPillText: {
+    fontFamily: fonts.uiSemi,
+    fontSize: 10,
+    color: colors.textMuted,
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+  },
+  quoteActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginTop: spacing.md,
+    paddingTop: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSoft,
+  },
+  quoteActionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+  },
+  quoteActionText: {
+    fontFamily: fonts.uiSemi,
+    fontSize: 12,
+    color: colors.primary,
+  },
+
+  // Editor modal
+  modalScrim: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "flex-end",
+  },
+  modalSheet: {
+    backgroundColor: colors.background,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    padding: spacing.lg,
+    maxHeight: "92%",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: spacing.md,
+  },
+  modalTitle: {
+    fontFamily: fonts.headingBold,
+    fontSize: 20,
+    color: colors.primary,
+  },
+  fieldLabel: {
+    fontFamily: fonts.uiSemi,
+    fontSize: 12,
+    color: colors.textSecondary,
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+    marginTop: spacing.sm,
+    marginBottom: 6,
+  },
+  fieldHint: {
+    fontFamily: fonts.bodyRegular,
+    fontSize: 12,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  fieldInput: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: 12,
+    fontFamily: fonts.bodyRegular,
+    fontSize: 14,
+    color: colors.textPrimary,
+    backgroundColor: colors.surface,
+  },
+  fieldInputMulti: {
+    minHeight: 110,
+    textAlignVertical: "top",
+  },
+  activeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    marginTop: spacing.md,
+    paddingHorizontal: 4,
+  },
+  saveBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: colors.primary,
+    borderRadius: radius.round,
+    paddingVertical: 14,
+    marginTop: spacing.lg,
+  },
+  saveBtnText: {
+    fontFamily: fonts.uiSemi,
+    fontSize: 15,
+    color: "#fff",
+    letterSpacing: 0.3,
   },
 });

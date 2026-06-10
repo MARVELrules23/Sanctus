@@ -171,3 +171,22 @@ export function pickCharityQuote(key?: string | null): CharityQuote {
   const idx = Math.abs(h) % CHARITY_QUOTES.length;
   return CHARITY_QUOTES[idx];
 }
+
+/**
+ * Same deterministic pick algorithm but over an arbitrary pool (e.g. quotes
+ * fetched from the admin-curated API). Returns null when the pool is empty.
+ */
+export function pickQuoteFromPool<T extends CharityQuote>(
+  pool: T[],
+  key?: string | null,
+): T | null {
+  if (!pool || pool.length === 0) return null;
+  if (!key) {
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+  let h = 0;
+  for (let i = 0; i < key.length; i++) {
+    h = (h * 31 + key.charCodeAt(i)) | 0;
+  }
+  return pool[Math.abs(h) % pool.length];
+}

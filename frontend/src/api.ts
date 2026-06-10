@@ -961,3 +961,64 @@ export async function adminListCharityContacts(charityId?: string): Promise<{
   return await api(`/charities/admin/contacts${qs}`);
 }
 
+// ===== Charity Quotes =====
+
+export interface CharityQuoteApi {
+  quote_id: string;
+  text: string;
+  source: string;
+  context?: string | null;
+}
+
+export interface AdminCharityQuoteApi extends CharityQuoteApi {
+  active: boolean;
+  seed: boolean;
+  created_by?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+export async function listCharityQuotes(): Promise<{ items: CharityQuoteApi[] }> {
+  return await api(`/charities/quotes`);
+}
+
+export async function adminListCharityQuotes(): Promise<{ items: AdminCharityQuoteApi[] }> {
+  return await api(`/charities/admin/quotes`);
+}
+
+export async function adminCreateCharityQuote(payload: {
+  text: string;
+  source: string;
+  context?: string | null;
+  active?: boolean;
+}): Promise<AdminCharityQuoteApi> {
+  return await api(`/charities/admin/quotes`, {
+    method: "POST",
+    body: JSON.stringify({
+      text: payload.text,
+      source: payload.source,
+      context: payload.context ?? null,
+      active: payload.active !== false,
+    }),
+  });
+}
+
+export async function adminUpdateCharityQuote(
+  quoteId: string,
+  payload: { text?: string; source?: string; context?: string | null; active?: boolean },
+): Promise<AdminCharityQuoteApi> {
+  return await api(`/charities/admin/quotes/${encodeURIComponent(quoteId)}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function adminToggleCharityQuote(quoteId: string): Promise<AdminCharityQuoteApi> {
+  return await api(`/charities/admin/quotes/${encodeURIComponent(quoteId)}/toggle`, { method: "POST" });
+}
+
+export async function adminDeleteCharityQuote(quoteId: string): Promise<{ ok: boolean }> {
+  return await api(`/charities/admin/quotes/${encodeURIComponent(quoteId)}`, { method: "DELETE" });
+}
+
+

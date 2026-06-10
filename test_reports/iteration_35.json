@@ -1,0 +1,38 @@
+{
+  "summary": "Iteration_35 — regression verification of the SEED_FILMS YouTube-ID rebuild (Sanctus Library → Films). BOTH backend and frontend tested against real Mongo + real ingress + real YouTube oEmbed (no mocks). BACKEND: 42/42 pytest in /app/backend/tests/test_films_iter35.py PASS — GET /api/library/films returns exactly 12 items; every one of the 12 expected (slug, youtube_id, duration_label, category) tuples matches verbatim; GET /api/library/films/{slug} returns 200 + correct youtube_id for all 12; ?category=saints|doctrine|animated|documentary each returns 3; and an INDEPENDENT call to https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v={YT_ID}&format=json returns 200 + a non-empty title for every one of the 12 youtube_ids (i.e. every video is publicly resolvable on YouTube — no more 404s). None of the three removed legacy slugs (ccc-juan-diego-anim, brother-francis-mass, catholicism-barron-trailer) appears in the catalog. Backend log confirms reseed on startup: 'library: seeded 3 films on startup'. FRONTEND (mobile-web @ 390x844): logged in as philipwils13@gmail.com via AsyncStorage-on-web injection (localStorage['sanctus_session_token'] = JSON.stringify('TEST_iter32_admin_tok')). /library?tab=films renders all 12 cards with hqdefault.jpg thumbnails (verified all 12 slugs + i.ytimg.com/vi/ URLs present in the DOM). Direct navigation to /library/films/{slug} for one film per category — molokai-damien (saints), barron-mass (doctrine), st-francis-animated (animated), guadalupe-doc (documentary) — each rendered a YouTube embed iframe whose src exactly contains the expected youtube_id (https://www.youtube.com/embed/{YT_ID}?autoplay=0&mute=1&playsinline=1&rel=0&modestbranding=1&enablejsapi=1&controls=1&origin=...), the category pill, the duration label, the title, the blurb, and both the 'Watch now' (testID=film-toggle-play) and 'Open on YouTube' (testID=film-open-youtube) buttons. No regressions surfaced. The only console output remains the pre-existing low-priority RN-web 0.19 'shadow*' style props deprecation warning carried over from iter33/34.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "global theme shadows (carry-over from iter33/34)", "issue": "'shadow*' style props deprecation warning still logged on RN-web 0.19+ when the films screen mounts. Migrate to boxShadow in /app/frontend/src/theme.ts shadow tokens. Reference: /app/frontend/src/theme.ts"}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_films_iter35.py",
+    "/app/test_reports/pytest/iteration_35_films.xml"
+  ],
+  "action_items": [
+    "(carry-over LOW) Migrate global `shadow*` style props in /app/frontend/src/theme.ts to `boxShadow` to silence the RN-web 0.19 deprecation warning."
+  ],
+  "critical_code_review_comments": [
+    "library_seed_data.SEED_FILMS (lines 575–687) — all 12 entries now point at YouTube IDs that resolve on the oEmbed API (200 OK + non-empty title). slug → youtube_id → category → duration_label mapping matches the spec exactly. The three removed slugs (ccc-juan-diego-anim, brother-francis-mass, catholicism-barron-trailer) are not present anywhere in the seed file.",
+    "/app/frontend/app/library/films/[slug].tsx — correctly threads film.youtube_id into <YouTubeEmbed videoId={film.youtube_id} />. Detail iframe src reflects the right ID for every category sampled.",
+    "Backend GET /api/library/films and /api/library/films/{slug} remain auth-gated (401 without bearer) — unchanged from iter32/33."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_films_iter35.py (new)",
+    "/app/test_reports/iteration_35.json (new)",
+    "/app/test_reports/pytest/iteration_35_films.xml (new)"
+  ],
+  "success_rate": {"backend": "100% (42/42)", "frontend": "100% — 12/12 cards render on /library?tab=films, 4/4 sampled detail screens (one per category) embed the exact expected youtube_id, no old slugs leaked"},
+  "seed_data_creation": "Re-used /app/test_reports/iter32_setup.py to mint admin session TEST_iter32_admin_tok (philipwils13@gmail.com) and non-admin TEST_iter32_user_tok. Library films collection was re-seeded by the backend on startup (verified via backend.err.log: 'library: seeded 3 films on startup' — the 3 figure reflects only the rows that were net-new vs. the 9 already-present-and-updated rows; total in collection is 12). Teardown removed both test sessions. No persistent test data left behind.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Films regression suite lives at /app/backend/tests/test_films_iter35.py. It is the canonical guard against the 'all 12 films broken' regression: it asserts the exact 12-tuple slug→youtube_id→duration_label→category mapping AND that every youtube_id is still resolvable on YouTube's public oEmbed API (the very signal that distinguishes a live video from a 404 takedown). If a future seed swap is needed, just update EXPECTED_FILMS at the top of the test file. The frontend session-injection pattern for AsyncStorage-on-web is: localStorage.setItem('sanctus_session_token', JSON.stringify('<token>')) — note the JSON.stringify wrap; without it the token is treated as a parse-failed string and the app shows the login screen.",
+  "rca_of_issue": "Original user-reported bug 'all 12 films broken — videos won't play / 404 / Video unavailable / one is just a trailer' had a single root cause: 11 of 12 of the YouTube IDs originally seeded in SEED_FILMS had been removed/taken-down on YouTube (returning HTTP 404 on the oEmbed API), and the last one (Bernadette) was a stale ID swapped in a prior round. Fix: library_seed_data.SEED_FILMS was rebuilt with 12 freshly-validated full-length YouTube IDs (each independently confirmed via oEmbed 200 + correct title before commit) and the films collection was wiped + reseeded. End-to-end retest in this iteration confirms: all 12 oEmbed checks pass, the backend serves all 12 via /api/library/films, the films tab renders 12 cards, and 4-of-4 sampled detail screens (one per category) embed the correct YouTube iframe."
+}

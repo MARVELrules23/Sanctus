@@ -132,7 +132,7 @@ SEED_BOOKS: List[Dict[str, Any]] = [
         "cover_color": "#DB2777",
         "cover_icon": "rose",
         "type": "embedded",
-        "source_url": "https://www.ccel.org/ccel/therese/soul.html",
+        "source_url": "https://www.gutenberg.org/ebooks/16772",
         "chapters": [
             {
                 "title": "Manuscript A — Springtime Story",
@@ -252,7 +252,7 @@ SEED_BOOKS: List[Dict[str, Any]] = [
         "cover_color": "#059669",
         "cover_icon": "hourglass-outline",
         "type": "embedded",
-        "source_url": "https://www.catholicspiritualdirection.org/abandonmentinfo.html",
+        "source_url": "https://www.gutenberg.org/ebooks/52057",
         "chapters": [
             {
                 "title": "Ch. 1 — Sanctity Made Easy",
@@ -426,7 +426,7 @@ SEED_BOOKS: List[Dict[str, Any]] = [
         "cover_color": "#581C87",
         "cover_icon": "umbrella-outline",
         "type": "embedded",
-        "source_url": "https://www.gutenberg.org/files/130/130-h/130-h.htm",
+        "source_url": "https://www.gutenberg.org/ebooks/130",
         "chapters": [],
     },
 
@@ -456,7 +456,7 @@ SEED_BOOKS: List[Dict[str, Any]] = [
         "cover_color": "#9A3412",
         "cover_icon": "earth-outline",
         "type": "external",
-        "source_url": "https://www.gutenberg.ca/ebooks/chestertongk-everlastingman/chestertongk-everlastingman-00-h.html",
+        "source_url": "https://gutenberg.net.au/ebooks01/0100311h.html",
         "chapters": [],
     },
 ]

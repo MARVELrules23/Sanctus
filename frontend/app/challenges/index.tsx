@@ -205,12 +205,12 @@ export default function ChallengesHub() {
                 <View style={styles.cardFoot}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.toggleLabel}>
-                      {c.enrolled ? "Walking with you" : "Walk this season"}
+                      {c.enrolled ? "Tracking your participation" : "Track my participation"}
                     </Text>
                     <Text style={styles.toggleSub}>
                       {c.enrolled
-                        ? "On Home card + Calendar"
-                        : "Tap the toggle to enroll"}
+                        ? "Counts streak + daily check-ins"
+                        : "Optional — turn the master toggle on Calendar to view dates"}
                     </Text>
                   </View>
                   {isToggling ? (

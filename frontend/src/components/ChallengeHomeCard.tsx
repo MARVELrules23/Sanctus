@@ -21,6 +21,7 @@ import {
   listChallenges,
 } from "@/src/api";
 import { useAuth } from "@/src/auth-context";
+import { useChallengeMasterPref } from "@/src/use-challenge-pref";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 
 function iso(s: string | null | undefined): string | null {
@@ -38,13 +39,16 @@ function isActiveToday(c: ChallengeSummary, today: string): boolean {
 export default function ChallengeHomeCard({ date }: { date: string }) {
   const router = useRouter();
   const { user } = useAuth();
+  const { enabled: masterOn, ready: prefReady } = useChallengeMasterPref();
   const [summary, setSummary] = useState<ChallengeSummary | null>(null);
   const [detail, setDetail] = useState<ChallengeDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
-    if (!user) {
+    // Master toggle off (or pref not yet read) → don't even hit the API.
+    if (!prefReady) return;
+    if (!user || !masterOn) {
       setSummary(null);
       setDetail(null);
       setLoading(false);
@@ -52,10 +56,9 @@ export default function ChallengeHomeCard({ date }: { date: string }) {
     }
     try {
       const r = await listChallenges();
-      // Find the user's enrolled + currently-active challenge.
-      const active = (r.items || []).find(
-        (c) => c.enrolled && isActiveToday(c, date),
-      );
+      // Find ANY published challenge whose window contains today — no
+      // enrollment requirement: the master toggle alone gates visibility.
+      const active = (r.items || []).find((c) => isActiveToday(c, date));
       if (!active) {
         setSummary(null);
         setDetail(null);
@@ -74,7 +77,7 @@ export default function ChallengeHomeCard({ date }: { date: string }) {
     } finally {
       setLoading(false);
     }
-  }, [user, date]);
+  }, [user, date, masterOn, prefReady]);
 
   useEffect(() => { void load(); }, [load]);
 

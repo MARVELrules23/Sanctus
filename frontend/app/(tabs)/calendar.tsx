@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
 import { api, ChallengeSummary, JournalEntry, LiturgicalDay, listChallenges } from "@/src/api";
+import { useChallengeMasterPref } from "@/src/use-challenge-pref";
 import LiturgicalBadge from "@/src/components/LiturgicalBadge";
 import { colorForLiturgical, colors, fonts, radius, shadow, spacing } from "@/src/theme";
 import { formatLongFromISO, monthName, todayISO } from "@/src/date-utils";
@@ -23,14 +24,15 @@ export default function CalendarScreen() {
   const [entriesLoading, setEntriesLoading] = useState(false);
   const [entryDates, setEntryDates] = useState<Set<string>>(new Set());
   const [challenges, setChallenges] = useState<ChallengeSummary[]>([]);
+  const { enabled: challengeMasterOn, setEnabled: setChallengeMasterOn } = useChallengeMasterPref();
 
-  // Pull enrolled challenges so we can decorate calendar cells (and the
-  // selected-day detail card) — only enrolled tracks count toward overlays,
-  // per the toggle-driven contract.
+  // Pull every published challenge — we'll decorate calendar cells whose
+  // date falls inside an active window. The master toggle below gates
+  // whether overlays render at all.
   const loadChallenges = useCallback(async () => {
     try {
       const r = await listChallenges();
-      setChallenges((r.items || []).filter((c) => c.enrolled));
+      setChallenges(r.items || []);
     } catch {
       setChallenges([]);
     }
@@ -103,9 +105,12 @@ export default function CalendarScreen() {
 
   const sel = days.find((d) => d.date === selected);
 
-  // Lookup: which enrolled challenge does this date belong to (if any)?
+  // Lookup: which published challenge does this date belong to (if any)?
+  // Returns null whenever the master "Liturgical Challenges" toggle is off —
+  // that single flag drives both the per-cell stripe and the day-detail tile.
   const challengeFor = useCallback(
     (dStr: string): ChallengeSummary | null => {
+      if (!challengeMasterOn) return null;
       for (const c of challenges) {
         const s = (c.start_date || "").slice(0, 10);
         const e = (c.end_date || "").slice(0, 10);
@@ -114,7 +119,7 @@ export default function CalendarScreen() {
       }
       return null;
     },
-    [challenges],
+    [challenges, challengeMasterOn],
   );
 
   const selChallenge = sel ? challengeFor(sel.date) : null;
@@ -215,6 +220,34 @@ export default function CalendarScreen() {
                 );
               })}
             </View>
+
+            {/* Master toggle — when ON, every published Liturgical Challenge
+                is laid over the calendar on its specific dates. Persisted per
+                device (AsyncStorage). */}
+            {challenges.length > 0 ? (
+              <View style={styles.challengeToggleCard} testID="cal-challenge-master-card">
+                <Ionicons
+                  name="flame-outline"
+                  size={18}
+                  color={challengeMasterOn ? colors.gold : colors.textMuted}
+                />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.challengeToggleTitle}>Liturgical Challenges</Text>
+                  <Text style={styles.challengeToggleSub}>
+                    {challengeMasterOn
+                      ? "Showing on the calendar on each track's dates."
+                      : "Turn on to see Hallowtide, Advent, and Lent on the calendar."}
+                  </Text>
+                </View>
+                <Switch
+                  testID="cal-challenge-master-toggle"
+                  value={challengeMasterOn}
+                  onValueChange={(v) => { void setChallengeMasterOn(v); }}
+                  trackColor={{ false: colors.borderSoft, true: colors.gold }}
+                  thumbColor={colors.surface}
+                />
+              </View>
+            ) : null}
 
             {sel ? (
               <View style={styles.detail} testID="cal-detail-card">
@@ -438,6 +471,25 @@ const styles = StyleSheet.create({
     right: 6,
     height: 3,
     borderRadius: 2,
+  },
+  challengeToggleCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginTop: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    backgroundColor: colors.surface,
+  },
+  challengeToggleTitle: { fontFamily: fonts.uiSemi, fontSize: 14, color: colors.textPrimary },
+  challengeToggleSub: {
+    fontFamily: fonts.bodyRegular,
+    fontSize: 12,
+    color: colors.textMuted,
+    marginTop: 2,
+    lineHeight: 16,
   },
   challengeTile: {
     flexDirection: "row",

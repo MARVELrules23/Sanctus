@@ -1,0 +1,38 @@
+{
+  "summary": "Iteration_29 verifies the Liturgical-Challenges UX PIVOT: a SINGLE master toggle on Calendar gates BOTH the per-cell stripes/day-detail tile AND the Home challenge card; per-challenge enroll toggles are now streak/check-in tracking only. Backend pytest 13/13 PASS (unchanged from iter_28). Frontend tests (mobile 390x844) all 7 scenarios PASS with a NON-enrolled, NON-admin test user seeded in Mongo (TEST_iter29_user / TEST_iter29_tok) and hallowtide dates patched to 2026-06-05 → 2026-06-20 so today (2026-06-10) is in window:\n  T1 (master OFF default): cal-challenge-master-card renders, toggle.input.checked=false, 0 cal-challenge-2026-* stripes, cal-challenge-tile-hallowtide NOT rendered on 06-10.\n  T2 (master ON): 16 stripes rendered for the 16-day window (6/5..6/20 inclusive), stripe on 2026-06-10 visible, day-detail tile cal-challenge-tile-hallowtide visible for the NON-ENROLLED user (this is the new contract — overlays no longer gated by enrollment).\n  T3 (persistence): localStorage key `sanctus:challenges:showOnCalendar`=true after reload, toggle still ON, 16 stripes still rendered.\n  T4 (Home ON): challenge-home-card visible for NON-ENROLLED user when master ON + today inside published window.\n  T5 (master OFF mid-session): 0 stripes, challenge-home-card hidden again.\n  T6 (hub labels & enroll independence): /challenges hub shows 'Track my participation' label; flipping challenge-toggle-hallowtide enrolls successfully but does NOT add any cal-challenge stripes while master is OFF.\n  T7 (detail screen): challenge-detail-toggle-hallowtide testID still present and labeled 'Track my participation'.\n\nDeprecation warnings carried over from iter_27/iter_28 (shadow*, pointerEvents) still present — no new regressions. Seed data has been torn down (hallowtide dates restored from snapshot, test user removed, enrollments cleaned).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "global (carry-over)", "issue": "Deprecated 'shadow*' style props on RN-web 0.19+ — should be 'boxShadow'. Console warns repeatedly. Reference: src/theme.ts shadow tokens used across challenge cards, calendar cells, etc."},
+      {"component": "global (carry-over)", "issue": "Deprecated `props.pointerEvents` — should be `style.pointerEvents` on web. Console warns on Calendar screen."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_challenges.py",
+    "/app/test_reports/pytest/iteration_29_challenges.xml",
+    "/app/test_reports/iter29_setup.py"
+  ],
+  "action_items": [
+    "OPTIONAL: migrate shadow*/pointerEvents to RN-web 0.19+ API (boxShadow / style.pointerEvents) to silence deprecation warnings. Carry-over from iteration_27.",
+    "OPTIONAL polish: the cal-challenge-master-card only renders when challenges.length > 0. If the user is offline or listChallenges fails the card silently disappears — consider showing it anyway in a disabled state, so the master toggle remains discoverable."
+  ],
+  "critical_code_review_comments": [
+    "use-challenge-pref.ts is clean and idiomatic (useEffect cancel flag, useCallback for setter). Storage util JSON-parses values, so the boolean default `false` reads back correctly.",
+    "ChallengeHomeCard load() correctly waits on `prefReady` before deciding; if master is off it skips the API entirely (good — keeps Home tab quiet and saves bandwidth).",
+    "Calendar.tsx now lists ALL published challenges (dropped enrolled filter) and the `challengeFor()` helper short-circuits when master is off — the two callsites (cell stripe + selected-day tile) share that single guard, so they cannot drift apart. Nice.",
+    "ChallengeHomeCard imports `useAuth` but the only thing it uses is `user` truthiness. Could be relaxed once anonymous-friendly endpoints exist; today it correctly gates on auth."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (13/13)", "frontend": "100% (7/7 pivot scenarios)"},
+  "seed_data_creation": "Created TEST_iter29_user (non-admin, non-enrolled) + session_token TEST_iter29_tok in Mongo (collections users + user_sessions). Patched liturgical_challenges/hallowtide start_date=2026-06-05 / end_date=2026-06-20 / status=published so today (2026-06-10) falls inside the window. Snapshot of original hallowtide dates saved to /tmp/iter29_hw_snapshot.json. Teardown restored hallowtide and deleted the test user, session, enrollments, and check-ins. Setup/teardown script: /app/test_reports/iter29_setup.py.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Storage util JSON-parses every value; when injecting tokens via localStorage in Playwright, use JSON.stringify('<token>'), e.g. `localStorage.setItem('sanctus_session_token', JSON.stringify('TEST_iter29_tok'))`. Otherwise auth-context's getItem<string>() throws SyntaxError and the app stays on the login screen. The master-pref key is `sanctus:challenges:showOnCalendar` and stores a raw boolean (true/false). Hallowtide currently has only 1 seeded challenge_day so the day-detail tile reads 'Day X of 1' (cosmetic, pre-existing). Backend EXPO_PUBLIC_BACKEND_URL = https://faithful-fitness-3.preview.emergentagent.com.",
+  "rca_of_issue": "No regression. Pivot was verified end-to-end: the master toggle now alone controls cross-surface visibility, and the non-enrolled contract holds (Home card + Calendar overlays both appear for a freshly-minted user with zero enrollments)."
+}

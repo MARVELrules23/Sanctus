@@ -167,10 +167,12 @@ export default function ChallengeDetailScreen() {
             <View style={styles.enrollRow}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.enrollLabel}>
-                  {enrolled ? "Walking with you" : "Walk this season"}
+                  {enrolled ? "Tracking your participation" : "Track my participation"}
                 </Text>
                 <Text style={styles.enrollSub}>
-                  {enrolled ? "Visible on Home + Calendar" : "Turn on to show on Home + Calendar"}
+                  {enrolled
+                    ? "Counts streaks and daily check-ins"
+                    : "Optional — calendar overlays use the master toggle on the Calendar tab"}
                 </Text>
               </View>
               {toggling ? (

@@ -90,12 +90,14 @@ export default function SubmitCharity() {
         phone: phone.trim() || null,
         logo_url: logoUrl,
       });
+      // Navigate first so the redirect works on all platforms (the Alert OK
+      // callback does not fire on react-native-web — we can't rely on it).
+      router.replace("/charities");
       Alert.alert(
         created.status === "approved" ? "Published" : "Submitted",
         created.status === "approved"
           ? "Live in the charity hub now."
           : "Thanks! Once an admin approves it, it will appear in the charity hub.",
-        [{ text: "OK", onPress: () => router.replace("/charities") }],
       );
     } catch (e: any) {
       Alert.alert("Couldn't submit", e?.message || "Try again.");

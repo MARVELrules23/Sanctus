@@ -1,0 +1,44 @@
+{
+  "summary": "Iteration_32 — Sanctus Library Phase 1 (BOOKS) verification on real backend + real Mongo + real seed (no mocks). BACKEND: 15/15 pytest tests PASS (test_library_phase1.py). FRONTEND: All 7 acceptance points (A-G) PASS on mobile viewport (390x844). 15 seed books rendered, tabs work, in-app reader opens, font/theme settings persist, next-chapter advances and progress persists in Mongo, external book shows 'Open full work' CTA, community header library icon routes to /library, admin CRUD UI opens with disabled slug on existing books.\n\nOne behavioural NIT (not a hard bug): the in-app reader's progress save fires from TWO places — (1) inline `void saveLibraryProgress(slug, idx, 0)` at the end of `loadChapter()` and (2) the useEffect [slug, chapter] cleanup which runs whenever `chapter` changes AND on unmount. When the user advances to the next chapter, the cleanup fires `save(OLD_CHAPTER_INDEX, scrollPctRef)` immediately after the new chapter's save is dispatched. Both fire concurrently as fire-and-forget POSTs. In my second run I observed the DB ending up at chapter_index=0 even though the title in UI had advanced to chapter 1 — i.e. POST(old=0) won the race vs POST(new=1). Using the in-app back button (which triggers a final unmount save) corrects this, but on a 'hard' page navigation away from the reader the order is non-deterministic. Recommend reworking the unmount effect to only save on TRUE unmount (use a ref for chapter and an empty-dep useEffect cleanup) so we never persist a stale index.\n\nAdmin CRUD flow fully exercised via pytest: create test-classic → append chapter → patch to draft (public list/get hides) → admin list still shows → delete chapter → delete book → 404 on subsequent GET. 409 returned on duplicate slug create. 401 for missing token, 403 for non-admin → /admin endpoints. ProgressUpdateModel correctly rejects scroll_pct>1 with 422.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "library/books/[slug]/read.tsx", "issue": "Race condition: useEffect cleanup at L129-135 (`[slug, chapter]`) fires `saveLibraryProgress(slug, OLD_chapter_index, scrollPctRef)` whenever chapter changes. Combined with the inline `saveLibraryProgress(slug, NEW_idx, 0)` at L103 inside loadChapter, the two fire-and-forget POSTs can land in non-deterministic order — observed DB ending at chapter_index=0 after user advanced to chapter 1. The in-app back button hides the issue because the final unmount save (with the new chapter) usually wins, but on a hard navigation the bug is reproducible. Fix: change the unmount-save effect to depend on `[]` (run once on real unmount) and read chapter via a ref. Reference: /app/frontend/app/library/books/[slug]/read.tsx:129", "testID": "reader-next", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "global (carry-over)", "issue": "Deprecated 'shadow*' style props on RN-web 0.19+ — still surfacing across reader/book cards. Pre-existing warning. Reference: /app/frontend/src/theme.ts (shadow tokens)."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_library_phase1.py",
+    "/app/test_reports/pytest/iteration_32_library.xml",
+    "/app/test_reports/iter32_setup.py"
+  ],
+  "action_items": [
+    "(P2) Refactor /app/frontend/app/library/books/[slug]/read.tsx progress-save to avoid the stale-index race: track current chapter via useRef and run the cleanup-save in a `useEffect(() => () => { … }, [])` that only fires on true unmount. The inline save inside loadChapter() is sufficient on chapter transitions.",
+    "(carry-over, OPTIONAL) Migrate `shadow*` style props to `boxShadow` to silence RN-web 0.19 deprecation warnings."
+  ],
+  "critical_code_review_comments": [
+    "library.py: clean separation of public vs admin routers, `_ensure_admin` checks `getattr(user, 'is_admin', False)` so non-existent attr is treated as False (good).",
+    "library.py L91-119 `_public_book` projection strips chapter bodies in list mode — confirmed via test_list_books_published_15. Bodies only leak in `_admin_book` which is correct.",
+    "library.py L135-164 `_seed_books_if_missing` is idempotent (find_one by slug per entry) — safe to re-run on every startup AND on every public list call.",
+    "library.py L156 hardcodes seeded books to `status: 'published'` regardless of any future seed field, which is intentional and matches the admin contract.",
+    "library.py L283 admin_list sort is `[(created_at, -1)]` — chronologically newest first, good for admin UX.",
+    "library.py L355 admin_upsert_chapter treats `index >= len(chapters)` as append, not as 400 — flexible but worth a comment for the main agent (no bug).",
+    "read.tsx font/theme persistence via AsyncStorage uses well-namespaced keys `sanctus.library.reader.font_size` and `…mode` (no collision risk).",
+    "read.tsx unmount-save effect dep on `[slug, chapter]` is the cause of the race documented above.",
+    "admin/library.tsx editor modal correctly grays out the slug field for existing books — confirmed visually."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (15/15)", "frontend": "100% (7/7 acceptance points); one non-blocking race condition documented"},
+  "seed_data_creation": "Ran /app/test_reports/iter32_setup.py setup which minted admin session token `TEST_iter32_admin_tok` (philipwils13@gmail.com) and created a non-admin user `TEST_iter32_user` + token for 403 testing. Library books (15 docs) were seeded by the backend at startup. Teardown ran clean: TEST sessions deleted, TEST user removed, admin's reading-progress row for practice-presence-of-god removed, leftover test-classic book (if any) removed.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Token storage MUST be JSON-stringified: localStorage.setItem('sanctus_session_token', JSON.stringify('<token>')). For Phase 1 testing the seed runs automatically on backend startup; no extra seed step needed once iter32_setup.py mints tokens. The Sanctus library router base path is `/api/library/...`. The reader screen has a known stale-index save race documented in frontend_issues.ui_bugs; tests that verify the resume CTA should either (a) tap reader-back inside the app rather than page.goto, OR (b) hit `POST /api/library/books/{slug}/progress` directly via fetch before reloading the detail page. The admin library editor modal renders the Slug field as disabled for existing books (no testID on the field itself, but visually it's the greyed-out first input).",
+  "rca_of_issue": "Frontend reader race: useEffect cleanup runs on every change of `chapter`, not just on unmount, so each chapter transition fires a save with the OLD chapter index. When the user navigates away immediately afterward, the inline new-chapter save and the cleanup old-chapter save both race. Mitigation: read chapter from a ref and switch cleanup to a `useEffect(() => () => save(refValue), [])` form; the inline save inside loadChapter already handles forward transitions."
+}

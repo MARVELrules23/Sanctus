@@ -294,6 +294,15 @@ export default function ProfileScreen() {
                 <Text style={styles.linkLabel}>Challenges · Review</Text>
                 <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
               </Pressable>
+              <Pressable
+                testID="profile-admin-library-link"
+                onPress={() => router.push("/admin/library")}
+                style={({ pressed }) => [styles.linkCard, pressed && styles.pressed]}
+              >
+                <Ionicons name="library-outline" size={18} color={colors.gold} />
+                <Text style={styles.linkLabel}>Library · Manage</Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+              </Pressable>
             </View>
           </>
         ) : null}

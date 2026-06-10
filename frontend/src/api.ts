@@ -1263,3 +1263,130 @@ export async function createCommunityPost(payload: {
     },
   });
 }
+
+// ============================================================
+// Sanctus Library (Phase 1: Books)
+// ============================================================
+
+export type LibraryChapter = {
+  index: number;
+  title: string;
+  word_count: number;
+  body_md?: string;
+};
+
+export type LibraryBook = {
+  book_id: string;
+  slug: string;
+  title: string;
+  author: string;
+  year?: number | null;
+  blurb?: string | null;
+  tradition: string;
+  cover_color?: string | null;
+  cover_icon?: string | null;
+  type: "embedded" | "external";
+  source_url?: string | null;
+  status: string;
+  chapter_count: number;
+  chapters: LibraryChapter[];
+  progress?: {
+    chapter_index: number;
+    scroll_pct: number;
+    updated_at: string;
+  } | null;
+};
+
+export type LibraryChapterDetail = {
+  book_id: string;
+  slug: string;
+  chapter_index: number;
+  title: string;
+  body_md: string;
+  is_last: boolean;
+  word_count: number;
+};
+
+export async function listLibraryBooks(): Promise<{ items: LibraryBook[]; total: number }> {
+  return await api(`/library/books`);
+}
+
+export async function getLibraryBook(slug: string): Promise<LibraryBook> {
+  return await api(`/library/books/${encodeURIComponent(slug)}`);
+}
+
+export async function getLibraryChapter(
+  slug: string,
+  idx: number,
+): Promise<LibraryChapterDetail> {
+  return await api(`/library/books/${encodeURIComponent(slug)}/chapters/${idx}`);
+}
+
+export async function saveLibraryProgress(
+  slug: string,
+  chapter_index: number,
+  scroll_pct: number = 0,
+): Promise<{ ok: boolean }> {
+  return await api(`/library/books/${encodeURIComponent(slug)}/progress`, {
+    method: "POST",
+    body: { chapter_index, scroll_pct },
+  });
+}
+
+// ---- Admin ----
+export async function adminListLibraryBooks(): Promise<{ items: LibraryBook[]; total: number }> {
+  return await api(`/library/admin/books`);
+}
+
+export type LibraryBookCreate = {
+  slug: string;
+  title: string;
+  author: string;
+  year?: number | null;
+  blurb?: string | null;
+  tradition?: string;
+  cover_color?: string | null;
+  cover_icon?: string | null;
+  type: "embedded" | "external";
+  source_url?: string | null;
+  chapters?: { title: string; body_md: string }[];
+  status?: "draft" | "published";
+};
+
+export async function adminCreateLibraryBook(payload: LibraryBookCreate): Promise<LibraryBook> {
+  return await api(`/library/admin/books`, { method: "POST", body: payload });
+}
+
+export async function adminPatchLibraryBook(
+  slug: string,
+  patch: Partial<LibraryBookCreate>,
+): Promise<LibraryBook> {
+  return await api(`/library/admin/books/${encodeURIComponent(slug)}`, {
+    method: "PATCH",
+    body: patch,
+  });
+}
+
+export async function adminDeleteLibraryBook(slug: string): Promise<{ ok: boolean }> {
+  return await api(`/library/admin/books/${encodeURIComponent(slug)}`, { method: "DELETE" });
+}
+
+export async function adminUpsertLibraryChapter(
+  slug: string,
+  payload: { index?: number | null; title: string; body_md: string },
+): Promise<{ ok: boolean; chapter_index: number; chapter_count: number }> {
+  return await api(`/library/admin/books/${encodeURIComponent(slug)}/chapters`, {
+    method: "POST",
+    body: payload,
+  });
+}
+
+export async function adminDeleteLibraryChapter(
+  slug: string,
+  idx: number,
+): Promise<{ ok: boolean; chapter_count: number }> {
+  return await api(`/library/admin/books/${encodeURIComponent(slug)}/chapters/${idx}`, {
+    method: "DELETE",
+  });
+}
+

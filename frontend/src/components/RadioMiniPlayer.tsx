@@ -41,8 +41,7 @@ export default function RadioMiniPlayer() {
 
   return (
     <View
-      pointerEvents="box-none"
-      style={[styles.wrap, { bottom: bottomOffset }]}
+      style={[styles.wrap, { bottom: bottomOffset, pointerEvents: "box-none" }]}
       testID="radio-mini-player"
     >
       <Pressable

@@ -124,7 +124,10 @@ export default function CalendarScreen() {
     if (!start) return null;
     const sD = new Date(`${start}T00:00:00`);
     const dD = new Date(`${sel.date}T00:00:00`);
-    return Math.floor((dD.getTime() - sD.getTime()) / 86_400_000) + 1;
+    const raw = Math.floor((dD.getTime() - sD.getTime()) / 86_400_000) + 1;
+    const total = selChallenge.total_days || 0;
+    if (!total) return Math.max(1, raw);
+    return Math.max(1, Math.min(raw, total));
   }, [sel, selChallenge]);
 
   const prev = () => {

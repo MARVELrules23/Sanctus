@@ -643,7 +643,7 @@ SEED_FILMS: List[Dict[str, Any]] = [
         "slug": "ccc-bernadette-anim",
         "title": "Bernadette — The Princess of Lourdes (CCC)",
         "blurb": "CCC of America's beloved animated retelling of St. Bernadette's encounter with Our Lady.",
-        "youtube_id": "MdK2c1n6lzs",
+        "youtube_id": "zdYxJIsNSqs",
         "duration_label": "45m",
         "category": "animated",
         "accent_color": "#0EA5E9",

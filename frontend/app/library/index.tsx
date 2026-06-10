@@ -250,9 +250,28 @@ export default function LibraryIndexScreen() {
   };
 
   /* ------------------------- FILM CARD --------------------------------- */
+  const FilmThumb: React.FC<{ youtubeId: string }> = ({ youtubeId }) => {
+    const [src, setSrc] = useState(`https://i.ytimg.com/vi/${youtubeId}/hqdefault.jpg`);
+    return (
+      <Image
+        source={{ uri: src }}
+        style={styles.filmThumb}
+        resizeMode="cover"
+        onError={() => {
+          // YouTube hqdefault is missing for some videos — fall back to
+          // the lower-res mqdefault, then to the catch-all 0.jpg.
+          if (src.includes("hqdefault")) {
+            setSrc(`https://i.ytimg.com/vi/${youtubeId}/mqdefault.jpg`);
+          } else if (src.includes("mqdefault")) {
+            setSrc(`https://i.ytimg.com/vi/${youtubeId}/0.jpg`);
+          }
+        }}
+      />
+    );
+  };
+
   const renderFilmCard = (f: LibraryFilm) => {
     const accent = f.accent_color || colors.gold;
-    const thumb = `https://i.ytimg.com/vi/${f.youtube_id}/hqdefault.jpg`;
     return (
       <Pressable
         key={f.film_id}
@@ -261,7 +280,7 @@ export default function LibraryIndexScreen() {
         style={({ pressed }) => [styles.filmCard, pressed && { opacity: 0.92 }]}
       >
         <View style={styles.filmThumbWrap}>
-          <Image source={{ uri: thumb }} style={styles.filmThumb} resizeMode="cover" />
+          <FilmThumb youtubeId={f.youtube_id} />
           <View style={[styles.filmCategoryPill, { backgroundColor: accent }]}>
             <Text style={styles.filmCategoryText}>{f.category.toUpperCase()}</Text>
           </View>

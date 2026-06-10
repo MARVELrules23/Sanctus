@@ -38,6 +38,7 @@ Reverent & traditional aesthetic: cream/parchment background, deep stained-gl- C
 - **Catholic journal** — write, save, and delete entries with movement-of-the-heart mood tags
 - Google sign-in via Emergent-managed Auth
 - Cream/navy/gold aesthetic, Cormorant Garamond + Lora serifs.
+- **Sanctus Library** — curated Catholic books (in-app reader for public-domain classics, plus external links), live Catholic **radio stations** with a persistent global mini-player that follows the user across the entire app, and Catholic **films** delivered as in-app YouTube embeds (Saints / Doctrine / For Kids / Documentary). Admin CRUD for all three media types.
 
 
 

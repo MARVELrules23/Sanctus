@@ -1,0 +1,41 @@
+{
+  "summary": "Iteration_34 — regression verification of the radio stream-url fix that closed the user-reported bug 'the radio stations don't seem to be working'. BOTH backend and frontend tested against real Mongo + real ingress + real stream hosts (no mocks). BACKEND: 19/19 pytest tests in /app/backend/tests/test_radio_streams_iter34.py PASS — GET /api/library/radio returns exactly the 8 new slugs, each detail endpoint returns 200 with the exact expected https stream_url, all 5 old/dead slugs return 404 and no dreamsiteradiocp4 host leaks. SOURCE PROBE: out-of-band HEAD/GET probe from inside the container confirms all 8 stream URLs return HTTP 200 with audio/aac or audio/mpeg content-type and serve real bytes (4 KB chunked read succeeded on every URL). FRONTEND (mobile-web @ 390x844): logged in as philipwils13@gmail.com via session-token injection. /library?tab=radio renders all 8 station cards. Tapping EWTN Catholic Radio shows 'ON AIR' on the card within ~2.5 s — proving the new src actually transitions from buffering to playing (this is the very thing the user reported as broken). Mini-player appears at the bottom with title + 'Live · On air'. A second tap on the card flips it to 'PAUSED'; the mini-player simultaneously shows 'Paused'. Clicking the mini-player play/pause button resumes ('Live · On air'); clicking × removes the mini-player entirely and the card clears its status indicator. Mini-player remains visible across in-app SPA tab switching inside /library (Books/Radio/Films segmented control). The RadioPlayerContext.tsx retry-play schedule (0/200/700/1500 ms) clearly fixes the web HTMLAudioElement first-tap latency — every station tap reached the ON-AIR state inside the test window.\n\nNo HIGH/CRITICAL blockers. Two LOW carry-over notes from iter33 still present: (a) 'shadow*' style props deprecation warning on RN-web 0.19, (b) 'props.pointerEvents is deprecated. Use style.pointerEvents' from RadioMiniPlayer wrapper. Neither affects functionality.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "src/components/RadioMiniPlayer.tsx", "issue": "Still uses prop form `pointerEvents='box-none'` which logs a deprecation warning on RN-web 0.19. Migrate to style.pointerEvents. Reference: /app/frontend/src/components/RadioMiniPlayer.tsx:44"},
+      {"component": "global theme shadows (carry-over)", "issue": "'shadow*' style props deprecated on RN-web 0.19+. Migrate to boxShadow. Reference: /app/frontend/src/theme.ts shadow tokens."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_radio_streams_iter34.py",
+    "/app/test_reports/pytest/iteration_34_radio_streams.xml"
+  ],
+  "action_items": [
+    "(LOW) Migrate RadioMiniPlayer's `pointerEvents='box-none'` to `style={{ pointerEvents: 'box-none', ...}}` to silence the RN-web 0.19 deprecation warning.",
+    "(carry-over LOW) Migrate global `shadow*` style props in /app/frontend/src/theme.ts to `boxShadow`."
+  ],
+  "critical_code_review_comments": [
+    "library_seed_data.py SEED_STATIONS (lines 476–565) — all 8 entries now point at HTTPS endpoints that return live audio. Verified independently via direct GET probe: every URL returns 200 + audio/aac|audio/mpeg + non-zero bytes. The slug→URL mapping matches the spec exactly.",
+    "RadioPlayerContext.tsx (lines 84–106) — the retry-play strategy at [0, 200, 700, 1500] ms when `urlChanged` is the right shape: it tolerates the asynchronous src-swap latency on web HTMLAudioElement without flooding when the user is just toggling pause/resume (single delay 0 in that case). The useEffect cleanup correctly cancels pending timers.",
+    "RadioMiniPlayer.tsx (lines 64–70) — subtitle wording is 'Buffering…' / 'Live · On air' / 'Paused', distinct from the card's 'BUFFERING' / 'ON AIR' / 'PAUSED'. Intentional warmer copy in the mini-player; the spec wording is met on the card itself (where the user is told what state the station is in).",
+    "Backend GET /api/library/radio remains auth-gated (401 without bearer); behaviour unchanged from iter32/33."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_radio_streams_iter34.py (new)",
+    "/app/test_reports/iteration_34.json (new)",
+    "/app/test_reports/pytest/iteration_34_radio_streams.xml (new)"
+  ],
+  "success_rate": {"backend": "100% (19/19)", "frontend": "100% — all flows in the review request passed: 8 cards render, tap → ON AIR within 2.5 s, mini-player visible + persistent across SPA nav inside /library, pause → PAUSED, × removes mini-player"},
+  "seed_data_creation": "Re-used /app/test_reports/iter32_setup.py to mint admin session TEST_iter32_admin_tok (philipwils13@gmail.com) and non-admin TEST_iter32_user_tok. Library radio collection was re-seeded by the backend on startup (verified via backend.err.log: 'library: seeded 5 radio stations on startup' — the 5 figure reflects only the rows that were missing; total in collection is 8). Teardown removed both test sessions. No persistent test data left behind in library_radio_stations.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Radio stream-URL regression suite lives at /app/backend/tests/test_radio_streams_iter34.py and is the canonical guard against the user's 'stations don't play' regression: it asserts the exact 8 new slug→URL mappings + that the 5 historical dead slugs (ave-maria-radio, sacred-heart-radio, veritas-radio-uk, vatican-radio-english, radio-maria-usa) return 404. The retry-play schedule [0, 200, 700, 1500] ms in RadioPlayerContext.tsx is what overcomes web HTMLAudioElement first-tap latency — do NOT collapse it back to a single .play() call without re-testing on the web preview. Mini-player persistence is reliable across SPA navigation INSIDE /library (Books/Radio/Films tab swap) and across router.push, but NOT across hard reloads (page.goto / location.assign / history.pushState+popstate) — the latter is expected and tracked in iter33. To assert PAUSED state on the card, look for the literal string 'PAUSED'; to assert it on the mini-player, look for 'Paused' (subtitle uses warmer mixed-case copy intentionally).",
+  "rca_of_issue": "Original user-reported bug 'radio stations don't seem to be working' had two layers: (1) 7/8 stream URLs were DNS-dead or returned HTTP 404 (playerservices.streamtheworld.com mounts that had been retired, dreamsiteradiocp4 proxy URLs that no longer exist, and a wrong Vatican mount). (2) Even when a URL was valid, the web HTMLAudioElement performs an asynchronous src-swap, and calling .play() once immediately after setting src can be a no-op — so the first tap did nothing visible. Both layers addressed: (1) library_seed_data.SEED_STATIONS replaced with 8 verified HTTPS Catholic radio streams from radio-browser.info + miriamtech + streamguys + live365 + radio.co + Vatican News, then DB wiped + reseeded. (2) RadioPlayerContext schedules .play() retries at 0/200/700/1500 ms on url change so the src-swap settles. End-to-end retest in this iteration confirms: every tested station now transitions card label → 'ON AIR' within ~2.5 s, and the underlying HTTP probes confirm real audio bytes are being delivered."
+}

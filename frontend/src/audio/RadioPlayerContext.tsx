@@ -75,29 +75,34 @@ export function RadioPlayerProvider({ children }: { children: React.ReactNode })
 
   // Sync our `shouldPlay` request into the underlying player whenever either
   // the player instance OR the requested intent changes.
+  //
+  // On web, swapping the HTMLAudioElement's `src` is asynchronous — the
+  // player may not be ready to accept `.play()` immediately after the source
+  // change.  We retry at staggered intervals so the first user tap doesn't
+  // appear to do nothing.
   const prevUrlRef = useRef<string | null>(null);
   useEffect(() => {
     if (!player) return;
     const url = current?.stream_url || null;
     const urlChanged = prevUrlRef.current !== url;
     prevUrlRef.current = url;
-    try {
-      if (shouldPlay) {
-        // When the URL changed, give the player a tick to swap the source
-        // before kicking it.
-        if (urlChanged) {
-          const t = setTimeout(() => {
-            try { player.play(); } catch (_e) { /* no-op */ }
-          }, 60);
-          return () => clearTimeout(t);
-        }
-        player.play();
-      } else {
-        player.pause();
-      }
-    } catch (e) {
-      console.warn("[RadioPlayer] sync failed", e);
+
+    if (!shouldPlay) {
+      try { player.pause(); } catch (_e) { /* no-op */ }
+      return;
     }
+
+    // Try to play immediately, then retry a few times (web src-swap latency).
+    const delays = urlChanged ? [0, 200, 700, 1500] : [0];
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    delays.forEach((d) => {
+      timers.push(
+        setTimeout(() => {
+          try { player.play(); } catch (_e) { /* no-op */ }
+        }, d),
+      );
+    });
+    return () => timers.forEach(clearTimeout);
   }, [player, shouldPlay, current?.stream_url]);
 
   // Surface buffering / error from the audio status.

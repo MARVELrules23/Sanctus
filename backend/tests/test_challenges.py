@@ -172,12 +172,25 @@ class TestAdmin:
 
     def test_admin_patch_challenge(self, admin_session, mongo_db):
         slug = "advent"
+        # Snapshot the original blurb so we can always restore it, even on
+        # assertion failure. Without this, a failed test permanently leaves
+        # "TEST_QA blurb …" in the live data (regression seen 2026-06).
+        original = mongo_db.liturgical_challenges.find_one({"slug": slug}) or {}
+        original_blurb = original.get("blurb")
         new_blurb = "TEST_QA blurb " + datetime.now(timezone.utc).isoformat()
-        r = requests.patch(f"{BASE_URL}/api/challenges/admin/{slug}",
-                           headers=_hdr(admin_session["token"]),
-                           json={"blurb": new_blurb}, timeout=15)
-        assert r.status_code == 200
-        assert r.json()["blurb"] == new_blurb
+        try:
+            r = requests.patch(f"{BASE_URL}/api/challenges/admin/{slug}",
+                               headers=_hdr(admin_session["token"]),
+                               json={"blurb": new_blurb}, timeout=15)
+            assert r.status_code == 200
+            assert r.json()["blurb"] == new_blurb
+        finally:
+            # Always restore — even if the assertions above failed.
+            requests.patch(
+                f"{BASE_URL}/api/challenges/admin/{slug}",
+                headers=_hdr(admin_session["token"]),
+                json={"blurb": original_blurb or ""}, timeout=15,
+            )
 
     def test_admin_patch_day(self, admin_session, mongo_db):
         # Find a day for hallowtide
@@ -187,12 +200,25 @@ class TestAdmin:
         day = mongo_db.challenge_days.find_one({"challenge_id": doc["challenge_id"]})
         if not day:
             pytest.skip("no day docs; generate-days has not yet run")
+        # Snapshot the original title so we can ALWAYS restore it, even on
+        # assertion failure. Previously this test left a permanent
+        # "TEST_QA Day title" string in the live data when assertions failed
+        # mid-flight (regression seen on Hallowtide Day 1, 2026-06).
+        original_title = day.get("title") or f"Day {day.get('day_index')}"
         new_title = "TEST_QA Day title"
-        r = requests.patch(f"{BASE_URL}/api/challenges/admin/days/{day['day_id']}",
-                           headers=_hdr(admin_session["token"]),
-                           json={"title": new_title}, timeout=15)
-        assert r.status_code == 200, r.text
-        assert r.json()["title"] == new_title
+        try:
+            r = requests.patch(f"{BASE_URL}/api/challenges/admin/days/{day['day_id']}",
+                               headers=_hdr(admin_session["token"]),
+                               json={"title": new_title}, timeout=15)
+            assert r.status_code == 200, r.text
+            assert r.json()["title"] == new_title
+        finally:
+            # Always restore — even if the assertions above failed.
+            requests.patch(
+                f"{BASE_URL}/api/challenges/admin/days/{day['day_id']}",
+                headers=_hdr(admin_session["token"]),
+                json={"title": original_title}, timeout=15,
+            )
 
     def test_publish_unpublish_cycle(self, admin_session):
         slug = "lent"

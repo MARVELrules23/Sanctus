@@ -119,6 +119,24 @@ export default function BibleIndexScreen() {
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scroll}>
+          {/* Mass Missals Hub — link to side-by-side Latin/English Order of Mass */}
+          <Pressable
+            testID="bible-missals-link"
+            onPress={() => router.push("/missals" as any)}
+            style={({ pressed }) => [styles.missalsLink, pressed && styles.pressed]}
+          >
+            <View style={styles.missalsIconWrap}>
+              <Ionicons name="book" size={22} color={colors.gold} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.missalsTitle}>Mass Missals</Text>
+              <Text style={styles.missalsSub}>
+                Novus Ordo · Traditional Latin · Ordinariate · Latin & English side-by-side
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.gold} />
+          </Pressable>
+
           {SECTION_ORDER.map((sec) => {
             const list = grouped[sec];
             if (!list.length) return null;
@@ -281,4 +299,39 @@ const styles = StyleSheet.create({
   },
   chapText: { fontFamily: fonts.uiSemi, color: colors.textPrimary, fontSize: 14 },
   pressed: { opacity: 0.7 },
+
+  // Mass Missals callout (links to /missals)
+  missalsLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+    backgroundColor: colors.primary,
+    borderRadius: radius.lg,
+    ...shadow.card,
+  },
+  missalsIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(212,179,109,0.15)",
+    borderWidth: 1,
+    borderColor: colors.gold,
+  },
+  missalsTitle: {
+    fontFamily: fonts.headingSemi,
+    fontSize: 15,
+    color: colors.gold,
+    letterSpacing: 0.4,
+  },
+  missalsSub: {
+    fontFamily: fonts.bodyRegular,
+    fontSize: 12,
+    color: "#F4EAD0",
+    marginTop: 2,
+    lineHeight: 17,
+  },
 });

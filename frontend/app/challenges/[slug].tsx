@@ -100,17 +100,21 @@ export default function ChallengeDetailScreen() {
   useEffect(() => { void load(); }, [load]);
   useEffect(() => { void loadCompanions(); }, [loadCompanions]);
 
-  // Auto-expand today's day on first load.
+  const { user } = useAuth();
+  const isLocked = !user?.is_premium;
+
+  // Auto-expand today's day on first load — but skip locked days.
   useEffect(() => {
     if (!data || expanded !== null) return;
     const td = (data.days || []).find((d) => iso(d.date) === today);
-    if (td) setExpanded(td.day_id);
-  }, [data, today, expanded]);
+    if (td) {
+      const tdLocked = !user?.is_premium && td.day_index !== 1;
+      if (!tdLocked) setExpanded(td.day_id);
+    }
+  }, [data, today, expanded, user?.is_premium]);
 
   const enrolled = !!data?.enrolled;
   const accent = data?.color || colors.gold;
-  const { user } = useAuth();
-  const isLocked = !user?.is_premium;
 
   const onToggleEnroll = async (next: boolean) => {
     if (!slug || toggling) return;
@@ -421,22 +425,34 @@ export default function ChallengeDetailScreen() {
               const isPast = dStr < today;
               const isOpen = expanded === d.day_id;
               const isDone = doneDays.has(d.day_id);
+              // Premium gate: Day 1 is always unlocked (preview); other days
+              // require premium. Admins flow through this via is_premium=true
+              // on the user record.
+              const dayLocked = isLocked && d.day_index !== 1;
               return (
                 <View
                   key={d.day_id}
                   testID={`challenge-day-${d.day_index}`}
                   style={[
                     styles.dayCard,
-                    isToday && { borderColor: accent, borderWidth: 1.5 },
+                    isToday && !dayLocked && { borderColor: accent, borderWidth: 1.5 },
+                    dayLocked && { opacity: 0.92 },
                   ]}
                 >
                   <Pressable
-                    onPress={() => setExpanded(isOpen ? null : d.day_id)}
+                    testID={`challenge-day-toggle-${d.day_index}`}
+                    onPress={() => {
+                      if (dayLocked) {
+                        router.push("/premium" as any);
+                        return;
+                      }
+                      setExpanded(isOpen ? null : d.day_id);
+                    }}
                     style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}
                   >
                     <View style={styles.dayHead}>
-                      <View style={[styles.dayBadge, { borderColor: accent }]}>
-                        <Text style={[styles.dayBadgeText, { color: accent }]}>
+                      <View style={[styles.dayBadge, { borderColor: dayLocked ? colors.borderSoft : accent }]}>
+                        <Text style={[styles.dayBadgeText, { color: dayLocked ? colors.textMuted : accent }]}>
                           {d.day_index}
                         </Text>
                       </View>
@@ -447,25 +463,37 @@ export default function ChallengeDetailScreen() {
                         <Text style={styles.dayMeta}>
                           {dStr ? formatLongFromISO(dStr) : "—"}
                           {d.theme ? ` · ${d.theme}` : ""}
+                          {dayLocked ? "  ·  Premium" : ""}
                         </Text>
                       </View>
                       {isDone ? (
                         <Ionicons name="checkmark-circle" size={20} color={accent} />
-                      ) : isToday ? (
+                      ) : isToday && !dayLocked ? (
                         <View style={[styles.todayPill, { backgroundColor: accent }]}>
                           <Text style={styles.todayPillText}>TODAY</Text>
                         </View>
-                      ) : isPast ? (
+                      ) : isPast && !dayLocked ? (
                         <Ionicons name="ellipsis-horizontal" size={16} color={colors.textMuted} />
-                      ) : (
+                      ) : !dayLocked ? (
                         <Ionicons name="lock-closed-outline" size={16} color={colors.textMuted} />
+                      ) : null}
+                      {/* Premium-lock takes priority over chevron. Day 1 always shows chevron. */}
+                      {dayLocked ? (
+                        <Ionicons
+                          testID={`challenge-day-lock-${d.day_index}`}
+                          name="lock-closed"
+                          size={16}
+                          color={colors.gold}
+                          style={{ marginLeft: 4 }}
+                        />
+                      ) : (
+                        <Ionicons
+                          name={isOpen ? "chevron-up" : "chevron-down"}
+                          size={16}
+                          color={colors.textMuted}
+                          style={{ marginLeft: 4 }}
+                        />
                       )}
-                      <Ionicons
-                        name={isOpen ? "chevron-up" : "chevron-down"}
-                        size={16}
-                        color={colors.textMuted}
-                        style={{ marginLeft: 4 }}
-                      />
                     </View>
                     {d.patron_saint ? (
                       <Text style={styles.dayPatron}>
@@ -474,10 +502,25 @@ export default function ChallengeDetailScreen() {
                     ) : null}
                   </Pressable>
 
-                  {/* Always render the check-in row (testID stays in the DOM
-                      so flows can locate it even when the day card is
-                      collapsed). The button is disabled for future days. */}
-                  <View style={styles.actionRow}>
+                  {/* Locked days hide the check-in & share actions; show a
+                      compact upsell row instead. */}
+                  {dayLocked ? (
+                    <Pressable
+                      testID={`challenge-day-paywall-${d.day_index}`}
+                      onPress={() => router.push("/premium" as any)}
+                      style={({ pressed }) => [
+                        styles.lockedRow,
+                        pressed && { opacity: 0.85 },
+                      ]}
+                    >
+                      <Ionicons name="key-outline" size={14} color={colors.gold} />
+                      <Text style={styles.lockedRowText}>
+                        Unlock with Sanctus Premium
+                      </Text>
+                      <Ionicons name="chevron-forward" size={14} color={colors.gold} />
+                    </Pressable>
+                  ) : (
+                    <View style={styles.actionRow}>
                     {!isDone ? (
                       <Pressable
                         testID={`challenge-day-checkin-${d.day_index}`}
@@ -539,8 +582,9 @@ export default function ChallengeDetailScreen() {
                       </Pressable>
                     ) : null}
                   </View>
+                  )}
 
-                  {isOpen ? (
+                  {isOpen && !dayLocked ? (
                     <View style={styles.dayBody}>
                       {d.patron_blurb ? (
                         <Text style={styles.patronBlurb}>{d.patron_blurb}</Text>
@@ -887,6 +931,28 @@ const styles = StyleSheet.create({
     borderRadius: radius.round,
   },
   checkBtnSmallText: { fontFamily: fonts.uiSemi, fontSize: 12, color: colors.gold, letterSpacing: 0.4 },
+
+  // ---- Locked-day upsell row (replaces actionRow for premium-locked days) -
+  lockedRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: spacing.sm,
+    paddingVertical: 9,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: "rgba(212,179,109,0.10)",
+    borderWidth: 1,
+    borderColor: colors.gold,
+    borderStyle: "dashed",
+  },
+  lockedRowText: {
+    fontFamily: fonts.uiSemi,
+    fontSize: 12,
+    color: colors.gold,
+    letterSpacing: 0.5,
+  },
 
   // ---- Phase 2 (companions + share to feed) -------------------------------
   actionRow: {

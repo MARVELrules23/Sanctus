@@ -1575,3 +1575,59 @@ export async function openPremiumPortal(return_origin: string): Promise<{ url: s
     body: { return_origin },
   });
 }
+
+
+// ---------------------------------------------------------------------------
+// Missals (Mass Hub)
+// ---------------------------------------------------------------------------
+
+export type MissalSummary = {
+  slug: string;
+  name: string;
+  subtitle: string;
+  tradition: string;
+  language_note: string;
+  accent_color: string;
+  icon: string;
+  section_count: number;
+};
+
+export type MissalSectionMeta = {
+  index: number;
+  title: string;
+  latin_title?: string | null;
+  has_latin: boolean;
+};
+
+export type MissalDetail = MissalSummary & {
+  intro: string;
+  sections: MissalSectionMeta[];
+};
+
+export type MissalSection = {
+  slug: string;
+  missal_name: string;
+  accent_color: string;
+  index: number;
+  total: number;
+  title: string;
+  latin_title?: string | null;
+  english: string;
+  latin?: string | null;
+  rubric?: string | null;
+  note?: string | null;
+  prev: number | null;
+  next: number | null;
+};
+
+export async function listMissals(): Promise<{ items: MissalSummary[] }> {
+  return await api(`/missals`);
+}
+
+export async function getMissal(slug: string): Promise<MissalDetail> {
+  return await api(`/missals/${encodeURIComponent(slug)}`);
+}
+
+export async function getMissalSection(slug: string, idx: number): Promise<MissalSection> {
+  return await api(`/missals/${encodeURIComponent(slug)}/sections/${idx}`);
+}

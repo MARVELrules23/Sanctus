@@ -314,6 +314,31 @@ main_agent_iteration_27_fix_2026-06-10: "Fixed three HIGH-priority bugs from tes
 "
 
 
+main_agent_iteration_37_2026-06-11: "Added 5 Catholic encyclicals to the Library as fully-embedded readable books, each opening with a hand-written 'Why This Matters' summary chapter.
+
+NEW BOOKS (all `type: embedded`, English, Vatican.va source):
+- magnifica-humanitas   — Pope Leo XIV (2026)             8 chapters / 265,115 chars
+- veritatis-splendor    — Pope St. John Paul II (1993)    10 chapters / 264,975 chars
+- centesimus-annus      — Pope St. John Paul II (1991)     8 chapters / 155,305 chars
+- humanae-vitae         — Pope St. Paul VI (1968)          5 chapters /  47,578 chars
+- evangelii-nuntiandi   — Pope St. Paul VI (1975)         11 chapters / 126,795 chars
+
+Every first chapter is titled 'Why This Matters' with subtitle 'A reader's introduction' (~1300 chars of pastoral context explaining importance to the Catholic faith). Subsequent chapters are split by detected Vatican-document section headers (CHAPTER ONE / Part I / Conclusion etc.) and contain the verbatim Magisterial text.
+
+IMPLEMENTATION
+- /app/backend/scripts/load_encyclicals.py (NEW): downloads each vatican.va English HTML, parses .documento with BeautifulSoup, detects 'CHAPTER X', Roman 'I./II./...', and singleton 'INTRODUCTION/CONCLUSION' headers; supports a MANUAL_OUTLINES override for documents (like Evangelii Nuntiandi) whose HTML is flat. Includes TOC-dedup pass so the top-of-document Table of Contents doesn't create ghost chapters. Upserts by slug while preserving any existing book_id.
+- /app/backend/library_seed_data.py: appended 5 stub entries (type='embedded', source_url set, chapters=[]) so a fresh DB knows the books exist; the loader script fills in chapters.
+
+NEEDS TESTING (backend; auth required):
+- GET /api/library/books → response includes all 5 new slugs above.
+- GET /api/library/books/magnifica-humanitas → type='embedded', author='Pope Leo XIV', chapter count==8, first chapter.title=='Why This Matters'.
+- GET /api/library/books/veritatis-splendor/chapters/0 → returns body_md > 1000 chars containing the phrase 'Veritatis Splendor', subtitle field present.
+- GET /api/library/books/humanae-vitae/chapters/1 → returns the Introduction body with non-empty text.
+- GET /api/library/books/evangelii-nuntiandi/chapters/0 → returns the 'Why This Matters' summary.
+- Regression: existing /api/library/books, /api/library/films, /api/library/radio still respond with their full lists.
+"
+
+
 main_agent_iteration_36_2026-06-10: "Two focused changes resuming the last working item:
 
 1) BERNADETTE FILM FIX — user reported 'ccc-bernadette-anim' was still only a 3-minute trailer. Updated `library_seed_data.py` (entry now: title='Bernadette — Princess of Lourdes', youtube_id='ACBWU4ug-rc', category='saints', duration_label='Feature') AND directly patched the existing MongoDB document (db.library_films.update_one slug=ccc-bernadette-anim) so the change is live without re-seed. Before: zdYxJIsNSqs / 'St. Bernadette — Princess of Lourdes (CCC)' / animated. After: ACBWU4ug-rc / 'Bernadette — Princess of Lourdes' / saints. New video is the full feature 'The Best Movie Based on True Events! The Legend of the Virgin Mary Changed His Life!'.

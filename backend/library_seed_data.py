@@ -459,6 +459,78 @@ SEED_BOOKS: List[Dict[str, Any]] = [
         "source_url": "https://gutenberg.net.au/ebooks01/0100311h.html",
         "chapters": [],
     },
+
+    # ============================================================
+    # PAPAL ENCYCLICALS — populated as embedded full-text by the
+    # script `scripts/load_encyclicals.py` (scrapes vatican.va).
+    # Seed values below are placeholders so a fresh DB knows the
+    # books exist; chapters are filled in by the loader.
+    # ============================================================
+    {
+        "slug": "magnifica-humanitas",
+        "title": "Magnifica Humanitas",
+        "author": "Pope Leo XIV",
+        "year": 2026,
+        "blurb": "Pope Leo XIV's first encyclical (2026) on safeguarding the human person in the age of artificial intelligence.",
+        "tradition": "papal",
+        "cover_color": "#0F172A",
+        "cover_icon": "shield-checkmark-outline",
+        "type": "embedded",
+        "source_url": "https://www.vatican.va/content/leo-xiv/en/encyclicals/documents/20260515-magnifica-humanitas.html",
+        "chapters": [],
+    },
+    {
+        "slug": "veritatis-splendor",
+        "title": "Veritatis Splendor",
+        "author": "Pope St. John Paul II",
+        "year": 1993,
+        "blurb": "The 1993 encyclical on the foundations of Catholic moral teaching — the splendor of the truth that sets us free.",
+        "tradition": "papal",
+        "cover_color": "#7C2D12",
+        "cover_icon": "sunny-outline",
+        "type": "embedded",
+        "source_url": "https://www.vatican.va/content/john-paul-ii/en/encyclicals/documents/hf_jp-ii_enc_06081993_veritatis-splendor.html",
+        "chapters": [],
+    },
+    {
+        "slug": "centesimus-annus",
+        "title": "Centesimus Annus",
+        "author": "Pope St. John Paul II",
+        "year": 1991,
+        "blurb": "The 1991 social encyclical marking the centennial of Rerum Novarum — a moral framework for the post-Cold-War world.",
+        "tradition": "papal",
+        "cover_color": "#1E3A8A",
+        "cover_icon": "people-outline",
+        "type": "embedded",
+        "source_url": "https://www.vatican.va/content/john-paul-ii/en/encyclicals/documents/hf_jp-ii_enc_01051991_centesimus-annus.html",
+        "chapters": [],
+    },
+    {
+        "slug": "humanae-vitae",
+        "title": "Humanae Vitae",
+        "author": "Pope St. Paul VI",
+        "year": 1968,
+        "blurb": "The 1968 encyclical defending the transmission of human life and the integrity of married love.",
+        "tradition": "papal",
+        "cover_color": "#9F1239",
+        "cover_icon": "heart-outline",
+        "type": "embedded",
+        "source_url": "https://www.vatican.va/content/paul-vi/en/encyclicals/documents/hf_p-vi_enc_25071968_humanae-vitae.html",
+        "chapters": [],
+    },
+    {
+        "slug": "evangelii-nuntiandi",
+        "title": "Evangelii Nuntiandi",
+        "author": "Pope St. Paul VI",
+        "year": 1975,
+        "blurb": "The 1975 apostolic exhortation on evangelization in the modern world — the Magna Carta of the New Evangelization.",
+        "tradition": "papal",
+        "cover_color": "#365314",
+        "cover_icon": "megaphone-outline",
+        "type": "embedded",
+        "source_url": "https://www.vatican.va/content/paul-vi/en/apost_exhortations/documents/hf_p-vi_exh_19751208_evangelii-nuntiandi.html",
+        "chapters": [],
+    },
 ]
 
 

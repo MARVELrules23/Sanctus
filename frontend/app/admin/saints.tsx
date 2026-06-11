@@ -263,6 +263,33 @@ function EditorModal({
 }
 
 // ---- Main admin screen ----
+
+// Mirror the backend's hard-required fields for approving a Saint entry.
+// Keep this list in sync with `_validate_for_approval` (or equivalent
+// non-empty checks) in /app/backend/saints.py so the UI can warn an admin
+// before the API rejects them with a 400.
+const REQUIRED_FOR_APPROVAL: Array<{ key: keyof SaintAdmin; label: string; minLen?: number }> = [
+  { key: "name", label: "Name" },
+  { key: "rank", label: "Rank" },
+  { key: "feast_date", label: "Feast date (MM-DD)" },
+  { key: "quote", label: "Quote" },
+  { key: "quote_source", label: "Quote source" },
+  { key: "biography", label: "Biography", minLen: 80 },
+  { key: "recommended_action", label: "Recommended action" },
+];
+
+function missingApprovalFields(s: SaintAdmin): string[] {
+  const missing: string[] = [];
+  for (const r of REQUIRED_FOR_APPROVAL) {
+    const raw = (s as any)[r.key];
+    const v = typeof raw === "string" ? raw.trim() : raw;
+    if (!v || (typeof v === "string" && r.minLen && v.length < r.minLen)) {
+      missing.push(r.label);
+    }
+  }
+  return missing;
+}
+
 export default function AdminSaintsScreen() {
   const router = useRouter();
   const { user } = useAuth();
@@ -313,6 +340,19 @@ export default function AdminSaintsScreen() {
   };
 
   const approve = async (s: SaintAdmin) => {
+    // Mirror the backend's hard-required field list so we can warn the
+    // admin BEFORE the API rejects the call. Empty `quote_source` is the
+    // most common reason approve was "doing nothing" — the LLM proposes a
+    // quote but sometimes leaves the source blank, and a 400 surfaced as
+    // an opaque alert.
+    const missing = missingApprovalFields(s);
+    if (missing.length > 0) {
+      Alert.alert(
+        "Fill these fields first",
+        `Missing: ${missing.join(", ")}.\n\nTap Edit to fill them in, then Approve.`,
+      );
+      return;
+    }
     try {
       await adminApproveSaint(s.saint_id);
       await load();
@@ -451,7 +491,10 @@ export default function AdminSaintsScreen() {
         ) : grouped.length === 0 ? (
           <Text style={styles.empty}>No entries with status “{filter}”.</Text>
         ) : (
-          grouped.map((s) => (
+          grouped.map((s) => {
+            const missing = missingApprovalFields(s);
+            const canApprove = missing.length === 0;
+            return (
             <View key={s.saint_id} style={styles.entryCard} testID={`admin-entry-${s.saint_id}`}>
               <View style={styles.entryHeader}>
                 {s.picture_url ? (
@@ -469,12 +512,26 @@ export default function AdminSaintsScreen() {
                 </View>
               </View>
               {s.quote ? (
-                <Text style={styles.entryQuote} numberOfLines={3}>“{s.quote}” — {s.quote_source}</Text>
+                <Text style={styles.entryQuote} numberOfLines={3}>“{s.quote}” — {s.quote_source || <Text style={{ color: colors.liturgical.red }}>NO SOURCE</Text>}</Text>
               ) : (
                 <Text style={[styles.entryQuote, { color: colors.liturgical.red }]}>⚠ No quote — fill before approving.</Text>
               )}
+              {/* Inline approval-readiness banner — surfaces exactly why the
+                  Approve button is greyed out, instead of silently 400ing. */}
+              {missing.length > 0 && s.status === "draft" ? (
+                <View testID={`admin-missing-${s.saint_id}`} style={styles.missingBanner}>
+                  <Ionicons name="alert-circle" size={14} color={colors.liturgical.red} />
+                  <Text style={styles.missingBannerText} numberOfLines={2}>
+                    Cannot approve — missing: {missing.join(", ")}.
+                  </Text>
+                </View>
+              ) : null}
               <View style={styles.actionRow}>
-                <Pressable onPress={() => setEditing(s)} style={({ pressed }) => [styles.actionBtn, pressed && { opacity: 0.7 }]}>
+                <Pressable
+                  testID={`admin-edit-${s.saint_id}`}
+                  onPress={() => setEditing(s)}
+                  style={({ pressed }) => [styles.actionBtn, pressed && { opacity: 0.7 }]}
+                >
                   <Ionicons name="create-outline" size={14} color={colors.primary} />
                   <Text style={styles.actionBtnText}>Edit</Text>
                 </Pressable>
@@ -482,10 +539,17 @@ export default function AdminSaintsScreen() {
                   <Pressable
                     testID={`admin-approve-${s.saint_id}`}
                     onPress={() => approve(s)}
-                    style={({ pressed }) => [styles.actionBtn, styles.approveBtn, pressed && { opacity: 0.7 }]}
+                    style={({ pressed }) => [
+                      styles.actionBtn,
+                      styles.approveBtn,
+                      !canApprove && { opacity: 0.45 },
+                      pressed && { opacity: 0.7 },
+                    ]}
                   >
-                    <Ionicons name="checkmark-circle" size={14} color={colors.gold} />
-                    <Text style={[styles.actionBtnText, { color: colors.gold }]}>Approve</Text>
+                    <Ionicons name="checkmark-circle" size={14} color={canApprove ? colors.gold : colors.textMuted} />
+                    <Text style={[styles.actionBtnText, { color: canApprove ? colors.gold : colors.textMuted }]}>
+                      Approve
+                    </Text>
                   </Pressable>
                 ) : null}
                 {s.status !== "rejected" ? (
@@ -507,7 +571,7 @@ export default function AdminSaintsScreen() {
                 </Pressable>
               </View>
             </View>
-          ))
+          );})
         )}
         <View style={{ height: spacing.xxl }} />
       </ScrollView>
@@ -578,6 +642,25 @@ const styles = StyleSheet.create({
   entryName: { fontFamily: fonts.headingSemi, fontSize: 15, color: colors.textPrimary },
   entryMeta: { fontFamily: fonts.uiMedium, fontSize: 11, color: colors.textMuted, marginTop: 2 },
   entryQuote: { fontFamily: fonts.bodyItalic, fontStyle: "italic", fontSize: 12, color: colors.textSecondary, marginTop: spacing.sm },
+  missingBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: spacing.sm,
+    paddingVertical: 6,
+    paddingHorizontal: spacing.sm,
+    backgroundColor: "rgba(180, 50, 50, 0.08)",
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: "rgba(180, 50, 50, 0.35)",
+  },
+  missingBannerText: {
+    flex: 1,
+    fontFamily: fonts.uiSemi,
+    fontSize: 11,
+    color: colors.liturgical.red,
+    letterSpacing: 0.2,
+  },
   actionRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 6, marginTop: spacing.sm },
   actionBtn: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.round, borderWidth: 1, borderColor: colors.borderSoft, backgroundColor: colors.background },
   approveBtn: { backgroundColor: colors.primary, borderColor: colors.primary },

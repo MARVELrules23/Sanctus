@@ -35,7 +35,7 @@ Indexes (created in server.py on startup):
 """
 from __future__ import annotations
 
-import hashlib
+import hashlib  # noqa: F401 — retained in case future seeding logic needs it
 import json
 import logging
 import re
@@ -226,7 +226,13 @@ Hard rules:
 """
 
 
-def _build_user_block(req: ProposeRequest) -> str:
+def _build_user_block(req: ProposeRequest, exclude_names: Optional[List[str]] = None) -> str:
+    """Compose the per-call user prompt for Claude.
+
+    `exclude_names` is the list of already-proposed/approved saints for the
+    same MM-DD; we ask the model to pick someone *different* so admins don't
+    keep getting the same headline saint on every "Propose" click.
+    """
     mmdd = _mmdd(req.date)
     lines = [
         f"Prepare an entry for the Roman Catholic feast day {mmdd} (MM-DD).",
@@ -242,6 +248,27 @@ def _build_user_block(req: ProposeRequest) -> str:
             "This is a SECONDARY commemoration for that date — feel free to pick a "
             "lesser-known holy person whose feast also falls on this day."
         )
+    # Exclusion list — the most important fix for "the AI keeps regurgitating
+    # the same Saint". Without this, every call from the admin's perspective
+    # tends to land on the headline saint of the day (e.g., St. Barnabas on
+    # 06-11). With it, the model is forced to surface other commemorations.
+    if exclude_names and not req.name_hint:
+        formatted = ", ".join(f'"{n}"' for n in exclude_names[:25])
+        lines.append(
+            "IMPORTANT — Do NOT propose any of these (they are already in the "
+            f"library for {mmdd}): {formatted}. Pick a DIFFERENT holy person "
+            "whose feast or memorial also falls on this date — older or modern, "
+            "Eastern Catholic, regional, religious-order patron, or a Blessed "
+            "/ Venerable whose cause is still open. Confirm the date in your "
+            "biography text."
+        )
+    # Final reminders that have measurably improved field completeness.
+    lines.append(
+        "REQUIRED: `quote_source` must always be filled when `quote` is "
+        "filled (cite a primary text, papal document, scripture, or hagiography). "
+        "If you cannot cite a real source, leave BOTH `quote` and `quote_source` "
+        "as empty strings — never a quote without a source."
+    )
     lines.append("Return JSON only.")
     return "\n".join(lines)
 
@@ -379,13 +406,30 @@ def build_router(
             raise HTTPException(status_code=503, detail="LLM unavailable")
 
         mmdd = _mmdd(req.date)
-        user_block = _build_user_block(req)
 
-        # Idempotency-ish session id so retries for the same date+hint stay coherent.
-        seed = hashlib.sha1(
-            f"{mmdd}|{req.name_hint or ''}|{req.rank_hint or ''}|{req.is_primary}".encode()
-        ).hexdigest()[:12]
-        session_id = f"saints-propose-{seed}"
+        # Pull existing saint names for the same MM-DD (any status) so we can
+        # ask the model NOT to repeat them. This is the primary fix for "AI
+        # keeps regurgitating the same Saint each time". The previous version
+        # used a deterministic session_id derived from (date, hint, rank) and
+        # no exclusion list, so Claude returned the same headline saint over
+        # and over until the admin manually edited the hint.
+        existing_cursor = db.saints.find(
+            {"feast_date": mmdd},
+            {"_id": 0, "name": 1, "status": 1},
+        )
+        existing_names: List[str] = []
+        async for d in existing_cursor:
+            nm = (d.get("name") or "").strip()
+            if nm and nm not in existing_names:
+                existing_names.append(nm)
+
+        user_block = _build_user_block(req, exclude_names=existing_names)
+
+        # FRESH session per call — uuid4-based, no caching. Previously this
+        # was a sha1 hash of (date, hint, rank, primary), which meant repeat
+        # clicks landed in the SAME Claude session and the SDK happily
+        # replayed the same answer.
+        session_id = f"saints-propose-{uuid.uuid4().hex[:12]}"
 
         try:
             chat = LlmChat(

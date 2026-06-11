@@ -520,3 +520,48 @@ VERIFIED:
   - 16/16 pytest cases in /app/backend/tests/test_dm_unread_iter39.py PASS
     (testing agent iter39). Covers auth, empty state, 1:1 flow, sender
     exclusion, group DM, regression set."
+
+
+main_agent_iteration_40_2026-06-11: "STRIPE PAYMENT LINKS — `/api/subscriptions/create-checkout-session` now prefers hosted Stripe Payment Links and falls back to the dynamic Stripe Checkout Session SDK path.
+
+CHANGES (/app/backend/subscriptions.py):
+  - Added `_append_payment_link_params(url, params)` helper that safely
+    merges new query params onto a https://buy.stripe.com/... URL without
+    clobbering pre-existing ones (urllib-based).
+  - `create_checkout` now:
+      1. Short-circuits to `already_premium: true` for admin/override users
+         (unchanged).
+      2. If payment links are configured (STRIPE_PAYMENT_LINK_MONTHLY/ANNUAL
+         env or built-in defaults — they ARE configured in this build),
+         returns `{ url: '<link>?client_reference_id=<user_id>&prefilled_email=<email>',
+         session_id: null, plan, kind: 'payment_link' }` and records
+         `stripe.last_plan_selected` + `stripe.last_checkout_kind` on the
+         user.
+      3. Otherwise falls back to the SDK Checkout Session path (only works
+         when STRIPE_API_KEY is real). The fallback now also passes
+         `client_reference_id=user.user_id` for parity.
+  - Webhook `_user_id_from_object` upgraded to map by, in order:
+      a) `metadata.user_id`
+      b) `client_reference_id` (NEW — Payment Link flow)
+      c) `stripe.customer_id`
+      d) `customer_email` / `customer_details.email` (case-insensitive)
+
+EXPECTED BEHAVIOR IN PREVIEW (STRIPE_API_KEY is placeholder, Payment Links ARE
+configured):
+  - GET  /api/subscriptions/status → 200; stripe_ready=true; checkout_ready=true;
+    payment_links=true; portal_ready=false.
+  - POST /api/subscriptions/create-checkout-session {plan:'monthly',
+    return_origin:'https://example'} as non-admin → 200, body.url starts with
+    'https://buy.stripe.com/bJe6oG3XJbE0gnw31fb7y00' AND contains
+    'client_reference_id=' followed by the user's user_id (URL-encoded).
+    body.kind === 'payment_link'. body.session_id === null.
+  - Same call with plan:'annual' → 200, url starts with the annual link.
+  - Admin caller → 200, body.already_premium === true, body.url === null.
+  - Regression: encyclical chapter still 200 for free user, non-encyclical
+    chapter still 402 for free user.
+
+The webhook endpoint is unreachable in preview (Stripe key placeholder ⇒ 503),
+so webhook mapping changes need to be tested post-deploy with a real key.
+
+NEEDS TESTING (backend): the 4 bullet points above + smoke pass on premium status."
+

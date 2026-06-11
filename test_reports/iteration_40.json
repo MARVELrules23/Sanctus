@@ -1,0 +1,39 @@
+{
+  "summary": "Iteration 40 — Sanctus Premium Stripe Payment Link refactor (backend-only). 21/21 pytest cases pass against the public preview URL. Verified all 6 review-request assertions: (1) GET /api/subscriptions/status returns checkout_ready=true, stripe_ready=true (legacy alias now true thanks to the refactor — distinct from iter38 where it was false), payment_links=true, portal_ready=false, trial_days=7, monthly=499, annual=3999 for both admin (is_premium=true) and non-admin (is_premium=false); unauth → 401. (2) POST /api/subscriptions/create-checkout-session for non-admin returns kind='payment_link', session_id=null, url starting with the correct https://buy.stripe.com/... base for monthly vs annual, with client_reference_id=user_test_nonadmin_001 AND prefilled_email=nonadmin@example.com appended as query params. Admin short-circuits to {already_premium:true, url:null} (200) — the short-circuit happens BEFORE the stripe_ready check, which is the documented behavior. Bad plan ('weekly') → 422, bad return_origin ('not-a-url') → 422, unauth → 401. (3) Mongo users doc is annotated with stripe.last_plan_selected ('annual' or 'monthly') and stripe.last_checkout_kind='payment_link' after each checkout call; overwrite on subsequent calls works. (4) POST /customer-portal → 503 for both admin and non-admin (SDK path still gated on real STRIPE_API_KEY). (5) POST /webhook → 503 with placeholder key. (6) Regression: humanae-vitae chapter free 200, confessions-augustine 402 non-admin / 200 admin, challenges enroll 402 non-admin, group DM 402 non-admin, /auth/me admin is_premium=true & is_admin=true, /community/dm/unread-count returns {total, threads} for both users. No issues found — the refactor is correct.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_payment_links_iter40.py",
+    "/app/test_reports/pytest/iter40_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "subscriptions.py:_append_payment_link_params uses urlencode(..., quote_via=quote) which percent-encodes safe chars like '_' in user_ids (no, '_' is in unreserved set) — verified the resulting URL still keeps user_test_nonadmin_001 readable. OK.",
+    "subscriptions.py:280 — `email = (getattr(user, 'email', '') or '').strip()` then passed straight in. Implementation correctly skips empty values in _append_payment_link_params, so a user without an email would just produce a URL without prefilled_email. The test asserts presence using the seeded non-admin email; this matches spec.",
+    "subscriptions.py:286 — `client_reference_id` is sent as the user_id but Stripe enforces [A-Za-z0-9_-]{0,200} on this field. Sanctus user_ids match this pattern (`user_<hex>`/`user_test_*`). If user_ids ever contain '@' or '.' the Payment Link would be rejected by Stripe at click time — worth noting but not in scope for this refactor.",
+    "subscriptions.py is now 670 lines — still under the 700-line guideline but very close. If a third checkout mechanism is added, factor the SDK fallback into its own module.",
+    "Module-level defaults PAYMENT_LINK_MONTHLY_DEFAULT/_ANNUAL_DEFAULT hard-code real founder URLs. That's fine for preview but means a code change is required to rotate them in production unless STRIPE_PAYMENT_LINK_MONTHLY/_ANNUAL env vars override them — the env override path is implemented correctly (line 198-203).",
+    "Webhook handler at /webhook returns 503 when stripe_ready=false, but the new client_reference_id path means Stripe WILL send checkout.session.completed events even from Payment Links (which never touch our backend during creation). When STRIPE_API_KEY is real but the webhook secret is missing, the handler does a best-effort parse — that's already correctly handled at line 568-574."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_payment_links_iter40.py (new)",
+    "/app/test_reports/pytest/iter40_results.xml (new junit output)"
+  ],
+  "success_rate": {
+    "backend": "100% (21/21)",
+    "frontend": "not tested (backend-only review per request)"
+  },
+  "seed_data_creation": "Re-inserted the two pre-minted bearer sessions into mongo user_sessions (admin token test_premium_2453a541f1e0982d → user_ade7a898e281, non-admin token test_nonadmin_7c1ac6ad1df64b42 → user_test_nonadmin_001) with expires_at = now+4h. The refresh_sessions fixture (autouse, module scope) does this on every pytest run so the suite is rerunnable without manual setup. No new users were created — the existing user_test_nonadmin_001 (email nonadmin@example.com) and user_ade7a898e281 (admin philipwils13@gmail.com) docs from prior iterations were reused.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Reusable pytest at /app/backend/tests/test_payment_links_iter40.py — re-run with `pytest /app/backend/tests/test_payment_links_iter40.py -v`. The autouse refresh_sessions fixture re-mints the admin & non-admin bearer tokens with a fresh +4h TTL on every run, so tokens never expire mid-suite. The two test-account user docs persist their `stripe.last_plan_selected` between tests — TestMongoAnnotation always sets it to 'monthly' last, so reruns leave the non-admin user doc deterministic. To override the Payment Link URLs (e.g. when stripe rotates them), set STRIPE_PAYMENT_LINK_MONTHLY / STRIPE_PAYMENT_LINK_ANNUAL in backend/.env (must start with https://buy.stripe.com/ and be longer than 24 chars or the module rejects them and falls back to the SDK path).",
+  "rca_of_issue": "No bugs found. The refactor in subscriptions.py correctly: (1) toggles checkout_ready=stripe_ready=true based on payment_links_ready OR stripe_ready, (2) prefers the Payment Link branch when payment_links_ready is true, (3) appends client_reference_id + prefilled_email correctly via _append_payment_link_params, (4) annotates the user doc with last_plan_selected/last_checkout_kind, (5) keeps customer-portal & webhook gated by stripe_ready (real SDK key required). All review-request assertions verified end-to-end."
+}

@@ -39,6 +39,7 @@ import os
 import time
 from datetime import datetime, timezone
 from typing import Any, Callable, Dict, Optional
+from urllib.parse import quote, urlencode, urlparse, urlunparse, parse_qsl
 
 import stripe
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
@@ -63,6 +64,53 @@ logger = logging.getLogger("sanctus.subscriptions")
 
 def _is_stripe_configured(api_key: str) -> bool:
     return bool(api_key) and api_key.startswith(("sk_test_", "sk_live_")) and len(api_key) > 30
+
+
+def _is_payment_link(url: str) -> bool:
+    """Validate that a configured value looks like a hosted Stripe
+    Payment Link (https://buy.stripe.com/...). Anything else is
+    rejected so we don't accidentally redirect to a typo."""
+    if not url:
+        return False
+    return url.startswith("https://buy.stripe.com/") and len(url) > 24
+
+
+def _append_payment_link_params(url: str, params: Dict[str, str]) -> str:
+    """Append/override query params on a Stripe Payment Link URL.
+
+    Stripe Payment Links accept reserved query params:
+      * `client_reference_id` — surfaces on the `checkout.session.completed`
+        webhook so we can map the payment back to a Sanctus user even though
+        we never created the session ourselves.
+      * `prefilled_email` — pre-populates the email field, which also helps
+        webhook reconciliation as a secondary fallback.
+
+    Values that already exist on the URL are preserved unless we explicitly
+    override them. We also `quote` values to be safe with characters like
+    `@` in emails.
+    """
+    if not url:
+        return url
+    parsed = urlparse(url)
+    existing = dict(parse_qsl(parsed.query, keep_blank_values=True))
+    for k, v in params.items():
+        if v is None:
+            continue
+        v = str(v).strip()
+        if not v:
+            continue
+        # Stripe's reserved params have strict character sets; the safest
+        # thing is to URL-encode aggressively.
+        existing[k] = v
+    new_query = urlencode(existing, quote_via=quote)
+    return urlunparse(parsed._replace(query=new_query))
+
+
+# Hosted Stripe Payment Links — set by user. Defaults to the URLs the
+# founder provided so the preview environment can also send users to
+# real checkout. Override in env if Stripe links are rotated.
+PAYMENT_LINK_MONTHLY_DEFAULT = "https://buy.stripe.com/bJe6oG3XJbE0gnw31fb7y00"
+PAYMENT_LINK_ANNUAL_DEFAULT = "https://buy.stripe.com/dRm4gyam7dM8b3c45jb7y01"
 
 
 def _now() -> datetime:
@@ -140,8 +188,30 @@ def build_subscriptions_router(
         )
     else:
         logger.warning(
-            "subscriptions: STRIPE_API_KEY missing/placeholder — premium checkout disabled until deploy"
+            "subscriptions: STRIPE_API_KEY missing/placeholder — Stripe API (portal/reconcile/webhook) disabled until deploy"
         )
+
+    # Hosted Stripe Payment Links — these power the buy flow even without a
+    # real STRIPE_API_KEY in the preview environment, since Stripe hosts
+    # the entire checkout page. The webhook + customer portal still need
+    # a real API key once you deploy.
+    payment_link_monthly = (
+        os.environ.get("STRIPE_PAYMENT_LINK_MONTHLY") or PAYMENT_LINK_MONTHLY_DEFAULT
+    ).strip()
+    payment_link_annual = (
+        os.environ.get("STRIPE_PAYMENT_LINK_ANNUAL") or PAYMENT_LINK_ANNUAL_DEFAULT
+    ).strip()
+    payment_links_ready = (
+        _is_payment_link(payment_link_monthly) and _is_payment_link(payment_link_annual)
+    )
+    if payment_links_ready:
+        logger.info(
+            "subscriptions: Payment Links configured (monthly=%s, annual=%s)",
+            payment_link_monthly[:40] + "...",
+            payment_link_annual[:40] + "...",
+        )
+
+    checkout_ready = payment_links_ready or stripe_ready
 
     # ----------------------------- Premium status -------------------------
 
@@ -165,7 +235,13 @@ def build_subscriptions_router(
             "trial_end": prem.get("trial_end"),
             "pricing": PREMIUM_PRICING,
             "trial_days": PREMIUM_TRIAL_DAYS,
-            "stripe_ready": stripe_ready,
+            # `stripe_ready` is kept for backwards compatibility — it now
+            # means "anything we can use to send the user to Stripe", which
+            # is true when either payment links or the API key are set.
+            "stripe_ready": checkout_ready,
+            "checkout_ready": checkout_ready,
+            "portal_ready": stripe_ready,
+            "payment_links": payment_links_ready,
         }
 
     @router.get("/status")
@@ -188,6 +264,51 @@ def build_subscriptions_router(
                 "url": None,
             }
 
+        # ------------------------------------------------------------------
+        # Primary path: hosted Stripe Payment Links
+        # ------------------------------------------------------------------
+        # These are pre-built Stripe checkout pages that work even when our
+        # backend doesn't have a STRIPE_API_KEY (e.g. preview environment).
+        # We append `client_reference_id` so the webhook can map the
+        # payment back to a Sanctus user.
+        if payment_links_ready:
+            tier = body.plan
+            base_url = (
+                payment_link_annual if tier == "annual" else payment_link_monthly
+            )
+            email = (getattr(user, "email", "") or "").strip()
+            checkout_url = _append_payment_link_params(
+                base_url,
+                {
+                    "client_reference_id": user.user_id,
+                    "prefilled_email": email,
+                },
+            )
+
+            # Record selection for later reconciliation/debugging. We don't
+            # have a Checkout Session ID yet (Stripe will mint one when the
+            # user actually clicks "Pay") — the webhook will fill it in.
+            await users.update_one(
+                {"user_id": user.user_id},
+                {"$set": {
+                    "stripe.last_plan_selected": tier,
+                    "stripe.last_checkout_kind": "payment_link",
+                    "stripe.updated_at": _now(),
+                }},
+            )
+
+            return {
+                "url": checkout_url,
+                "session_id": None,
+                "plan": tier,
+                "kind": "payment_link",
+            }
+
+        # ------------------------------------------------------------------
+        # Fallback path: dynamic Stripe Checkout Session
+        # ------------------------------------------------------------------
+        # Kept so we can revert / A-B test without a code change. Requires
+        # STRIPE_API_KEY because we call the Stripe SDK here.
         if not stripe_ready:
             raise HTTPException(
                 status_code=503,
@@ -234,6 +355,7 @@ def build_subscriptions_router(
             session = stripe.checkout.Session.create(
                 mode="subscription",
                 customer=customer_id,
+                client_reference_id=user.user_id,
                 line_items=[
                     {
                         "quantity": 1,
@@ -273,6 +395,7 @@ def build_subscriptions_router(
             {"$set": {
                 "stripe.last_checkout_session_id": session.id,
                 "stripe.last_plan_selected": tier,
+                "stripe.last_checkout_kind": "session",
                 "stripe.updated_at": _now(),
             }},
         )
@@ -281,6 +404,7 @@ def build_subscriptions_router(
             "url": session.url,
             "session_id": session.id,
             "plan": tier,
+            "kind": "session",
         }
 
     # ----------------------------- Reconcile ------------------------------
@@ -453,13 +577,34 @@ def build_subscriptions_router(
         data_object = (event.get("data") or {}).get("object") or {}
 
         async def _user_id_from_object(obj: Dict[str, Any]) -> Optional[str]:
+            # 1) Explicit metadata (we set this when we create dynamic
+            #    Checkout Sessions ourselves).
             uid = (obj.get("metadata") or {}).get("user_id")
             if uid:
                 return uid
-            # Fallback by customer_id
+            # 2) `client_reference_id` — set on the Payment Link URL we hand
+            #    out. Stripe surfaces it on the `checkout.session.completed`
+            #    object.
+            cref = obj.get("client_reference_id")
+            if cref:
+                return cref
+            # 3) Map by Stripe customer id (set after first payment).
             cid = obj.get("customer")
             if cid:
                 doc = await users.find_one({"stripe.customer_id": cid}, {"user_id": 1, "_id": 0})
+                if doc:
+                    return doc.get("user_id")
+            # 4) Last-resort fallback: customer_email / customer_details.email.
+            email = (
+                obj.get("customer_email")
+                or (obj.get("customer_details") or {}).get("email")
+            )
+            if email:
+                email = str(email).strip().lower()
+                doc = await users.find_one(
+                    {"email": {"$regex": f"^{email}$", "$options": "i"}},
+                    {"user_id": 1, "_id": 0},
+                )
                 if doc:
                     return doc.get("user_id")
             return None

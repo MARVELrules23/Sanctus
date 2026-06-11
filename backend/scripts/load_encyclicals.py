@@ -557,6 +557,7 @@ async def _load(slug: str, meta: Dict, db) -> None:
         "cover_color": meta["cover_color"],
         "cover_icon": meta["cover_icon"],
         "type": "embedded",
+        "status": "published",
         "source_url": meta["url"],
         "chapters": chapters,
         "created_at": now,

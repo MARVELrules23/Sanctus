@@ -30,6 +30,7 @@ import {
   adminUpdateSaint,
 } from "@/src/api";
 import { useAuth } from "@/src/auth-context";
+import { confirm } from "@/src/utils/confirm";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 
 const RANKS: SaintRank[] = ["saint", "blessed", "venerable"];
@@ -321,33 +322,38 @@ export default function AdminSaintsScreen() {
   };
 
   const reject = async (s: SaintAdmin) => {
-    Alert.alert("Reject this entry?", `${s.name} will be hidden.`, [
-      { text: "Cancel" },
-      {
-        text: "Reject",
-        style: "destructive",
-        onPress: async () => {
-          try { await adminRejectSaint(s.saint_id); await load(); } catch (e: any) {
-            Alert.alert("Failed", e?.message);
-          }
-        },
-      },
-    ]);
+    // IMPORTANT: do not use Alert.alert(..., [buttons]) here — on web it
+    // collapses to window.alert() and the destructive callback never fires,
+    // which is exactly why the Reject button "did nothing" on web preview.
+    const ok = await confirm({
+      title: "Reject this entry?",
+      message: `${s.name} will be hidden from the daily feature.`,
+      confirmText: "Reject",
+      destructive: true,
+    });
+    if (!ok) return;
+    try {
+      await adminRejectSaint(s.saint_id);
+      await load();
+    } catch (e: any) {
+      Alert.alert("Failed", e?.message || "Could not reject. Try again.");
+    }
   };
 
   const del = async (s: SaintAdmin) => {
-    Alert.alert("Delete permanently?", `${s.name} will be removed.`, [
-      { text: "Cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          try { await adminDeleteSaint(s.saint_id); await load(); } catch (e: any) {
-            Alert.alert("Failed", e?.message);
-          }
-        },
-      },
-    ]);
+    const ok = await confirm({
+      title: "Delete permanently?",
+      message: `${s.name} will be removed. This cannot be undone.`,
+      confirmText: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
+    try {
+      await adminDeleteSaint(s.saint_id);
+      await load();
+    } catch (e: any) {
+      Alert.alert("Failed", e?.message || "Could not delete. Try again.");
+    }
   };
 
   const grouped = useMemo(() => items, [items]);
@@ -483,12 +489,20 @@ export default function AdminSaintsScreen() {
                   </Pressable>
                 ) : null}
                 {s.status !== "rejected" ? (
-                  <Pressable onPress={() => reject(s)} style={({ pressed }) => [styles.actionBtn, pressed && { opacity: 0.7 }]}>
+                  <Pressable
+                    testID={`admin-reject-${s.saint_id}`}
+                    onPress={() => reject(s)}
+                    style={({ pressed }) => [styles.actionBtn, pressed && { opacity: 0.7 }]}
+                  >
                     <Ionicons name="close-circle-outline" size={14} color={colors.liturgical.red} />
                     <Text style={[styles.actionBtnText, { color: colors.liturgical.red }]}>Reject</Text>
                   </Pressable>
                 ) : null}
-                <Pressable onPress={() => del(s)} style={({ pressed }) => [styles.actionBtn, pressed && { opacity: 0.7 }]}>
+                <Pressable
+                  testID={`admin-delete-${s.saint_id}`}
+                  onPress={() => del(s)}
+                  style={({ pressed }) => [styles.actionBtn, pressed && { opacity: 0.7 }]}
+                >
                   <Ionicons name="trash-outline" size={14} color={colors.textMuted} />
                 </Pressable>
               </View>

@@ -480,3 +480,43 @@ NEEDS TESTING (frontend):
     Create with a free user redirects to /premium.
   - All paywall actions show the Stripe-not-configured note (button stays
     disabled with explanatory copy) since STRIPE_API_KEY is placeholder."
+
+
+main_agent_iteration_39_2026-06-11: "UNREAD DM NOTIFICATION BADGE — feature complete.
+
+NEW BACKEND ENDPOINT:
+  - GET /api/community/dm/unread-count
+    Returns { total: int, threads: [{thread_id, unread}] }
+    Computed from community_dm_messages WHERE sender_id != current_user AND
+    created_at > thread.reads[current_user]. Threads with zero unread are
+    omitted from the array. Hits at most ~one count_documents per thread.
+
+FRONTEND PLUMBING:
+  - /app/frontend/src/notifications-context.tsx (NEW)
+      NotificationsProvider polls every 30s while signed in + foregrounded,
+      pauses when backgrounded, refreshes immediately on app-resume.
+      Exposes unreadDMTotal, unreadByThread, refresh(), markThreadRead().
+  - /app/frontend/src/components/NotificationBadge.tsx (NEW)
+      Small gold pill, '99+' collapse, absolute-positioned by caller.
+  - /app/frontend/app/_layout.tsx — NotificationsProvider wraps app.
+  - /app/frontend/app/(tabs)/_layout.tsx — Parish tab now gets
+      tabBarBadge=unreadDMTotal (string-cast) with gold styling.
+  - /app/frontend/app/(tabs)/community.tsx — Inbox header icon shows
+      NotificationBadge overlay using the same context value.
+  - /app/frontend/app/community/dm/[thread_id].tsx — calls
+      markThreadRead(tid) immediately after the messages load so badge
+      drops to 0 in the same frame (backend already moved the read mark).
+  - /app/frontend/src/api.ts — new getDMUnreadCount() + DMUnreadResponse.
+
+BEHAVIOR:
+  - Pre-iter38 1:1 DMs (free for all users) and Premium group DMs are both
+    counted toward the total.
+  - User's own outbound messages never contribute to their own badge.
+  - When a friend sends N messages while the user is elsewhere in the app,
+    within ≤30s the Parish tab gains a gold pill '+N'. Tapping the Inbox /
+    opening the thread clears it instantly.
+
+VERIFIED:
+  - 16/16 pytest cases in /app/backend/tests/test_dm_unread_iter39.py PASS
+    (testing agent iter39). Covers auth, empty state, 1:1 flow, sender
+    exclusion, group DM, regression set."

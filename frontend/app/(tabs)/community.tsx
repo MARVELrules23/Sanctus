@@ -27,7 +27,9 @@ import {
 } from "@/src/api";
 import Avatar from "@/src/components/Avatar";
 import LiturgicalBadge from "@/src/components/LiturgicalBadge";
+import { NotificationBadge } from "@/src/components/NotificationBadge";
 import { useAuth } from "@/src/auth-context";
+import { useNotifications } from "@/src/notifications-context";
 import { colorForLiturgical, colors, fonts, radius, shadow, spacing } from "@/src/theme";
 import { timeAgo } from "@/src/utils/time-ago";
 
@@ -38,6 +40,7 @@ const DEFAULT_TOPICS: CommunityTopic[] = [
 export default function CommunityScreen() {
   const router = useRouter();
   const { user } = useAuth();
+  const { unreadDMTotal } = useNotifications();
   const [topics, setTopics] = useState<CommunityTopic[]>(DEFAULT_TOPICS);
   const [reportReasons, setReportReasons] = useState<string[]>(REPORT_REASONS_FALLBACK);
   const [activeTopic, setActiveTopic] = useState<string | null>(null);
@@ -267,6 +270,7 @@ export default function CommunityScreen() {
             style={({ pressed }) => [styles.iconBtn, pressed && styles.pressed]}
           >
             <Ionicons name="chatbubbles-outline" size={20} color={colors.primary} />
+            <NotificationBadge count={unreadDMTotal} testID="community-dm-badge" />
           </Pressable>
         </ScrollView>
       </View>

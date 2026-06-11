@@ -178,6 +178,16 @@ def build_subscriptions_router(
     @router.post("/create-checkout-session")
     async def create_checkout(body: CreateCheckoutRequest,
                               user=Depends(get_current_user)):
+        # Admin / override accounts never need to pay — short-circuit
+        # BEFORE checking whether Stripe is configured, so the founder /
+        # admin always sees a clean "already premium" response (even in
+        # the placeholder-key preview environment).
+        if is_premium_user(user):
+            return {
+                "already_premium": True,
+                "url": None,
+            }
+
         if not stripe_ready:
             raise HTTPException(
                 status_code=503,
@@ -186,13 +196,6 @@ def build_subscriptions_router(
                     "Deploy the app to enable Sanctus Premium."
                 ),
             )
-
-        # Admin / override accounts never need to pay.
-        if is_premium_user(user):
-            return {
-                "already_premium": True,
-                "url": None,
-            }
 
         tier = body.plan
         pricing = PREMIUM_PRICING[tier]

@@ -446,6 +446,16 @@ export async function dmCreateGroup(memberIds: string[], name?: string | null): 
   });
 }
 
+// ---- Unread DM notification badge ----
+export type DMUnreadResponse = {
+  total: number;
+  threads: { thread_id: string; unread: number }[];
+};
+
+export async function getDMUnreadCount(): Promise<DMUnreadResponse> {
+  return await api<DMUnreadResponse>(`/community/dm/unread-count`);
+}
+
 export async function dmRenameGroup(threadId: string, name: string | null): Promise<CommunityDMThread> {
   return await api(`/community/dm/threads/${encodeURIComponent(threadId)}/name`, {
     method: "PUT",

@@ -17,6 +17,7 @@ import { Inter_500Medium, Inter_600SemiBold } from "@expo-google-fonts/inter";
 
 import { useIconFonts } from "@/src/hooks/use-icon-fonts";
 import { AuthProvider, useAuth } from "@/src/auth-context";
+import { NotificationsProvider } from "@/src/notifications-context";
 import { RadioPlayerProvider } from "@/src/audio/RadioPlayerContext";
 import RadioMiniPlayer from "@/src/components/RadioMiniPlayer";
 
@@ -86,9 +87,11 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <StatusBar style="dark" />
       <AuthProvider>
-        <RadioPlayerProvider>
-          <AppShell />
-        </RadioPlayerProvider>
+        <NotificationsProvider>
+          <RadioPlayerProvider>
+            <AppShell />
+          </RadioPlayerProvider>
+        </NotificationsProvider>
       </AuthProvider>
     </SafeAreaProvider>
   );

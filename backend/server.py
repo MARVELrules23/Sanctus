@@ -2232,6 +2232,37 @@ async def community_user_profile(user_id: str, user: User = Depends(get_current_
 
 
 # ---- Direct Messages (1-on-1) ----
+@api.get("/community/dm/unread-count")
+async def dm_unread_count(user: User = Depends(get_current_user)):
+    """Total number of unread DM messages across all of the user's threads.
+
+    Used by the bottom-tab badge and the Inbox icon badge in the Parish
+    header. Cheap to call (one find + one count_documents per thread).
+    Returns 0 silently if the user has no threads.
+    """
+    cur = db.community_dm_threads.find(
+        {"member_ids": user.user_id},
+        {"_id": 0, "thread_id": 1, "reads": 1},
+    )
+    threads = await cur.to_list(length=500)
+    total = 0
+    per_thread: List[Dict[str, Any]] = []
+    for t in threads:
+        my_reads = (t.get("reads") or {})
+        last_read_at = my_reads.get(user.user_id)
+        q: Dict[str, Any] = {
+            "thread_id": t["thread_id"],
+            "sender_id": {"$ne": user.user_id},
+        }
+        if last_read_at:
+            q["created_at"] = {"$gt": last_read_at}
+        n = await db.community_dm_messages.count_documents(q)
+        if n > 0:
+            per_thread.append({"thread_id": t["thread_id"], "unread": n})
+            total += n
+    return {"total": total, "threads": per_thread}
+
+
 @api.get("/community/dm/threads")
 async def dm_threads(user: User = Depends(get_current_user)):
     cur = db.community_dm_threads.find(

@@ -19,12 +19,14 @@ import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { api, CommunityDMMessage, CommunityDMThread, dmRenameGroup, dmRemoveGroupMember } from "@/src/api";
 import Avatar from "@/src/components/Avatar";
 import { useAuth } from "@/src/auth-context";
+import { useNotifications } from "@/src/notifications-context";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 import { timeOfDay } from "@/src/utils/time-ago";
 
 export default function DMThreadScreen() {
   const router = useRouter();
   const { user } = useAuth();
+  const { markThreadRead, refresh: refreshNotifications } = useNotifications();
   const params = useLocalSearchParams<{ thread_id?: string; other_id?: string }>();
   const incomingThread = typeof params.thread_id === "string" ? params.thread_id : "";
   const incomingOther = typeof params.other_id === "string" ? params.other_id : "";
@@ -57,6 +59,8 @@ export default function DMThreadScreen() {
         );
         setThread(r.thread);
         setMessages(r.messages || []);
+        // Backend just marked this thread read for us; drop the badge instantly.
+        markThreadRead(tid);
       }
     } catch (e: any) {
       Alert.alert("Couldn't open conversation", e?.message || "Please try again.");
@@ -64,7 +68,7 @@ export default function DMThreadScreen() {
     } finally {
       setLoading(false);
     }
-  }, [incomingThread, incomingOther, router]);
+  }, [incomingThread, incomingOther, router, markThreadRead]);
 
   useEffect(() => {
     void bootstrap();

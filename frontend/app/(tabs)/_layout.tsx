@@ -5,6 +5,7 @@ import { StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { colors, fonts } from "@/src/theme";
+import { useNotifications } from "@/src/notifications-context";
 
 /**
  * Bottom tab navigator.
@@ -19,6 +20,14 @@ import { colors, fonts } from "@/src/theme";
  */
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
+  const { unreadDMTotal } = useNotifications();
+  // expo-router's tabBarBadge accepts string|number|undefined. Undefined
+  // hides the badge entirely. We cap visually at "99+" to keep the pill
+  // from blowing out the icon's footprint.
+  const parishBadge =
+    unreadDMTotal > 0
+      ? (unreadDMTotal > 99 ? "99+" : String(unreadDMTotal))
+      : undefined;
   return (
     <Tabs
       screenOptions={{
@@ -94,6 +103,16 @@ export default function TabsLayout() {
             <Ionicons name="people-outline" color={color} size={size} />
           ),
           tabBarTestID: "tab-community",
+          tabBarBadge: parishBadge,
+          tabBarBadgeStyle: {
+            backgroundColor: colors.gold,
+            color: colors.primary,
+            fontFamily: fonts.uiSemi,
+            fontSize: 10,
+            minWidth: 18,
+            height: 18,
+            lineHeight: 14,
+          },
         }}
       />
       <Tabs.Screen

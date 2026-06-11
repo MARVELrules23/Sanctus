@@ -20,6 +20,7 @@ import {
   friendList,
 } from "@/src/api";
 import Avatar from "@/src/components/Avatar";
+import { useAuth } from "@/src/auth-context";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 
 // Backend cap (mirrors community.MAX_GROUP_MEMBERS). Subtract 1 for the
@@ -28,6 +29,8 @@ const MAX_OTHERS = 49;
 
 export default function NewGroupDMScreen() {
   const router = useRouter();
+  const { user } = useAuth();
+  const isLocked = !user?.is_premium;
   const [friends, setFriends] = useState<CommunityUserPublic[]>([]);
   const [loadingFriends, setLoadingFriends] = useState(true);
   const [selected, setSelected] = useState<Record<string, CommunityUserPublic>>({});
@@ -84,6 +87,10 @@ export default function NewGroupDMScreen() {
 
   const create = async () => {
     if (!canCreate) return;
+    if (isLocked) {
+      router.push("/premium" as any);
+      return;
+    }
     setCreating(true);
     try {
       const thread = await dmCreateGroup(
@@ -97,6 +104,10 @@ export default function NewGroupDMScreen() {
         params: { thread_id: thread.thread_id },
       });
     } catch (e: any) {
+      if (e?.status === 402) {
+        router.push("/premium" as any);
+        return;
+      }
       Alert.alert("Couldn't create group", e?.message || "Please try again.");
     } finally {
       setCreating(false);
@@ -125,6 +136,23 @@ export default function NewGroupDMScreen() {
           )}
         </Pressable>
       </View>
+
+      {isLocked ? (
+        <Pressable
+          testID="group-paywall-banner"
+          onPress={() => router.push("/premium" as any)}
+          style={({ pressed }) => [styles.premiumBanner, pressed && { opacity: 0.9 }]}
+        >
+          <Ionicons name="lock-closed" size={18} color={colors.gold} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.premiumBannerTitle}>Group DMs are Premium</Text>
+            <Text style={styles.premiumBannerCopy}>
+              Start a 7-day free trial to create a group chat. 1-on-1 DMs are always free.
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.gold} />
+        </Pressable>
+      ) : null}
 
       {/* Optional group name */}
       <View style={styles.nameWrap}>
@@ -269,6 +297,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   createBtnText: { fontFamily: fonts.uiSemi, color: colors.gold, fontSize: 13 },
+  premiumBanner: {
+    flexDirection: "row", alignItems: "center", gap: spacing.sm,
+    marginHorizontal: spacing.lg, marginTop: spacing.md, padding: spacing.md,
+    borderRadius: radius.lg, backgroundColor: colors.primary,
+    ...shadow.card,
+  },
+  premiumBannerTitle: { fontFamily: fonts.uiSemi, fontSize: 13, color: colors.gold, letterSpacing: 0.6, textTransform: "uppercase" },
+  premiumBannerCopy: { fontFamily: fonts.bodyRegular, fontSize: 13, color: "#F4EAD0", lineHeight: 18, marginTop: 2 },
   nameWrap: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,

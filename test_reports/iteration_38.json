@@ -1,0 +1,44 @@
+{
+  "summary": "Iteration 38 (Stripe Recurring Subscriptions + Premium gating) backend-only review. Wrote pytest suite covering 31 test cases across /api/subscriptions/* payload + Stripe gating, /api/auth/me premium flag, library/challenges/group-DM 200-vs-402 gating, and 8 regression endpoints. 30/31 pass. Single failure: POST /api/subscriptions/create-checkout-session returns 503 for the admin user instead of the expected 200 + already_premium=true — root cause is the `if not stripe_ready` 503 raise being placed BEFORE the `if is_premium_user(user)` short-circuit in subscriptions.py:181-195. All other contracts hold: admin status payload is_premium=true / is_admin_premium=true, non-admin is_premium=false, pricing.monthly=499c / pricing.annual=3999c, trial_days=7, stripe_ready=false; customer-portal & webhook both 503 with placeholder key; library/challenge/group-DM 402 detail contains the exact phrase 'Sanctus Premium is required'; all 5 papal encyclicals (humanae-vitae, veritatis-splendor, centesimus-annus, evangelii-nuntiandi, magnifica-humanitas) free for non-admin; confessions-augustine paywalled 402 for non-admin, 200 for admin; books list now carries `is_premium` bool (papal=false, others=true); challenges enroll 402/200; group DM 402/200; film ccc-bernadette-anim youtube_id still 'ACBWU4ug-rc'. Note: /api/saints/today and /api/daily-practice require a `?date=` query param (pre-existing, not a regression) — adjusted regression test accordingly.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "POST /api/subscriptions/create-checkout-session",
+        "issue": "Admin (philipwils13@gmail.com / user_ade7a898e281) receives 503 'Payments are not configured…' instead of the spec-required 200 + {already_premium: true, url: null}. Root cause: in /app/backend/subscriptions.py the `if not stripe_ready: raise 503` block runs BEFORE the `if is_premium_user(user): return {already_premium: True}` short-circuit. Fix: move the `is_premium_user(user)` check above the stripe_ready guard (or check it inside the 503 branch first). One-line ordering swap — purely business-logic, no Stripe call needed for premium accounts.",
+        "priority": "HIGH"
+      }
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_subscriptions_iter38.py",
+    "/app/test_reports/pytest/iter38_results.xml"
+  ],
+  "action_items": [
+    "Swap the ordering in /app/backend/subscriptions.py inside create_checkout(): check `if is_premium_user(user): return {already_premium: True, url: None}` BEFORE the `if not stripe_ready: raise 503`. This is required by the explicit spec: admin must receive 200/already_premium=true even when STRIPE_API_KEY is the placeholder."
+  ],
+  "critical_code_review_comments": [
+    "subscriptions.py create_checkout: stripe_ready gate fires before the admin/already-premium short-circuit (lines 181-195). Spec says admin must short-circuit first; this is the sole failing test.",
+    "subscriptions.py:298 reads `subscription.current_period_end` directly. As of Stripe API 2025-09-30, `current_period_end` was relocated from the Subscription object to the line items. If the deployed Stripe account uses an API version after that change, this field will arrive None and premium.current_period_end will silently become null. Consider falling back to `items.data[0].current_period_end` (no fix required now since reconcile/webhook paths are 503-gated in preview).",
+    "subscriptions.py file is 521 lines — still within budget but approaching the 700-line ceiling; consider extracting the webhook handler into its own module before it grows further."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_subscriptions_iter38.py (new)",
+    "/app/test_reports/pytest/iter38_results.xml (junit output)"
+  ],
+  "success_rate": {
+    "backend": "96.8% (30/31)",
+    "frontend": "not tested (backend-only review per request)"
+  },
+  "seed_data_creation": "None. Reused pre-existing pre-minted sessions: admin token test_premium_2453a541f1e0982d (user_ade7a898e281, philipwils13@gmail.com) and non-admin token test_nonadmin_7c1ac6ad1df64b42 (user_test_nonadmin_001). Both sessions were still live in mongo user_sessions collection.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Reusable pytest at /app/backend/tests/test_subscriptions_iter38.py covers the full premium-gating contract. Re-run with: `pytest /app/backend/tests/test_subscriptions_iter38.py -v`. The only expected failure after fix is TestStripeGatedEndpoints::test_create_checkout_admin_already_premium — once the admin short-circuit is moved above the stripe_ready guard, suite should be 31/31. Note: pre-minted sessions expire ~2h after last use; refresh by inserting into mongo `user_sessions` collection if 401s appear.",
+  "rca_of_issue": "Bug: POST /api/subscriptions/create-checkout-session returns 503 for admin instead of 200/already_premium=true. Reproduce: `curl -X POST http://localhost:8001/api/subscriptions/create-checkout-session -H 'Authorization: Bearer test_premium_2453a541f1e0982d' -H 'Content-Type: application/json' -d '{\"plan\":\"monthly\",\"return_origin\":\"http://localhost\"}'` → 503. Root cause: subscriptions.py lines 181-195, the `if not stripe_ready` raise precedes the `if is_premium_user(user)` short-circuit, so admin accounts can never reach the already_premium branch in the placeholder-key preview environment. Mitigation: swap the two if-blocks so the admin check runs first."
+}

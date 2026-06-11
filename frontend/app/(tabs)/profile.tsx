@@ -217,6 +217,17 @@ export default function ProfileScreen() {
         <Text style={styles.section}>About</Text>
         <View style={styles.linkRow} testID="profile-about-links">
           <Pressable
+            testID="profile-premium-link"
+            onPress={() => router.push("/premium")}
+            style={({ pressed }) => [styles.linkCard, pressed && styles.pressed]}
+          >
+            <Ionicons name="ribbon-outline" size={18} color={colors.gold} />
+            <Text style={styles.linkLabel}>
+              {user?.is_premium ? "Sanctus Premium · Manage" : "Sanctus Premium"}
+            </Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          </Pressable>
+          <Pressable
             testID="profile-shop-link"
             onPress={() => router.push("/shop")}
             style={({ pressed }) => [styles.linkCard, pressed && styles.pressed]}

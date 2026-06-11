@@ -61,6 +61,10 @@ class User(BaseModel):
     age: Optional[int] = None                 # 12..120, optional
     show_attribution: Optional[bool] = None   # default for overlay attributions
     is_admin: Optional[bool] = False          # gates /api/saints/admin/* etc.
+    # Premium / Sanctus Premium subscription state. The `premium` subdoc
+    # is written by `subscriptions.py` (Stripe webhook + reconcile flow).
+    premium: Optional[Dict[str, Any]] = None
+    stripe: Optional[Dict[str, Any]] = None
 
 
 class PreferencesPayload(BaseModel):
@@ -297,7 +301,11 @@ async def auth_session(payload: SessionExchangeRequest):
 
 @api.get("/auth/me")
 async def auth_me(user: User = Depends(get_current_user)):
-    return user
+    # Augment with a computed `is_premium` flag for clients (paywall UI).
+    from premium import is_premium_user
+    payload = user.model_dump()
+    payload["is_premium"] = is_premium_user(user)
+    return payload
 
 
 @api.put("/auth/me")
@@ -2345,7 +2353,12 @@ async def dm_send_message(thread_id: str, payload: CommunityDMSendRequest,
 @api.post("/community/dm/threads/group")
 async def dm_create_group(payload: GroupDMCreateRequest,
                           user: User = Depends(get_current_user)):
-    """Create a new group DM. Creator is auto-added. Capped at MAX_GROUP_MEMBERS."""
+    """Create a new group DM. Creator is auto-added. Capped at MAX_GROUP_MEMBERS.
+
+    Group DMs are a Sanctus Premium feature. 1-on-1 DMs remain free for all.
+    """
+    from premium import require_premium
+    require_premium(user, feature="Group DMs")
     requested = list({m for m in (payload.member_ids or []) if m})
     if user.user_id in requested:
         requested.remove(user.user_id)
@@ -2966,6 +2979,7 @@ from shop import build_router as build_shop_router
 from charity import build_router as build_charity_router
 from library import build_router as build_library_router
 from legal import build_legal_router
+from subscriptions import build_subscriptions_router
 
 api.include_router(build_daily_practice_router(db, get_current_user))
 api.include_router(build_catechism_router(db, get_current_user, EMERGENT_LLM_KEY))
@@ -2975,6 +2989,7 @@ api.include_router(build_challenges_router(db, get_current_user, EMERGENT_LLM_KE
 api.include_router(build_shop_router(db, get_current_user))
 api.include_router(build_charity_router(db, get_current_user))
 api.include_router(build_library_router(db, get_current_user))
+api.include_router(build_subscriptions_router(db, get_current_user))
 
 
 async def _resolve_session_user_optional(authorization: Optional[str]):

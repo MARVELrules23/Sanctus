@@ -164,6 +164,8 @@ def _public_book(doc: Dict[str, Any], include_chapter_bodies: bool = False) -> D
         "status": doc.get("status") or "published",
         "chapter_count": len(chapters_out),
         "chapters": chapters_out,
+        # Encyclicals are free; everything else needs Sanctus Premium.
+        "is_premium": (doc.get("tradition") or "").lower() != "papal",
     }
 
 
@@ -346,6 +348,15 @@ def build_router(db: AsyncIOMotorDatabase, get_current_user) -> APIRouter:
     async def get_chapter(slug: str, idx: int, user=Depends(get_current_user)):
         is_admin = bool(getattr(user, "is_admin", False))
         doc = await _get_book_or_404(slug, allow_drafts=is_admin)
+        # Premium gate: all books require Sanctus Premium EXCEPT papal
+        # encyclicals (tradition == "papal"), which are always free.
+        if (doc.get("tradition") or "").lower() != "papal":
+            from premium import is_premium_user
+            if not is_premium_user(user):
+                raise HTTPException(
+                    status_code=402,
+                    detail="Sanctus Premium is required to read this book.",
+                )
         chapters = doc.get("chapters") or []
         if idx < 0 or idx >= len(chapters):
             raise HTTPException(status_code=404, detail="chapter not found")

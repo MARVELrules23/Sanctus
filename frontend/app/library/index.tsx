@@ -23,6 +23,7 @@ import {
   listLibraryStations,
 } from "@/src/api";
 import { useRadioPlayer } from "@/src/audio/RadioPlayerContext";
+import { useAuth } from "@/src/auth-context";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 
 type Tab = "books" | "radio" | "films";
@@ -133,6 +134,7 @@ export default function LibraryIndexScreen() {
     return films.filter((f) => f.category === filmCategory);
   }, [films, filmCategory]);
 
+  const { user } = useAuth();
   /* ------------------------- BOOK CARD --------------------------------- */
   const renderBookCard = (b: LibraryBook) => {
     const accent = b.cover_color || colors.gold;
@@ -141,6 +143,7 @@ export default function LibraryIndexScreen() {
     const pct = hasProgress
       ? Math.min(1, (progress!.chapter_index + progress!.scroll_pct) / Math.max(1, b.chapter_count))
       : 0;
+    const isLocked = !!b.is_premium && !user?.is_premium;
     return (
       <Pressable
         key={b.book_id}
@@ -153,6 +156,11 @@ export default function LibraryIndexScreen() {
           {b.type === "external" ? (
             <View style={styles.externalBadge}>
               <Ionicons name="open-outline" size={10} color={colors.surface} />
+            </View>
+          ) : null}
+          {isLocked ? (
+            <View style={styles.lockBadge}>
+              <Ionicons name="lock-closed" size={10} color={colors.primary} />
             </View>
           ) : null}
         </View>
@@ -535,6 +543,15 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.35)",
     borderRadius: radius.round,
     padding: 3,
+  },
+  lockBadge: {
+    position: "absolute",
+    bottom: 4,
+    right: 4,
+    backgroundColor: colors.gold,
+    borderRadius: radius.round,
+    width: 18, height: 18,
+    alignItems: "center", justifyContent: "center",
   },
   bookMeta: { flex: 1, justifyContent: "center" },
   bookTitle: { fontFamily: fonts.headingSemi, fontSize: 16, color: colors.textPrimary, lineHeight: 20 },

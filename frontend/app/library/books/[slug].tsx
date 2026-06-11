@@ -14,6 +14,7 @@ import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 
 import { getLibraryBook, LibraryBook } from "@/src/api";
+import { useAuth } from "@/src/auth-context";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 
 const TRADITION_LABEL: Record<string, string> = {
@@ -26,6 +27,7 @@ const TRADITION_LABEL: Record<string, string> = {
 export default function BookDetailScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const router = useRouter();
+  const { user } = useAuth();
   const [book, setBook] = useState<LibraryBook | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -58,8 +60,14 @@ export default function BookDetailScreen() {
   const progress = book.progress;
   const resumeIndex = progress?.chapter_index ?? 0;
   const hasResume = !!progress && (progress.chapter_index > 0 || progress.scroll_pct > 0.01);
+  // Encyclicals (tradition === "papal") are free; other books require Premium.
+  const isLocked = !!book.is_premium && !user?.is_premium;
 
   const startReading = (chapterIndex: number) => {
+    if (isLocked) {
+      router.push("/premium" as any);
+      return;
+    }
     router.push(`/library/books/${slug}/read?chapter=${chapterIndex}`);
   };
 
@@ -107,6 +115,26 @@ export default function BookDetailScreen() {
 
         {book.blurb ? <Text style={styles.blurb}>{book.blurb}</Text> : null}
 
+        {isLocked && !isExternal ? (
+          <Pressable
+            testID="book-paywall"
+            onPress={() => router.push("/premium" as any)}
+            style={({ pressed }) => [
+              styles.premiumBanner,
+              pressed && { opacity: 0.9 },
+            ]}
+          >
+            <Ionicons name="lock-closed" size={18} color={colors.gold} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.premiumBannerTitle}>Sanctus Premium</Text>
+              <Text style={styles.premiumBannerCopy}>
+                Start a 7-day free trial to read this book in-app. Encyclicals stay free.
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.gold} />
+          </Pressable>
+        ) : null}
+
         {isExternal ? (
           <Pressable
             testID="book-open-external"
@@ -142,8 +170,10 @@ export default function BookDetailScreen() {
                   { backgroundColor: accent, opacity: pressed ? 0.85 : 1 },
                 ]}
               >
-                <Ionicons name="book" size={14} color={colors.gold} />
-                <Text style={styles.primaryBtnText}>Start Reading</Text>
+                <Ionicons name={isLocked ? "lock-closed" : "book"} size={14} color={colors.gold} />
+                <Text style={styles.primaryBtnText}>
+                  {isLocked ? "Unlock with Premium" : "Start Reading"}
+                </Text>
               </Pressable>
             )}
 
@@ -226,6 +256,14 @@ const styles = StyleSheet.create({
     gap: 8, paddingVertical: 14, borderRadius: radius.round, marginTop: spacing.lg,
   },
   primaryBtnText: { fontFamily: fonts.uiSemi, fontSize: 14, color: colors.gold, letterSpacing: 0.6 },
+  premiumBanner: {
+    flexDirection: "row", alignItems: "center", gap: spacing.sm,
+    marginTop: spacing.lg, padding: spacing.md,
+    borderRadius: radius.lg, backgroundColor: colors.primary,
+    ...shadow.card,
+  },
+  premiumBannerTitle: { fontFamily: fonts.uiSemi, fontSize: 13, color: colors.gold, letterSpacing: 0.6, textTransform: "uppercase" },
+  premiumBannerCopy: { fontFamily: fonts.bodyRegular, fontSize: 13, color: "#F4EAD0", lineHeight: 18, marginTop: 2 },
   section: {
     fontFamily: fonts.headingSemi, fontSize: 16, color: colors.textPrimary,
     marginTop: spacing.xl, marginBottom: spacing.sm,

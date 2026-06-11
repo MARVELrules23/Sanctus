@@ -380,6 +380,8 @@ def _public_challenge(doc: Dict[str, Any], include_prep: bool = True) -> Dict[st
         "status": doc.get("status", "draft"),
         "total_days": window_days or (doc.get("total_days") or 0),
         "published_days": doc.get("published_days") or 0,
+        # All Liturgical Challenges are Sanctus Premium features.
+        "is_premium": True,
     }
 
 
@@ -671,6 +673,8 @@ def build_router(
 
     @router.post("/{slug}/enroll")
     async def enroll(slug: str, user=Depends(get_current_user)):
+        from premium import require_premium
+        require_premium(user, feature="Liturgical Challenges")
         doc = await _get_challenge_or_404(slug)
         existing = await enrollments.find_one({"user_id": user.user_id, "challenge_id": doc["challenge_id"]})
         if existing:

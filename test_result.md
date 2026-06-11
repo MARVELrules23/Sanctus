@@ -375,3 +375,108 @@ Frontend:
 - Library tab → Books sub-tab → tap Orthodoxy → detail screen now shows 'Start Reading' (NOT 'Open full work' external button); chapter list shows 10 chapters incl. 'Preface', 'Chapter I', 'Chapter II'.
 - Open Confessions Bk I in reader → text renders smoothly (no freeze >2s, scrollable, paragraphs visually separated). Verify subtitle is visible if non-empty. Resume + chapter nav still work.
 "
+
+
+main_agent_iteration_38_2026-06-11: "STRIPE RECURRING SUBSCRIPTIONS — Sanctus Premium implemented end-to-end.
+
+PRICING + TRIAL (confirmed with user before implementation):
+  - Monthly: $4.99/month
+  - Annual:  $39.99/year (≈33% savings)
+  - 7-day free trial on both tiers
+  - Admin email philipwils13@gmail.com gets premium FREE permanently
+    (see ADMIN_PREMIUM_EMAILS in backend/premium.py)
+
+PREMIUM GATING RULES (already verified via curl, all returning expected codes):
+  - Library books (in-app reader): NON-encyclical books require Premium.
+    Encyclicals (tradition='papal': humanae-vitae, evangelii-nuntiandi,
+    veritatis-splendor, centesimus-annus, magnifica-humanitas) remain
+    100% free for everyone.
+  - Liturgical Challenges: enrollment + check-ins require Premium.
+    Browsing/preview is free.
+  - Group DMs: creating a group thread requires Premium. 1-on-1 DMs
+    remain free.
+
+NEW FILES:
+  - /app/backend/premium.py        — gating helpers (is_premium_user,
+    require_premium), ADMIN_PREMIUM_EMAILS={'philipwils13@gmail.com'},
+    PREMIUM_PRICING/TRIAL constants
+  - /app/backend/subscriptions.py  — full Stripe router:
+      GET  /api/subscriptions/status
+      POST /api/subscriptions/create-checkout-session  (mode=subscription,
+           inline price_data, trial_period_days=7, allow_promo_codes)
+      POST /api/subscriptions/reconcile/{session_id}  (post-redirect)
+      POST /api/subscriptions/customer-portal  (Stripe Billing Portal)
+      POST /api/subscriptions/webhook  (handles checkout.session.completed,
+           customer.subscription.created/updated/deleted/trial_will_end,
+           invoice.payment_failed)
+  - /app/frontend/app/premium/index.tsx     — paywall + manage screen
+  - /app/frontend/app/premium/success.tsx   — post-checkout reconcile
+  - /app/frontend/src/premium-utils.ts      — publicOrigin, formatCents,
+    describeStatus, isPaywallError
+
+MODIFIED FILES:
+  - /app/backend/server.py — User model gains premium+stripe subdocs;
+    /api/auth/me now returns is_premium; group-DM create gated; router
+    wired in.
+  - /app/backend/library.py — get_chapter raises 402 unless tradition=='papal'
+    or user is premium/admin; _public_book returns is_premium flag.
+  - /app/backend/challenges.py — enroll route gated; _public_challenge
+    returns is_premium: true.
+  - /app/frontend/src/api.ts — User type adds is_premium/premium/stripe;
+    new functions: getPremiumStatus, createPremiumCheckout,
+    reconcilePremiumSession, openPremiumPortal; LibraryBook.is_premium.
+  - /app/frontend/src/auth-context.tsx — exposes refresh().
+  - /app/frontend/app/library/index.tsx — lock badge on book cover when
+    is_premium && !user.is_premium.
+  - /app/frontend/app/library/books/[slug].tsx — Start-Reading CTA shows
+    'Unlock with Premium' + lock icon when locked; premium banner.
+  - /app/frontend/app/library/books/[slug]/read.tsx — 402 from chapter
+    GET bounces user to /premium.
+  - /app/frontend/app/challenges/[slug].tsx — enroll/checkin paths
+    redirect to /premium when not premium; banner above enroll row.
+  - /app/frontend/app/community/dm/new-group.tsx — same paywall behavior
+    + visible banner explaining group DMs are Premium.
+  - /app/frontend/app/(tabs)/profile.tsx — adds 'Sanctus Premium' link
+    in About section (labels 'Manage' if user already premium).
+
+ENV:
+  - STRIPE_API_KEY currently 'sk_test_emergent' (placeholder). The
+    subscriptions module returns 503 with a helpful message until a
+    real key is injected at deploy. No env vars were modified.
+  - Optional STRIPE_WEBHOOK_SECRET supported but not required pre-deploy.
+
+VERIFIED MANUALLY via curl with pre-minted tokens (see
+memory/test_credentials.md):
+  - Admin: /auth/me.is_premium = true, /subscriptions/status.is_admin_premium
+    = true, encyclical chapter 200, non-encyclical chapter 200, enroll 200,
+    create group 200.
+  - Non-admin: encyclical 200 (free), non-encyclical 402, enroll 402,
+    create group 402, status.is_premium=false.
+
+NEEDS TESTING (backend):
+  - GET /api/subscriptions/status (admin → is_premium=true,is_admin_premium=true;
+    non-admin → is_premium=false). pricing.monthly.amount_cents=499;
+    pricing.annual.amount_cents=3999; trial_days=7; stripe_ready=false.
+  - POST /api/subscriptions/create-checkout-session {plan:'monthly',
+    return_origin:'http://localhost'} → 503 because Stripe key is placeholder.
+  - GET /api/library/books/humanae-vitae/chapters/0 (non-admin) → 200.
+  - GET /api/library/books/confessions-augustine/chapters/0 (non-admin) → 402.
+  - GET /api/library/books/confessions-augustine/chapters/0 (admin) → 200.
+  - POST /api/challenges/{any}/enroll (non-admin) → 402; (admin) → 200.
+  - POST /api/community/dm/threads/group {member_ids:[..]} (non-admin) → 402.
+  - GET /api/auth/me (admin) → is_premium:true.
+  - Regression: all previously-passing endpoints still work (library list,
+    films, radio, challenges list, community feed, shop products).
+
+NEEDS TESTING (frontend):
+  - /premium screen renders (paywall when not premium / active card when premium).
+  - Profile tab shows 'Sanctus Premium' row that routes to /premium.
+  - Library book card shows a small gold lock badge on non-encyclical
+    embedded books when user is non-premium; tapping a locked book shows
+    'Unlock with Premium' button that routes to /premium.
+  - Challenge detail shows premium banner above enroll row when user is
+    not premium; Enroll switch redirects to /premium instead of toggling.
+  - Community → DM Inbox → 'New group' shows paywall banner; tapping
+    Create with a free user redirects to /premium.
+  - All paywall actions show the Stripe-not-configured note (button stays
+    disabled with explanatory copy) since STRIPE_API_KEY is placeholder."

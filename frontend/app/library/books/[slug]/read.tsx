@@ -104,11 +104,19 @@ export default function ReaderScreen() {
       // Scroll back to top after the new chapter renders.
       requestAnimationFrame(() => scrollRef.current?.scrollTo({ y: 0, animated: false }));
     } catch (e: any) {
-      Alert.alert("Couldn't load chapter", e?.message || "Try again.");
+      const status = e?.status;
+      const msg = e?.message || "";
+      if (status === 402 || msg.toLowerCase().includes("sanctus premium is required")) {
+        // Quietly bounce to the paywall — caller already saw a CTA, this is
+        // just defensive (e.g. expired subscription mid-read).
+        router.replace("/premium" as any);
+        return;
+      }
+      Alert.alert("Couldn't load chapter", msg || "Try again.");
     } finally {
       setLoading(false);
     }
-  }, [slug]);
+  }, [slug, router]);
 
   useEffect(() => { void loadChapter(initialChapter); }, [loadChapter, initialChapter]);
 

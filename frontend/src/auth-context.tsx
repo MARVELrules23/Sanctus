@@ -15,6 +15,7 @@ type AuthState = {
   signIn: () => Promise<void>;
   signOut: () => Promise<void>;
   setUser: (u: User | null) => void;
+  refresh: () => Promise<void>;
 };
 
 const AuthCtx = createContext<AuthState>({
@@ -23,6 +24,7 @@ const AuthCtx = createContext<AuthState>({
   signIn: async () => {},
   signOut: async () => {},
   setUser: () => {},
+  refresh: async () => {},
 });
 
 const AUTH_URL = "https://auth.emergentagent.com/?redirect=";
@@ -145,7 +147,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.replace("/login");
   }, [router]);
 
-  const value = useMemo(() => ({ user, loading, signIn, signOut, setUser }), [user, loading, signIn, signOut]);
+  const value = useMemo(() => ({ user, loading, signIn, signOut, setUser, refresh }), [user, loading, signIn, signOut, refresh]);
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;
 }
 

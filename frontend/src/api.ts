@@ -77,6 +77,15 @@ export type User = {
   age?: number | null;
   show_attribution?: boolean | null;
   is_admin?: boolean | null;
+  is_premium?: boolean | null;
+  premium?: {
+    active?: boolean;
+    tier?: "monthly" | "annual" | null;
+    status?: string | null;
+    current_period_end?: number | null;
+    cancel_at_period_end?: boolean;
+    trial_end?: number | null;
+  } | null;
 };
 
 export type GoalMode = "liturgical" | "goals";
@@ -1290,6 +1299,7 @@ export type LibraryBook = {
   status: string;
   chapter_count: number;
   chapters: LibraryChapter[];
+  is_premium?: boolean;
   progress?: {
     chapter_index: number;
     scroll_pct: number;
@@ -1510,3 +1520,48 @@ export async function adminDeleteLibraryFilm(slug: string): Promise<{ ok: boolea
   return await api(`/library/admin/films/${encodeURIComponent(slug)}`, { method: "DELETE" });
 }
 
+
+// ===== Sanctus Premium (Stripe Subscriptions) =====
+
+export type PremiumPricing = {
+  monthly: { amount_cents: number; interval: "month"; label: string };
+  annual: { amount_cents: number; interval: "year"; label: string };
+};
+
+export type PremiumStatus = {
+  is_premium: boolean;
+  is_admin_premium: boolean;
+  tier: "monthly" | "annual" | null;
+  status: string | null;
+  current_period_end: number | null;
+  cancel_at_period_end: boolean;
+  trial_end: number | null;
+  pricing: PremiumPricing;
+  trial_days: number;
+  stripe_ready: boolean;
+};
+
+export async function getPremiumStatus(): Promise<PremiumStatus> {
+  return await api<PremiumStatus>("/subscriptions/status");
+}
+
+export async function createPremiumCheckout(body: {
+  plan: "monthly" | "annual";
+  return_origin: string;
+}): Promise<{ url: string | null; session_id?: string; plan?: string; already_premium?: boolean }> {
+  return await api(`/subscriptions/create-checkout-session`, { method: "POST", body });
+}
+
+export async function reconcilePremiumSession(sessionId: string): Promise<{
+  reconciled: boolean;
+  premium: PremiumStatus["status"] extends infer _ ? Record<string, unknown> : never;
+}> {
+  return await api(`/subscriptions/reconcile/${encodeURIComponent(sessionId)}`, { method: "POST" });
+}
+
+export async function openPremiumPortal(return_origin: string): Promise<{ url: string }> {
+  return await api(`/subscriptions/customer-portal`, {
+    method: "POST",
+    body: { return_origin },
+  });
+}

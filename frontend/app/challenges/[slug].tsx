@@ -37,6 +37,7 @@ import {
 } from "@/src/api";
 import { Avatar } from "@/src/components/Avatar";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
+import { useAuth } from "@/src/auth-context";
 import { todayISO, formatLongFromISO } from "@/src/date-utils";
 
 function iso(s: string | null | undefined): string | null {
@@ -108,15 +109,26 @@ export default function ChallengeDetailScreen() {
 
   const enrolled = !!data?.enrolled;
   const accent = data?.color || colors.gold;
+  const { user } = useAuth();
+  const isLocked = !user?.is_premium;
 
   const onToggleEnroll = async (next: boolean) => {
     if (!slug || toggling) return;
+    if (next && isLocked) {
+      router.push("/premium" as any);
+      return;
+    }
     setToggling(true);
     try {
       if (next) await enrollChallenge(slug);
       else await unenrollChallenge(slug);
       await load();
     } catch (e: any) {
+      const status = e?.status;
+      if (status === 402) {
+        router.push("/premium" as any);
+        return;
+      }
       Alert.alert("Couldn't update", e?.message || "Try again.");
     } finally {
       setToggling(false);
@@ -125,6 +137,10 @@ export default function ChallengeDetailScreen() {
 
   const onCheckIn = async (day: ChallengeDay) => {
     if (!slug || busyDay) return;
+    if (isLocked) {
+      router.push("/premium" as any);
+      return;
+    }
     if (!enrolled) {
       Alert.alert("Enroll first", "Turn the toggle on to walk this season — then mark days complete.");
       return;
@@ -254,6 +270,23 @@ export default function ChallengeDetailScreen() {
               <Text style={styles.heroPatron}>Patron · {data.patron_saint}</Text>
             ) : null}
             {data.blurb ? <Text style={styles.heroBlurb}>{data.blurb}</Text> : null}
+
+            {isLocked && !enrolled ? (
+              <Pressable
+                testID="challenge-paywall"
+                onPress={() => router.push("/premium" as any)}
+                style={({ pressed }) => [styles.premiumBanner, pressed && { opacity: 0.9 }]}
+              >
+                <Ionicons name="lock-closed" size={18} color={colors.gold} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.premiumBannerTitle}>Sanctus Premium</Text>
+                  <Text style={styles.premiumBannerCopy}>
+                    Unlock every Liturgical Challenge — start your 7-day free trial.
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.gold} />
+              </Pressable>
+            ) : null}
 
             <View style={styles.enrollRow}>
               <View style={{ flex: 1 }}>
@@ -688,6 +721,14 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.borderSoft,
   },
+  premiumBanner: {
+    flexDirection: "row", alignItems: "center", gap: spacing.sm,
+    marginTop: spacing.md, padding: spacing.md,
+    borderRadius: radius.lg, backgroundColor: colors.primary,
+    ...shadow.card,
+  },
+  premiumBannerTitle: { fontFamily: fonts.uiSemi, fontSize: 13, color: colors.gold, letterSpacing: 0.6, textTransform: "uppercase" },
+  premiumBannerCopy: { fontFamily: fonts.bodyRegular, fontSize: 13, color: "#F4EAD0", lineHeight: 18, marginTop: 2 },
   enrollLabel: { fontFamily: fonts.uiSemi, fontSize: 14, color: colors.textPrimary },
   enrollSub: { fontFamily: fonts.uiMedium, fontSize: 11, color: colors.textMuted, marginTop: 2 },
   statRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm, flexWrap: "wrap" },

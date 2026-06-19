@@ -3012,6 +3012,7 @@ from library import build_router as build_library_router
 from legal import build_legal_router
 from subscriptions import build_subscriptions_router
 from missals import build_router as build_missals_router
+from liturgy_of_hours import build_router as build_liturgy_router
 
 api.include_router(build_daily_practice_router(db, get_current_user))
 api.include_router(build_catechism_router(db, get_current_user, EMERGENT_LLM_KEY))
@@ -3023,6 +3024,7 @@ api.include_router(build_charity_router(db, get_current_user))
 api.include_router(build_library_router(db, get_current_user))
 api.include_router(build_subscriptions_router(db, get_current_user))
 api.include_router(build_missals_router(db, get_current_user))
+api.include_router(build_liturgy_router(db, get_current_user))
 
 
 async def _resolve_session_user_optional(authorization: Optional[str]):

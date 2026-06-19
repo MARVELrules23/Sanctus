@@ -1631,3 +1631,74 @@ export async function getMissal(slug: string): Promise<MissalDetail> {
 export async function getMissalSection(slug: string, idx: number): Promise<MissalSection> {
   return await api(`/missals/${encodeURIComponent(slug)}/sections/${idx}`);
 }
+
+// ---------------------------------------------------------------------------
+// Liturgy of the Hours (Divine Office)
+// ---------------------------------------------------------------------------
+
+export type LiturgyHourSummary = {
+  slug: string;
+  name: string;
+  subtitle: string;
+  latin_name: string;
+  icon: string;
+  accent_color: string;
+  time_of_day: string;
+  duration: string;
+  psalms_vary_by_day: boolean;
+};
+
+export type LiturgyDay = {
+  key: string;
+  name: string;
+  latin_name: string;
+  weekday_index: number;
+};
+
+export type LiturgyExternalLink = {
+  url: string;
+  label: string;
+  description: string;
+};
+
+export type LiturgyIndex = {
+  hours: LiturgyHourSummary[];
+  days: LiturgyDay[];
+  today: string;
+  external_link: LiturgyExternalLink;
+};
+
+export type LiturgyHourDetail = LiturgyHourSummary & {
+  intro: string;
+  section_count_per_day: number;
+  days: LiturgyDay[];
+};
+
+export type LiturgySection = {
+  index: number;
+  title: string;
+  latin_title?: string | null;
+  english: string;
+  latin?: string | null;
+  rubric?: string | null;
+  note?: string | null;
+};
+
+export type LiturgyDayPayload = {
+  hour: LiturgyHourSummary;
+  day: LiturgyDay;
+  today: string;
+  sections: LiturgySection[];
+};
+
+export async function listLiturgyHours(): Promise<LiturgyIndex> {
+  return await api(`/liturgy`);
+}
+
+export async function getLiturgyHour(slug: string): Promise<LiturgyHourDetail> {
+  return await api(`/liturgy/${encodeURIComponent(slug)}`);
+}
+
+export async function getLiturgyDay(slug: string, dayKey: string): Promise<LiturgyDayPayload> {
+  return await api(`/liturgy/${encodeURIComponent(slug)}/${encodeURIComponent(dayKey)}`);
+}

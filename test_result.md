@@ -565,3 +565,23 @@ so webhook mapping changes need to be tested post-deploy with a real key.
 
 NEEDS TESTING (backend): the 4 bullet points above + smoke pass on premium status."
 
+
+main_agent_liturgy_2026-06-19: "LITURGY OF THE HOURS (Divine Office) shipped — finished the in-progress feature.
+
+BACKEND: `backend/liturgy_of_hours.py` (already authored, public-domain pre-1962 Roman Breviary text) is now WIRED into server.py (import + include_router). All endpoints require auth, NOT premium-gated (free for all).
+  - GET /api/liturgy → { hours:[lauds,vespers,compline], days:[sun..sat], today, external_link }
+  - GET /api/liturgy/{hour_slug} → hour detail (intro, section_count_per_day, days). 404 on unknown hour.
+  - GET /api/liturgy/{hour_slug}/{day_key} → { hour, day, today, sections:[{index,title,latin_title,english,latin,rubric,note}] }. 404 on unknown day.
+  - Lauds/Vespers vary by weekday (psalms_vary_by_day=true); Compline is fixed (false).
+
+FRONTEND (new):
+  - /app/frontend/app/liturgy/index.tsx — hub (testID `liturgy-index`): hero, 3 hour tiles (`liturgy-tile-lauds/vespers/compline`), iBreviary external link (`liturgy-external-link`), 'Today is X' pill.
+  - /app/frontend/app/liturgy/[hour].tsx — reader (testID `liturgy-reader-{hour}`): language mode toggle (`liturgy-mode-both/english/latin`), weekday selector (`liturgy-day-{key}`, hidden for Compline), intro card, section cards (`liturgy-section-{index}`) with side-by-side Latin/English on wide screens, stacked on phones. Default day = device weekday.
+  - Entry point: Holy Bible hub (`/bible`) now has a 'Liturgy of the Hours' link (`bible-liturgy-link`) below the Mass Missals link.
+  - api.ts: added LiturgyIndex/HourSummary/HourDetail/Day/Section/DayPayload types + listLiturgyHours/getLiturgyHour/getLiturgyDay.
+
+VERIFIED: backend curl (list/hour/day 200, bad hour 404, no-auth 401), lint clean, smoke screenshots of hub + reader (Lauds Sunday & Friday) render correctly.
+
+NEEDS TESTING (backend): the 3 endpoints above — auth gating (401 w/o token), 404s, day-varying psalmody differs between weekdays for Lauds/Vespers, Compline identical across days, response shapes.
+NEEDS TESTING (frontend): /bible → 'Liturgy of the Hours' link routes to /liturgy; hub renders 3 tiles + external link; tap a tile → reader; mode toggle switches Latin-only/English-only/both; weekday chips change the psalmody; Compline reader hides the weekday selector."
+

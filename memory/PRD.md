@@ -82,3 +82,18 @@ Reverent & traditional aesthetic: cream/parchment background, deep stained-gl- C
 - Which morning prayer per day? AI-pick from a small library or always the same per-season prayer?
 - Should completing the season unlock a small badge/keepsake in profile?
 - Do friends see each other's challenge progress in the Parish tab? (Probably opt-in.)
+
+---
+
+## Feature log — 2026-06-19
+
+### Daytime Prayer (Liturgy of the Hours)
+- Added the Little Hours (Terce, Sext, None) as a single "Daytime Prayer" Hour (slug `daytime`) in `backend/liturgy_of_hours.py` — public-domain ferial per-annum form, Latin + English, fixed across the week. Hub now: Lauds · Daytime · Vespers · Compline. No new frontend (existing /liturgy hub + reader handle it).
+
+### Virtus (home page — replaced the Journal preview card)
+- `backend/virtues.py` (wired with EMERGENT_LLM_KEY). 9 topics: chastity, charity, humility, patience, temperance, fortitude, spiritual-warfare, habits-discipline, saints-of-virtue.
+- Content AI-authored by Claude (claude-sonnet-4-5) on first GET, cached in Mongo `virtue_content`. Subsections: what_is, life_stages (singleness/dating/marriage), overcoming_vice, saints[], and Resources (PREMIUM-gated, 402 for free). saints-of-virtue → intro + saints_by_virtue[].
+- Virtue Plans (`virtue_plans`): pick virtues + timeframe → AI goals (do/refrain), check-off tracking. FREE.
+- Admin (founder) can edit/regenerate any virtue's content (PUT/regenerate/admin endpoints, 403 for non-admin; edit screen at /virtus/edit/[slug]).
+- Frontend: /virtus (hub), /virtus/[slug] (detail), /virtus/plan/[id], /virtus/edit/[slug]; home `VirtusHomeCard`.
+- Verified: 25/25 backend pytest + all frontend flows (iteration_42).

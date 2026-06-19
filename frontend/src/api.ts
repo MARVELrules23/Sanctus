@@ -3,6 +3,7 @@
  * Reads token from secure storage and attaches Bearer header.
  */
 import { storage } from "@/src/utils/storage";
+import { getLang } from "@/src/i18n";
 
 const BASE = process.env.EXPO_PUBLIC_BACKEND_URL ?? "";
 const TOKEN_KEY = "sanctus_session_token";
@@ -27,7 +28,10 @@ type FetchOpts = {
 
 export async function api<T = unknown>(path: string, opts: FetchOpts = {}): Promise<T> {
   const url = `${BASE}/api${path}`;
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "Accept-Language": getLang(),
+  };
   if (opts.auth !== false) {
     const token = await getToken();
     if (token) headers.Authorization = `Bearer ${token}`;

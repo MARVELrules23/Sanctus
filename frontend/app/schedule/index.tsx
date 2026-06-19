@@ -19,12 +19,14 @@ import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-rou
 
 import { listSchedule, ScheduleItem } from "@/src/api";
 import { notificationsSupported } from "@/src/notifications";
+import { useI18n } from "@/src/i18n";
 import { DOW_SHORT, daysLabel, format12 } from "@/src/schedule-utils";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 import { formatLongFromISO, todayISO } from "@/src/date-utils";
 
 export default function ScheduleScreen() {
   const router = useRouter();
+  const { t } = useI18n();
   const params = useLocalSearchParams<{ dow?: string }>();
   const todayDow = new Date().getDay();
   const [selectedDow, setSelectedDow] = useState<number>(
@@ -101,8 +103,8 @@ export default function ScheduleScreen() {
           <Ionicons name="chevron-back" size={26} color={colors.primary} />
         </Pressable>
         <View style={styles.headerTitleWrap}>
-          <Text style={styles.headerTitle}>Schedule</Text>
-          <Text style={styles.headerSub}>Plan your week with the Church</Text>
+          <Text style={styles.headerTitle}>{t("schedule.title")}</Text>
+          <Text style={styles.headerSub}>{t("schedule.subtitle")}</Text>
         </View>
         <Pressable testID="schedule-add" onPress={goAdd} hitSlop={10}>
           <Ionicons name="add-circle" size={28} color={colors.gold} />
@@ -136,14 +138,14 @@ export default function ScheduleScreen() {
             <View style={styles.banner}>
               <Ionicons name="information-circle-outline" size={16} color={colors.primary} />
               <Text style={styles.bannerText}>
-                Reminders fire on the built iOS/Android app — not in this web preview.
+                {t("schedule.remindersNote")}
               </Text>
             </View>
           ) : null}
 
-          <Text style={styles.sectionLabel}>EVERY {DOW_SHORT[selectedDow].toUpperCase()}</Text>
+          <Text style={styles.sectionLabel}>{t("schedule.every", { day: DOW_SHORT[selectedDow].toUpperCase() })}</Text>
           {weeklyForDay.length === 0 ? (
-            <Text style={styles.empty}>Nothing scheduled on this day yet.</Text>
+            <Text style={styles.empty}>{t("schedule.nothing")}</Text>
           ) : (
             weeklyForDay.map((it) => <ItemCard key={it.id} item={it} />)
           )}
@@ -161,7 +163,7 @@ export default function ScheduleScreen() {
             style={({ pressed }) => [styles.addCta, pressed && { opacity: 0.85 }]}
           >
             <Ionicons name="add" size={18} color={colors.gold} />
-            <Text style={styles.addCtaText}>Add to schedule</Text>
+            <Text style={styles.addCtaText}>{t("schedule.addToSchedule")}</Text>
           </Pressable>
           <View style={{ height: spacing.xxl }} />
         </ScrollView>
@@ -214,4 +216,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg, paddingVertical: 13, borderRadius: radius.round, backgroundColor: colors.primary,
   },
   addCtaText: { fontFamily: fonts.uiSemi, fontSize: 14, color: colors.gold, letterSpacing: 0.4 },
+});
+ 14, color: colors.gold, letterSpacing: 0.4 },
 });

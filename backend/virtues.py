@@ -31,6 +31,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from pydantic import BaseModel
 
 from premium import is_premium_user, require_premium
+from lang_ctx import get_lang, lang_instruction
 
 logger = logging.getLogger("sanctus.virtues")
 
@@ -160,6 +161,7 @@ def _virtue_prompt(v: Dict[str, Any]) -> str:
         "}\n"
         "Stay strictly within Catholic doctrine. Do not invent Catechism paragraph "
         "numbers. Keep prose plain (no markdown, no headings, no bullet characters)."
+        + lang_instruction()
     )
 
 
@@ -180,6 +182,7 @@ def _saints_prompt() -> str:
         "}\n"
         "Use real, canonized (or beatified) saints appropriate to each virtue. "
         "Stay within Catholic doctrine. Plain prose, no markdown."
+        + lang_instruction()
     )
 
 
@@ -215,6 +218,7 @@ async def _generate_content(emergent_llm_key: str, v: Dict[str, Any]) -> Dict[st
     doc: Dict[str, Any] = {
         "slug": v["slug"],
         "kind": v["kind"],
+        "lang": get_lang(),
         "resources": data.get("resources") or [],
         "generated_at": now.isoformat(),
         "edited": False,
@@ -236,17 +240,28 @@ async def _generate_content(emergent_llm_key: str, v: Dict[str, Any]) -> Dict[st
     return doc
 
 
+def _content_filter(slug: str) -> Dict[str, Any]:
+    """Mongo filter for a virtue's cached content in the current language.
+    English also matches legacy docs created before per-language caching."""
+    lang = get_lang()
+    if lang == "en":
+        return {"slug": slug, "$or": [{"lang": "en"}, {"lang": {"$exists": False}}]}
+    return {"slug": slug, "lang": lang}
+
+
 async def _get_or_create_content(
     db: AsyncIOMotorDatabase, emergent_llm_key: str, slug: str
 ) -> Dict[str, Any]:
     v = VIRTUES_BY_SLUG.get(slug)
     if not v:
         raise HTTPException(status_code=404, detail="Virtue not found")
-    existing = await db.virtue_content.find_one({"slug": slug}, {"_id": 0})
+    existing = await db.virtue_content.find_one(_content_filter(slug), {"_id": 0})
     if existing:
         return existing
     doc = await _generate_content(emergent_llm_key, v)
-    await db.virtue_content.update_one({"slug": slug}, {"$set": doc}, upsert=True)
+    await db.virtue_content.update_one(
+        {"slug": slug, "lang": get_lang()}, {"$set": doc}, upsert=True
+    )
     return doc
 
 
@@ -325,6 +340,7 @@ async def _generate_goals(
         "Goals must be specific and achievable within the timeframe, rooted in "
         "Catholic practice (prayer, sacraments, acts of charity, fasting, "
         "accountability). Plain prose, no markdown."
+        + lang_instruction()
     )
     try:
         chat = LlmChat(
@@ -398,9 +414,13 @@ def build_router(
     # ---- catalogue ----
     @router.get("")
     async def list_virtues(user=Depends(get_current_user)):
-        ready = set(
-            await db.virtue_content.distinct("slug")
+        lang = get_lang()
+        ready_filter = (
+            {"$or": [{"lang": "en"}, {"lang": {"$exists": False}}]}
+            if lang == "en"
+            else {"lang": lang}
         )
+        ready = set(await db.virtue_content.distinct("slug", ready_filter))
         return {
             "items": [
                 {**_meta(v), "has_content": v["slug"] in ready}
@@ -523,8 +543,8 @@ def build_router(
             raise HTTPException(status_code=400, detail="Nothing to update")
         update["edited"] = True
         update["edited_at"] = datetime.now(timezone.utc).isoformat()
-        await db.virtue_content.update_one({"slug": slug}, {"$set": update})
-        new_doc = await db.virtue_content.find_one({"slug": slug}, {"_id": 0})
+        await db.virtue_content.update_one(_content_filter(slug), {"$set": update})
+        new_doc = await db.virtue_content.find_one(_content_filter(slug), {"_id": 0})
         full = {**_public_content(v, new_doc, True), "resources": new_doc.get("resources") or []}
         return full
 
@@ -536,7 +556,7 @@ def build_router(
         if not v:
             raise HTTPException(status_code=404, detail="Virtue not found")
         doc = await _generate_content(emergent_llm_key, v)
-        await db.virtue_content.update_one({"slug": slug}, {"$set": doc}, upsert=True)
+        await db.virtue_content.update_one({"slug": slug, "lang": get_lang()}, {"$set": doc}, upsert=True)
         return {**_public_content(v, doc, True), "resources": doc.get("resources") or []}
 
     # ---- admin: full content incl. resources (for the edit screen) ----

@@ -112,3 +112,9 @@ Reverent & traditional aesthetic: cream/parchment background, deep stained-gl- C
 
 ### TODO NEXT — "Español" whole-site Spanish (agreed plan 2Aa/2Ba)
 - Not yet started. Large multi-screen i18n effort: build LanguageProvider + EN|ES toggle on Home, translate Home → tabs → Schedule → Virtus interface (phased), and generate AI content (virtues, readings, meals) in Spanish when ES selected (per-language cache). To be built as a dedicated pass.
+
+## Session update (June 2026)
+- FIXED: Virtue plan delete button — replaced web-broken `Alert.alert` with cross-platform `confirm()` helper in `app/virtus/plan/[id].tsx`.
+- Spanish AI content: added `lang_ctx.py` + Accept-Language middleware. Frontend `api.ts` sends `Accept-Language: <lang>`. Virtue content/plan goals cached per-language (`virtue_content.lang`); meals/workouts generated in active language. Verified via curl (EN stays English, ES returns Spanish).
+- i18n applied to Virtus hub + Schedule list (home + tabs already done).
+- BACKLOG (Spanish strings not yet applied): schedule/edit, calendar tab, profile tab, virtus/[slug] detail. Mass readings remain English (USCCB source). Meals/workouts adopt language at generation time (cached by date, regenerate to switch).

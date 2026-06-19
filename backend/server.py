@@ -19,6 +19,7 @@ from pydantic import BaseModel, Field
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 
 from liturgical import get_liturgical_day
+from lang_ctx import current_lang, resolve_lang, lang_instruction
 from usccb import fetch_readings, usccb_url_for
 from churches import nearby_churches, enrich_with_masstimes, search_churches
 from prayers import EXAMEN_PROMPTS, EXAMINATION_SECTIONS
@@ -486,7 +487,7 @@ async def generate_meal(payload: GenerateMealRequest, user: User = Depends(get_c
         "}"
     )
     note_hash = hashlib.sha1(note_clean.encode("utf-8")).hexdigest()[:8] if note_clean else "none"
-    plan = await _chat_json(system, user_prompt, session_id=f"meals-{user.user_id}-{payload.date}-{payload.goal_mode}-{note_hash}")
+    plan = await _chat_json(system + lang_instruction(), user_prompt, session_id=f"meals-{user.user_id}-{payload.date}-{payload.goal_mode}-{note_hash}")
 
     doc = {
         "user_id": user.user_id,
@@ -554,7 +555,7 @@ async def generate_workout(payload: GenerateWorkoutRequest, user: User = Depends
         "}"
     )
     note_hash = hashlib.sha1(note_clean.encode("utf-8")).hexdigest()[:8] if note_clean else "none"
-    plan = await _chat_json(system, user_prompt, session_id=f"workout-{user.user_id}-{payload.date}-{payload.goal_mode}-{note_hash}")
+    plan = await _chat_json(system + lang_instruction(), user_prompt, session_id=f"workout-{user.user_id}-{payload.date}-{payload.goal_mode}-{note_hash}")
     doc = {
         "user_id": user.user_id,
         "date": payload.date,
@@ -3064,6 +3065,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def language_middleware(request: Request, call_next):
+    """Resolve the request language from Accept-Language into a ContextVar so
+    AI prompt builders can author content in the user's chosen language."""
+    token = current_lang.set(resolve_lang(request.headers.get("accept-language")))
+    try:
+        return await call_next(request)
+    finally:
+        current_lang.reset(token)
 
 
 @app.on_event("startup")

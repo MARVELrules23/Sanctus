@@ -29,12 +29,14 @@ import {
   VirtuePlan,
 } from "@/src/api";
 import Ornament from "@/src/components/Ornament";
+import { useI18n } from "@/src/i18n";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 
 const DAY_OPTIONS = [7, 14, 30, 60];
 
 export default function VirtusIndexScreen() {
   const router = useRouter();
+  const { t } = useI18n();
   const [items, setItems] = useState<VirtueListItem[]>([]);
   const [plans, setPlans] = useState<VirtuePlan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -103,7 +105,7 @@ export default function VirtusIndexScreen() {
         </Pressable>
         <View style={styles.headerTitleWrap}>
           <Text style={styles.headerTitle}>Virtus</Text>
-          <Text style={styles.headerSub}>Grow in holiness, one virtue at a time</Text>
+          <Text style={styles.headerSub}>{t("virtus.subtitle")}</Text>
         </View>
         <View style={{ width: 26 }} />
       </View>
@@ -114,7 +116,7 @@ export default function VirtusIndexScreen() {
         <View style={styles.center}>
           <Text style={styles.errorText}>{error}</Text>
           <Pressable onPress={load} style={({ pressed }) => [styles.retry, pressed && { opacity: 0.7 }]}>
-            <Text style={styles.retryText}>Try again</Text>
+            <Text style={styles.retryText}>{t("common.tryAgain")}</Text>
           </Pressable>
         </View>
       ) : (
@@ -122,17 +124,14 @@ export default function VirtusIndexScreen() {
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
             <View style={styles.heroIntro}>
               <Ornament />
-              <Text style={styles.heroTitle}>The school of virtue</Text>
-              <Text style={styles.heroSub}>
-                Study the virtues, learn to live them in every season of life, and
-                set a goal to grow in the ones the Lord is calling you toward.
-              </Text>
+              <Text style={styles.heroTitle}>{t("virtus.heroTitle")}</Text>
+              <Text style={styles.heroSub}>{t("virtus.heroSub")}</Text>
             </View>
 
             {/* Plan builder */}
             <View style={styles.planCard} testID="virtus-plan-builder">
-              <Text style={styles.planTitle}>Work on a virtue</Text>
-              <Text style={styles.planHint}>Choose one or more virtues to focus on.</Text>
+              <Text style={styles.planTitle}>{t("virtus.workOn")}</Text>
+              <Text style={styles.planHint}>{t("virtus.chooseHint")}</Text>
               <View style={styles.chipWrap}>
                 {planVirtues.map((v) => {
                   const on = selected.has(v.slug);
@@ -173,7 +172,7 @@ export default function VirtusIndexScreen() {
                         pressed && { opacity: 0.85 },
                       ]}
                     >
-                      <Text style={[styles.chipText, on && { color: colors.gold }]}>{d} days</Text>
+                      <Text style={[styles.chipText, on && { color: colors.gold }]}>{t("virtus.days", { n: d })}</Text>
                     </Pressable>
                   );
                 })}
@@ -183,7 +182,7 @@ export default function VirtusIndexScreen() {
                 testID="virtus-plan-note"
                 value={note}
                 onChangeText={setNote}
-                placeholder="Anything you'd like the plan to address? (optional)"
+                placeholder={t("virtus.notePlaceholder")}
                 placeholderTextColor={colors.textMuted}
                 style={styles.noteInput}
                 multiline
@@ -207,7 +206,7 @@ export default function VirtusIndexScreen() {
                   <>
                     <Ionicons name="sparkles" size={15} color={colors.gold} />
                     <Text style={styles.createBtnText}>
-                      {selected.size === 0 ? "Pick a virtue to begin" : `Build my ${days}-day plan`}
+                      {selected.size === 0 ? t("virtus.pickToBegin") : t("virtus.buildPlan", { n: days })}
                     </Text>
                   </>
                 )}
@@ -217,7 +216,7 @@ export default function VirtusIndexScreen() {
             {/* Active plans */}
             {activePlans.length > 0 ? (
               <View style={styles.section}>
-                <Text style={styles.sectionLabel}>YOUR PLANS</Text>
+                <Text style={styles.sectionLabel}>{t("virtus.yourPlans")}</Text>
                 {activePlans.map((p) => (
                   <Pressable
                     key={p.id}
@@ -230,7 +229,7 @@ export default function VirtusIndexScreen() {
                         {p.virtues.map((v) => v.name).join(" · ")}
                       </Text>
                       <Text style={styles.planRowSub}>
-                        {p.completed}/{p.total} goals · ends {p.end_date}
+                        {t("virtus.goalsEnds", { done: p.completed, total: p.total, date: p.end_date })}
                       </Text>
                       <View style={styles.progressTrack}>
                         <View
@@ -249,7 +248,7 @@ export default function VirtusIndexScreen() {
 
             {/* Virtue catalogue */}
             <View style={styles.section}>
-              <Text style={styles.sectionLabel}>THE VIRTUES</Text>
+              <Text style={styles.sectionLabel}>{t("virtus.theVirtues")}</Text>
               {items.map((v) => (
                 <Pressable
                   key={v.slug}

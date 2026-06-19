@@ -8,7 +8,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -25,6 +24,7 @@ import {
   toggleVirtueGoal,
   VirtuePlan,
 } from "@/src/api";
+import { confirm } from "@/src/utils/confirm";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 
 export default function VirtuePlanScreen() {
@@ -62,23 +62,21 @@ export default function VirtuePlanScreen() {
     }
   };
 
-  const confirmDelete = () => {
-    Alert.alert("Delete plan?", "This virtue plan and its goals will be removed.", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          if (!id) return;
-          try {
-            await deleteVirtuePlan(id);
-            router.back();
-          } catch {
-            /* ignore */
-          }
-        },
-      },
-    ]);
+  const confirmDelete = async () => {
+    if (!id) return;
+    const ok = await confirm({
+      title: "Delete plan?",
+      message: "This virtue plan and its goals will be removed.",
+      confirmText: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
+    try {
+      await deleteVirtuePlan(id);
+      router.back();
+    } catch {
+      /* ignore */
+    }
   };
 
   const grouped = useMemo(() => {

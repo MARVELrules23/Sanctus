@@ -15,6 +15,7 @@ import { useRouter } from "expo-router";
 
 import { api, User } from "@/src/api";
 import { useAuth } from "@/src/auth-context";
+import { useI18n } from "@/src/i18n";
 import Ornament from "@/src/components/Ornament";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 
@@ -31,6 +32,7 @@ const LEVEL_OPTIONS = ["beginner", "intermediate", "advanced"];
 
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
+  const { t, lang, setLang } = useI18n();
   const router = useRouter();
   const [prefs, setPrefs] = useState<Prefs | null>(null);
   const [loading, setLoading] = useState(true);
@@ -79,7 +81,7 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={["top"]} testID="profile-screen">
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.title}>Profile</Text>
+        <Text style={styles.title}>{t("profile.title")}</Text>
         <View style={styles.userCard} testID="user-card">
           {user?.picture ? (
             <Image source={{ uri: user.picture }} style={styles.avatar} />
@@ -89,7 +91,7 @@ export default function ProfileScreen() {
             </View>
           )}
           <View style={{ flex: 1 }}>
-            <Text style={styles.userName}>{user?.name ?? "Faithful soul"}</Text>
+            <Text style={styles.userName}>{user?.name ?? t("profile.defaultName")}</Text>
             <Text style={styles.userEmail}>{user?.email}</Text>
             <FaithBioChips user={user} />
           </View>
@@ -112,7 +114,7 @@ export default function ProfileScreen() {
             style={({ pressed }) => [styles.quickLink, pressed && styles.pressed]}
           >
             <Ionicons name="calendar-outline" size={18} color={colors.gold} />
-            <Text style={styles.quickLinkText}>My Events</Text>
+            <Text style={styles.quickLinkText}>{t("profile.myEvents")}</Text>
             <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
           </Pressable>
           <Pressable
@@ -121,7 +123,7 @@ export default function ProfileScreen() {
             style={({ pressed }) => [styles.quickLink, pressed && styles.pressed]}
           >
             <Ionicons name="book-outline" size={18} color={colors.gold} />
-            <Text style={styles.quickLinkText}>Journal</Text>
+            <Text style={styles.quickLinkText}>{t("profile.journal")}</Text>
             <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
           </Pressable>
         </View>
@@ -132,8 +134,8 @@ export default function ProfileScreen() {
           <ActivityIndicator color={colors.gold} style={{ marginTop: spacing.xl }} />
         ) : (
           <>
-            <Text style={styles.section}>Nourishment</Text>
-            <Text style={styles.label}>Dietary pattern</Text>
+            <Text style={styles.section}>{t("profile.nourishment")}</Text>
+            <Text style={styles.label}>{t("profile.dietary")}</Text>
             <View style={styles.optionRow}>
               {DIETARY_OPTIONS.map((opt) => (
                 <Pressable
@@ -147,11 +149,11 @@ export default function ProfileScreen() {
               ))}
             </View>
 
-            <Text style={styles.label}>Allergies / things to avoid</Text>
+            <Text style={styles.label}>{t("profile.allergies")}</Text>
             <TextInput
               testID="pref-allergies-input"
               style={styles.input}
-              placeholder="e.g. nuts, shellfish"
+              placeholder={t("profile.allergiesPh")}
               placeholderTextColor={colors.textMuted}
               value={prefs.allergies}
               onChangeText={(t) => setPrefs({ ...prefs, allergies: t })}
@@ -159,8 +161,8 @@ export default function ProfileScreen() {
               returnKeyType="done"
             />
 
-            <Text style={styles.section}>Discipline</Text>
-            <Text style={styles.label}>Fitness level</Text>
+            <Text style={styles.section}>{t("profile.discipline")}</Text>
+            <Text style={styles.label}>{t("profile.fitnessLevel")}</Text>
             <View style={styles.optionRow}>
               {LEVEL_OPTIONS.map((opt) => (
                 <Pressable
@@ -176,11 +178,11 @@ export default function ProfileScreen() {
               ))}
             </View>
 
-            <Text style={styles.label}>Goal</Text>
+            <Text style={styles.label}>{t("profile.goal")}</Text>
             <TextInput
               testID="pref-goal-input"
               style={styles.input}
-              placeholder="e.g. build endurance, lose weight"
+              placeholder={t("profile.goalPh")}
               placeholderTextColor={colors.textMuted}
               value={prefs.fitness_goal}
               onChangeText={(t) => setPrefs({ ...prefs, fitness_goal: t })}
@@ -188,12 +190,12 @@ export default function ProfileScreen() {
               returnKeyType="done"
             />
 
-            <Text style={styles.section}>Devotion</Text>
-            <Text style={styles.label}>Focus</Text>
+            <Text style={styles.section}>{t("profile.devotion")}</Text>
+            <Text style={styles.label}>{t("profile.focus")}</Text>
             <TextInput
               testID="pref-devotion-input"
               style={styles.input}
-              placeholder="e.g. daily Mass, rosary, Liturgy of the Hours"
+              placeholder={t("profile.focusPh")}
               placeholderTextColor={colors.textMuted}
               value={prefs.devotion_focus}
               onChangeText={(t) => setPrefs({ ...prefs, devotion_focus: t })}
@@ -207,14 +209,31 @@ export default function ProfileScreen() {
               ) : savedFlash ? (
                 <>
                   <Ionicons name="checkmark-circle" size={16} color={colors.liturgical.green} />
-                  <Text style={styles.savedText}>Saved</Text>
+                  <Text style={styles.savedText}>{t("profile.saved")}</Text>
                 </>
               ) : null}
             </View>
           </>
         )}
 
-        <Text style={styles.section}>About</Text>
+        <Text style={styles.section}>{t("settings.language")}</Text>
+        <Text style={styles.label}>{t("settings.languageHint")}</Text>
+        <View style={styles.optionRow} testID="profile-language">
+          {(["en", "es"] as const).map((l) => (
+            <Pressable
+              key={l}
+              testID={`lang-${l}`}
+              onPress={() => setLang(l)}
+              style={[styles.optionChip, lang === l && styles.optionChipSel]}
+            >
+              <Text style={[styles.optionText, lang === l && styles.optionTextSel]}>
+                {l === "en" ? "English" : "Español"}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        <Text style={styles.section}>{t("profile.about")}</Text>
         <View style={styles.linkRow} testID="profile-about-links">
           <Pressable
             testID="profile-premium-link"
@@ -223,7 +242,7 @@ export default function ProfileScreen() {
           >
             <Ionicons name="ribbon-outline" size={18} color={colors.gold} />
             <Text style={styles.linkLabel}>
-              {user?.is_premium ? "Sanctus Premium · Manage" : "Sanctus Premium"}
+              {user?.is_premium ? t("profile.premiumManage") : t("profile.premium")}
             </Text>
             <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
           </Pressable>
@@ -233,7 +252,7 @@ export default function ProfileScreen() {
             style={({ pressed }) => [styles.linkCard, pressed && styles.pressed]}
           >
             <Ionicons name="basket-outline" size={18} color={colors.primary} />
-            <Text style={styles.linkLabel}>Sanctus Shop</Text>
+            <Text style={styles.linkLabel}>{t("profile.shop")}</Text>
             <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
           </Pressable>
           <Pressable
@@ -242,7 +261,7 @@ export default function ProfileScreen() {
             style={({ pressed }) => [styles.linkCard, pressed && styles.pressed]}
           >
             <Ionicons name="receipt-outline" size={18} color={colors.primary} />
-            <Text style={styles.linkLabel}>My Orders</Text>
+            <Text style={styles.linkLabel}>{t("profile.orders")}</Text>
             <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
           </Pressable>
           <Pressable
@@ -251,7 +270,7 @@ export default function ProfileScreen() {
             style={({ pressed }) => [styles.linkCard, pressed && styles.pressed]}
           >
             <Ionicons name="help-buoy-outline" size={18} color={colors.primary} />
-            <Text style={styles.linkLabel}>Help &amp; Support</Text>
+            <Text style={styles.linkLabel}>{t("profile.support")}</Text>
             <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
           </Pressable>
           <Pressable
@@ -260,7 +279,7 @@ export default function ProfileScreen() {
             style={({ pressed }) => [styles.linkCard, pressed && styles.pressed]}
           >
             <Ionicons name="lock-closed-outline" size={18} color={colors.primary} />
-            <Text style={styles.linkLabel}>Privacy Policy</Text>
+            <Text style={styles.linkLabel}>{t("profile.privacy")}</Text>
             <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
           </Pressable>
         </View>
@@ -342,10 +361,10 @@ export default function ProfileScreen() {
           style={({ pressed }) => [styles.signOutBtn, pressed && styles.pressed]}
         >
           <Ionicons name="log-out-outline" size={18} color={colors.liturgical.red} />
-          <Text style={styles.signOutText}>Sign out</Text>
+          <Text style={styles.signOutText}>{t("profile.signOut")}</Text>
         </Pressable>
 
-        <Text style={styles.footer}>Ad maiorem Dei gloriam — for the greater glory of God.</Text>
+        <Text style={styles.footer}>{t("profile.footer")}</Text>
         <View style={{ height: spacing.xl }} />
       </ScrollView>
     </SafeAreaView>

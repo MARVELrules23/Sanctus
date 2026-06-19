@@ -19,7 +19,7 @@ from pydantic import BaseModel, Field
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 
 from liturgical import get_liturgical_day
-from lang_ctx import current_lang, resolve_lang, lang_instruction
+from lang_ctx import current_lang, resolve_lang, lang_instruction, get_lang
 from usccb import fetch_readings, usccb_url_for
 from churches import nearby_churches, enrich_with_masstimes, search_churches
 from prayers import EXAMEN_PROMPTS, EXAMINATION_SECTIONS
@@ -785,12 +785,57 @@ async def _ai_reflection(lit: dict, date_str: str) -> str:
         return ""
 
 
+async def _translate_readings_es(base: dict, date: str) -> dict:
+    """Produce a Spanish rendering of an English readings doc. Scripture citations
+    (e.g. 'Mt 5:1-12') are preserved; titles, excerpts and the reflection are
+    faithfully translated to Latin American Spanish."""
+    fields = [
+        "liturgical_title", "first_reading_excerpt", "psalm_excerpt",
+        "second_reading_excerpt", "gospel_acclamation_excerpt",
+        "gospel_excerpt", "reflection",
+    ]
+    es = dict(base)
+    es.pop("_id", None)
+    es["date"] = date
+    es["lang"] = "es"
+    es["cached_at"] = datetime.now(timezone.utc).isoformat()
+    payload = {k: base.get(k, "") for k in fields if (base.get(k) or "").strip()}
+    if payload:
+        system = (
+            "You are a faithful Catholic translator. Translate the given liturgical "
+            "texts from English into reverent, accurate Latin American Spanish. "
+            "Return STRICT JSON with the SAME keys, each value translated. Do not add, "
+            "remove or rename keys. Preserve the sense of Scripture faithfully; no markdown."
+        )
+        try:
+            data = await _chat_json(system, json.dumps(payload, ensure_ascii=False), session_id=f"readings-es-{date}")
+            for k, v in (data or {}).items():
+                if k in fields and isinstance(v, str) and v.strip():
+                    es[k] = v.strip()
+        except Exception as e:  # noqa: BLE001
+            logger.warning("readings es translation failed: %s", e)
+    return es
+
+
 @api.get("/readings")
 async def daily_readings(date: str, user: User = Depends(get_current_user)):
     try:
-        d = datetime.strptime(date, "%Y-%m-%d").date()
+        datetime.strptime(date, "%Y-%m-%d")
     except ValueError:
         raise HTTPException(status_code=400, detail="date must be YYYY-MM-DD")
+    if get_lang() != "es":
+        return await _readings_en(date)
+    cached_es = await db.readings_es.find_one({"date": date}, {"_id": 0})
+    if cached_es:
+        return cached_es
+    base = await _readings_en(date)
+    es = await _translate_readings_es(base, date)
+    await db.readings_es.update_one({"date": date}, {"$set": es}, upsert=True)
+    return es
+
+
+async def _readings_en(date: str) -> dict:
+    d = datetime.strptime(date, "%Y-%m-%d").date()
     cached = await db.readings.find_one({"date": date}, {"_id": 0})
     if cached and cached.get("source") in {"usccb", "universalis", "ai-fallback"}:
         # Universalis serves today's date — invalidate cache rollover if the cached

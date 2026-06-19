@@ -217,5 +217,3 @@ const styles = StyleSheet.create({
   },
   addCtaText: { fontFamily: fonts.uiSemi, fontSize: 14, color: colors.gold, letterSpacing: 0.4 },
 });
- 14, color: colors.gold, letterSpacing: 0.4 },
-});

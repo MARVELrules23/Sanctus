@@ -44,6 +44,8 @@ import {
 } from "@/src/notifications";
 import { build24, DOW_SHORT, parse24 } from "@/src/schedule-utils";
 import { googleCalUrl, icsLink } from "@/src/calendar-export";
+import { confirm } from "@/src/utils/confirm";
+import { useI18n } from "@/src/i18n";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 import { formatLongFromISO, todayISO } from "@/src/date-utils";
 
@@ -65,6 +67,7 @@ function shiftISO(iso: string, days: number): string {
 
 export default function ScheduleEditScreen() {
   const router = useRouter();
+  const { t } = useI18n();
   const params = useLocalSearchParams<{ id?: string; dow?: string; date?: string; rec?: string }>();
   const editing = !!params.id;
 
@@ -203,22 +206,20 @@ export default function ScheduleEditScreen() {
     }
   };
 
-  const confirmDelete = () => {
-    Alert.alert("Delete this item?", "It will be removed from your schedule.", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          if (!params.id) return;
-          try {
-            const r = await deleteScheduleItem(params.id);
-            await cancelNotifications(r.notif_ids);
-            router.back();
-          } catch { /* ignore */ }
-        },
-      },
-    ]);
+  const confirmDelete = async () => {
+    if (!params.id) return;
+    const ok = await confirm({
+      title: t("schedule.deleteTitle"),
+      message: t("schedule.deleteMsg"),
+      confirmText: t("common.delete"),
+      destructive: true,
+    });
+    if (!ok) return;
+    try {
+      const r = await deleteScheduleItem(params.id);
+      await cancelNotifications(r.notif_ids);
+      router.back();
+    } catch { /* ignore */ }
   };
 
   if (loading) {
@@ -240,7 +241,7 @@ export default function ScheduleEditScreen() {
           <Ionicons name="chevron-back" size={26} color={colors.primary} />
         </Pressable>
         <View style={styles.headerTitleWrap}>
-          <Text style={styles.headerTitle}>{editing ? "Edit item" : "Add to schedule"}</Text>
+          <Text style={styles.headerTitle}>{editing ? t("schedule.editTitle") : t("schedule.addTitle")}</Text>
         </View>
         {editing ? (
           <Pressable testID="schedule-edit-delete" onPress={confirmDelete} hitSlop={10}>
@@ -475,7 +476,7 @@ export default function ScheduleEditScreen() {
             {saving ? <ActivityIndicator size="small" color={colors.gold} /> : (
               <>
                 <Ionicons name="checkmark" size={18} color={colors.gold} />
-                <Text style={styles.saveText}>{editing ? "Save changes" : "Add to schedule"}</Text>
+                <Text style={styles.saveText}>{editing ? t("common.saveChanges") : t("schedule.addToSchedule")}</Text>
               </>
             )}
           </Pressable>

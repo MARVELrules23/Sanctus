@@ -118,3 +118,9 @@ Reverent & traditional aesthetic: cream/parchment background, deep stained-gl- C
 - Spanish AI content: added `lang_ctx.py` + Accept-Language middleware. Frontend `api.ts` sends `Accept-Language: <lang>`. Virtue content/plan goals cached per-language (`virtue_content.lang`); meals/workouts generated in active language. Verified via curl (EN stays English, ES returns Spanish).
 - i18n applied to Virtus hub + Schedule list (home + tabs already done).
 - BACKLOG (Spanish strings not yet applied): schedule/edit, calendar tab, profile tab, virtus/[slug] detail. Mass readings remain English (USCCB source). Meals/workouts adopt language at generation time (cached by date, regenerate to switch).
+
+## Session update 2 (June 2026)
+- Spanish Mass editions: readings now translated to Spanish on demand (citations preserved, excerpts+reflection translated) and cached in a separate `readings_es` collection to avoid the unique `date` index on `readings`. Verified EN/ES.
+- Profile: added a Language (Idioma) setting with EN/Español toggle; profile screen fully translated.
+- Schedule editor: fixed delete button (web Alert -> confirm helper) and translated title/save/delete.
+- Remaining ES backlog: calendar tab, virtus/[slug] detail, schedule editor field labels/KIND chips.

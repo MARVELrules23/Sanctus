@@ -208,7 +208,7 @@ export default function VirtuePlanScreen() {
               <View style={styles.statsRow}>
                 <View style={styles.statPill}>
                   <Ionicons name="flame-outline" size={13} color={colors.gold} />
-                  <Text style={styles.statText}>{plan.days_logged} days logged</Text>
+                  <Text style={styles.statText}>{plan.days_logged} {plan.days_logged === 1 ? "day" : "days"} logged</Text>
                 </View>
                 <View style={styles.statPill}>
                   <Ionicons name="checkmark-done-outline" size={13} color={colors.gold} />

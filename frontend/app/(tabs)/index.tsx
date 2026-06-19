@@ -17,6 +17,7 @@ import { useAuth } from "@/src/auth-context";
 import DailyPracticeCard from "@/src/components/DailyPracticeCard";
 import CatechismCard from "@/src/components/CatechismCard";
 import VirtusHomeCard from "@/src/components/VirtusHomeCard";
+import { useI18n } from "@/src/i18n";
 import SaintOfTheDayCard from "@/src/components/SaintOfTheDayCard";
 import ChallengeHomeCard from "@/src/components/ChallengeHomeCard";
 import LiturgicalBadge from "@/src/components/LiturgicalBadge";
@@ -46,6 +47,7 @@ function pickDevotion(dateStr: string) {
 
 export default function TodayScreen() {
   const { user } = useAuth();
+  const { t, lang, setLang } = useI18n();
   const router = useRouter();
   const [date] = useState(() => todayISO());
   const [lit, setLit] = useState<LiturgicalDay | null>(null);
@@ -137,6 +139,24 @@ export default function TodayScreen() {
         contentContainerStyle={styles.scroll}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} />}
       >
+        {/* Language toggle */}
+        <View style={styles.langRow}>
+          <Pressable
+            testID="lang-en"
+            onPress={() => setLang("en")}
+            style={[styles.langChip, lang === "en" && styles.langChipOn]}
+          >
+            <Text style={[styles.langText, lang === "en" && styles.langTextOn]}>EN</Text>
+          </Pressable>
+          <Pressable
+            testID="lang-es"
+            onPress={() => setLang("es")}
+            style={[styles.langChip, lang === "es" && styles.langChipOn]}
+          >
+            <Text style={[styles.langText, lang === "es" && styles.langTextOn]}>Español</Text>
+          </Pressable>
+        </View>
+
         {/* Header */}
         <Text style={styles.greeting}>Pax tecum, {firstName}.</Text>
         <Text style={styles.date}>{longDate}</Text>
@@ -168,19 +188,19 @@ export default function TodayScreen() {
           <QuickTile
             testID="quick-rosary"
             icon="flower-outline"
-            label="Prayer"
+            label={t("home.prayer")}
             onPress={() => router.push("/prayer")}
           />
           <QuickTile
             testID="quick-journal"
             icon="create-outline"
-            label="Journal"
+            label={t("home.journal")}
             onPress={() => router.push("/journal-list")}
           />
           <QuickTile
             testID="quick-grocery"
             icon="cart-outline"
-            label="Grocery"
+            label={t("home.grocery")}
             onPress={() => router.push("/grocery")}
           />
         </View>
@@ -188,19 +208,19 @@ export default function TodayScreen() {
           <QuickTile
             testID="quick-bible"
             icon="book-outline"
-            label="Bible"
+            label={t("home.bible")}
             onPress={() => router.push("/bible")}
           />
           <QuickTile
             testID="quick-calendar"
             icon="calendar-outline"
-            label="Calendar"
+            label={t("home.calendar")}
             onPress={() => router.push("/(tabs)/calendar")}
           />
           <QuickTile
             testID="quick-churches"
             icon="home-outline"
-            label="Churches"
+            label={t("home.churches")}
             onPress={() => router.push("/churches")}
           />
         </View>
@@ -208,25 +228,25 @@ export default function TodayScreen() {
           <QuickTile
             testID="quick-examen"
             icon="sunny-outline"
-            label="Examen"
+            label={t("home.examen")}
             onPress={() => router.push({ pathname: "/journal", params: { date, mode: "examen" } })}
           />
           <QuickTile
             testID="quick-selfdefense"
             icon="shield-outline"
-            label="Self-Defense"
+            label={t("home.selfDefense")}
             onPress={() => router.push("/self-defense")}
           />
           <QuickTile
             testID="quick-charities"
             icon="heart-circle-outline"
-            label="Charities"
+            label={t("home.charities")}
             onPress={() => router.push("/charities")}
           />
           <QuickTile
             testID="quick-schedule"
             icon="time-outline"
-            label="Schedule"
+            label={t("home.schedule")}
             onPress={() => router.push("/schedule")}
           />
         </View>
@@ -519,10 +539,36 @@ const styles = StyleSheet.create({
     color: colors.gold,
     fontSize: 14,
   },
+  langRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 6,
+    marginBottom: 4,
+  },
+  langChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    backgroundColor: colors.surface,
+  },
+  langChipOn: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  langText: {
+    fontFamily: fonts.uiSemi,
+    fontSize: 11,
+    letterSpacing: 0.4,
+    color: colors.textSecondary,
+  },
+  langTextOn: {
+    color: colors.gold,
+  },
   quickRow: {
     flexDirection: "row",
-    gap: spacing.sm,
-    marginTop: spacing.md,
+    gap: spacing.sm,    marginTop: spacing.md,
   },
   tile: {
     flex: 1,

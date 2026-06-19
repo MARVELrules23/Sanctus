@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { colors, fonts } from "@/src/theme";
 import { useNotifications } from "@/src/notifications-context";
+import { useI18n } from "@/src/i18n";
 
 /**
  * Bottom tab navigator.
@@ -21,6 +22,7 @@ import { useNotifications } from "@/src/notifications-context";
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
   const { unreadDMTotal } = useNotifications();
+  const { t } = useI18n();
   // expo-router's tabBarBadge accepts string|number|undefined. Undefined
   // hides the badge entirely. We cap visually at "99+" to keep the pill
   // from blowing out the icon's footprint.
@@ -51,7 +53,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Today",
+          title: t("tab.today"),
           tabBarIcon: ({ color, size }) => <Ionicons name="sunny-outline" color={color} size={size} />,
           tabBarTestID: "tab-today",
         }}
@@ -59,7 +61,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="meals"
         options={{
-          title: "Meals",
+          title: t("tab.meals"),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="restaurant-outline" color={color} size={size} />
           ),
@@ -69,7 +71,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="workouts"
         options={{
-          title: "Workouts",
+          title: t("tab.workouts"),
           tabBarIcon: ({ color, size }) => <Ionicons name="barbell-outline" color={color} size={size} />,
           tabBarTestID: "tab-workouts",
         }}
@@ -77,7 +79,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="wellness"
         options={{
-          title: "Wellness",
+          title: t("tab.wellness"),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="heart-circle-outline" color={color} size={size} />
           ),
@@ -87,7 +89,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="sanctuary"
         options={{
-          title: "Sanctuary",
+          title: t("tab.sanctuary"),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="musical-notes-outline" color={color} size={size} />
           ),
@@ -97,8 +99,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="community"
         options={{
-          title: "Parish",
-          tabBarLabel: "Parish",
+          title: t("tab.parish"),
+          tabBarLabel: t("tab.parish"),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="people-outline" color={color} size={size} />
           ),
@@ -124,7 +126,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: "Profile",
+          title: t("tab.profile"),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person-circle-outline" color={color} size={size} />
           ),

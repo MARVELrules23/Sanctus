@@ -1765,6 +1765,10 @@ export type VirtuePlan = {
   goals: VirtuePlanGoal[];
   total: number;
   completed: number;
+  checkins: Record<string, string[]>;
+  journal: Record<string, string>;
+  days_logged: number;
+  today: string;
   active: boolean;
   created_at: string;
 };
@@ -1806,6 +1810,12 @@ export async function getVirtuePlan(id: string): Promise<VirtuePlan> {
 }
 export async function toggleVirtueGoal(planId: string, goalId: string): Promise<VirtuePlan> {
   return await api(`/virtues/plans/${encodeURIComponent(planId)}/goals/${encodeURIComponent(goalId)}/toggle`, { method: "POST" });
+}
+export async function checkinVirtueGoal(planId: string, date: string, goalId: string): Promise<VirtuePlan> {
+  return await api(`/virtues/plans/${encodeURIComponent(planId)}/checkin`, { method: "POST", body: { date, goal_id: goalId } });
+}
+export async function saveVirtueJournal(planId: string, date: string, text: string): Promise<VirtuePlan> {
+  return await api(`/virtues/plans/${encodeURIComponent(planId)}/journal`, { method: "PUT", body: { date, text } });
 }
 export async function deleteVirtuePlan(id: string): Promise<{ ok: boolean }> {
   return await api(`/virtues/plans/${encodeURIComponent(id)}`, { method: "DELETE" });

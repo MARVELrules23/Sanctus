@@ -326,6 +326,16 @@ class CreatePlanRequest(BaseModel):
     note: Optional[str] = None
 
 
+class CheckinRequest(BaseModel):
+    date: str
+    goal_id: str
+
+
+class JournalRequest(BaseModel):
+    date: str
+    text: str = ""
+
+
 class EditContentRequest(BaseModel):
     what_is: Optional[str] = None
     life_stages: Optional[Dict[str, str]] = None
@@ -398,8 +408,10 @@ async def _generate_goals(
 
 def _shape_plan(p: Dict[str, Any]) -> Dict[str, Any]:
     goals = p.get("goals") or []
-    done = sum(1 for g in goals if g.get("done"))
+    checkins: Dict[str, List[str]] = p.get("checkins") or {}
+    journal: Dict[str, str] = p.get("journal") or {}
     today = _date.today().isoformat()
+    done_today = len([g for g in (checkins.get(today) or []) if any(x.get("id") == g for x in goals)])
     return {
         "id": p["id"],
         "virtue_slugs": p.get("virtue_slugs") or [],
@@ -412,7 +424,11 @@ def _shape_plan(p: Dict[str, Any]) -> Dict[str, Any]:
         "note": p.get("note"),
         "goals": goals,
         "total": len(goals),
-        "completed": done,
+        "completed": done_today,
+        "checkins": checkins,
+        "journal": journal,
+        "days_logged": len([d for d, ids in checkins.items() if ids]),
+        "today": today,
         "active": (p.get("end_date") or today) >= today,
         "created_at": p.get("created_at"),
     }
@@ -477,6 +493,8 @@ def build_router(
             "start_date": start.isoformat(),
             "end_date": end.isoformat(),
             "goals": goals,
+            "checkins": {},
+            "journal": {},
             "created_at": now.isoformat(),
         }
         await db.virtue_plans.insert_one(plan)
@@ -514,6 +532,51 @@ def build_router(
         if res.deleted_count == 0:
             raise HTTPException(status_code=404, detail="Plan not found")
         return {"ok": True}
+
+    @router.post("/plans/{plan_id}/checkin")
+    async def checkin_goal(plan_id: str, payload: CheckinRequest, user=Depends(get_current_user)):
+        try:
+            datetime.strptime(payload.date, "%Y-%m-%d")
+        except ValueError:
+            raise HTTPException(status_code=400, detail="date must be YYYY-MM-DD")
+        p = await db.virtue_plans.find_one({"id": plan_id, "user_id": user.user_id})
+        if not p:
+            raise HTTPException(status_code=404, detail="Plan not found")
+        goal_ids = {g.get("id") for g in (p.get("goals") or [])}
+        if payload.goal_id not in goal_ids:
+            raise HTTPException(status_code=404, detail="Goal not found")
+        checkins: Dict[str, List[str]] = p.get("checkins") or {}
+        day = list(checkins.get(payload.date) or [])
+        if payload.goal_id in day:
+            day = [g for g in day if g != payload.goal_id]
+        else:
+            day.append(payload.goal_id)
+        if day:
+            checkins[payload.date] = day
+        else:
+            checkins.pop(payload.date, None)
+        await db.virtue_plans.update_one({"id": plan_id}, {"$set": {"checkins": checkins}})
+        p["checkins"] = checkins
+        return _shape_plan(p)
+
+    @router.put("/plans/{plan_id}/journal")
+    async def set_journal(plan_id: str, payload: JournalRequest, user=Depends(get_current_user)):
+        try:
+            datetime.strptime(payload.date, "%Y-%m-%d")
+        except ValueError:
+            raise HTTPException(status_code=400, detail="date must be YYYY-MM-DD")
+        p = await db.virtue_plans.find_one({"id": plan_id, "user_id": user.user_id})
+        if not p:
+            raise HTTPException(status_code=404, detail="Plan not found")
+        journal: Dict[str, str] = p.get("journal") or {}
+        text = (payload.text or "").strip()
+        if text:
+            journal[payload.date] = text
+        else:
+            journal.pop(payload.date, None)
+        await db.virtue_plans.update_one({"id": plan_id}, {"$set": {"journal": journal}})
+        p["journal"] = journal
+        return _shape_plan(p)
 
     # ---- per-virtue content ----
     @router.get("/{slug}")

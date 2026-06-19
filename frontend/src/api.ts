@@ -674,7 +674,7 @@ export async function getSaint(saintId: string): Promise<SaintPublic> {
 }
 
 export async function adminListSaints(status?: string): Promise<{ items: SaintAdmin[]; count: number }> {
-  const qs = status ? `?status=${encodeURIComponent(status)}` : "";
+  const qs = status ? `?status=${encodeURIComponent(status)}&limit=500` : "?limit=500";
   return await api(`/saints/admin/list${qs}`);
 }
 

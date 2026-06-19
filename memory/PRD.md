@@ -104,3 +104,11 @@ Reverent & traditional aesthetic: cream/parchment background, deep stained-gl- C
 - Frontend: /schedule (day-of-week hub), /schedule/edit (kind+source picker, weekly/one-off, 12-hour AM/PM time picker, reminder toggle). Calendar tab shows schedule dots + a per-day Schedule section. Home 'Schedule' quick-tile.
 - Reminders: on-device expo-notifications (LOCAL only, no keys). Web = no-op; real reminders require a built iOS/Android app. expo-notifications plugin added to app.json.
 - Verified: 24/24 backend pytest + all frontend flows (iteration_43).
+
+### Schedule → Calendar export — 2026-06-19
+- backend/schedule.py: items now carry `ics_token`; PUBLIC GET /api/schedule/ics/{token}.ics returns RFC5545 VCALENDAR (RRULE for weekly, single DTSTART for one-off, VALARM). 404 on bad token.
+- Frontend src/calendar-export.ts: googleCalUrl() (Google Calendar render link w/ RRULE) + icsLink() (.ics capability URL). Editor 'Add to your calendar' section (export-google / export-ics) shown for saved items.
+- Verified iteration_44 (8 new + 24 regression backend, frontend buttons present).
+
+### TODO NEXT — "Español" whole-site Spanish (agreed plan 2Aa/2Ba)
+- Not yet started. Large multi-screen i18n effort: build LanguageProvider + EN|ES toggle on Home, translate Home → tabs → Schedule → Virtus interface (phased), and generate AI content (virtues, readings, meals) in Spanish when ES selected (per-language cache). To be built as a dedicated pass.

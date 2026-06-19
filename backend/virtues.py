@@ -102,6 +102,24 @@ VIRTUES: List[Dict[str, Any]] = [
         "opposite_vice": "Cowardice & Sloth",
     },
     {
+        "slug": "prudence", "name": "Prudence", "kind": "virtue",
+        "icon": "compass-outline", "accent_color": "#5E6BA8",
+        "tagline": "Right reason applied to action",
+        "opposite_vice": "Rashness & Negligence",
+    },
+    {
+        "slug": "justice", "name": "Justice", "kind": "virtue",
+        "icon": "scale-outline", "accent_color": "#7A6A33",
+        "tagline": "Giving God and neighbor their due",
+        "opposite_vice": "Injustice",
+    },
+    {
+        "slug": "hope", "name": "Hope", "kind": "virtue",
+        "icon": "sunny-outline", "accent_color": "#3F8F6E",
+        "tagline": "Trusting in God's promise of eternal life",
+        "opposite_vice": "Despair & Presumption",
+    },
+    {
         "slug": "spiritual-warfare", "name": "Spiritual Warfare", "kind": "topic",
         "icon": "flame-outline", "accent_color": "#9C3B2E",
         "tagline": "Standing firm against temptation and the enemy",

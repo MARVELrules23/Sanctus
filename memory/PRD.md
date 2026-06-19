@@ -97,3 +97,10 @@ Reverent & traditional aesthetic: cream/parchment background, deep stained-gl- C
 - Admin (founder) can edit/regenerate any virtue's content (PUT/regenerate/admin endpoints, 403 for non-admin; edit screen at /virtus/edit/[slug]).
 - Frontend: /virtus (hub), /virtus/[slug] (detail), /virtus/plan/[id], /virtus/edit/[slug]; home `VirtusHomeCard`.
 - Verified: 25/25 backend pytest + all frontend flows (iteration_42).
+
+### Schedule (calendar-linked) — 2026-06-19
+- backend/schedule.py (collection `schedule_items`), wired with EMERGENT-free. Items: kind (meal/workout/virtue/challenge/custom), weekly (days_of_week 0=Sun..6=Sat) OR one-off (date), optional 24h time, notify + notif_ids.
+- Endpoints: GET /schedule, GET /schedule/day/{date}, GET /schedule/sources (active virtue plans + enrolled challenges), POST/PUT/DELETE /schedule, PUT /schedule/{id}/notif-ids.
+- Frontend: /schedule (day-of-week hub), /schedule/edit (kind+source picker, weekly/one-off, 12-hour AM/PM time picker, reminder toggle). Calendar tab shows schedule dots + a per-day Schedule section. Home 'Schedule' quick-tile.
+- Reminders: on-device expo-notifications (LOCAL only, no keys). Web = no-op; real reminders require a built iOS/Android app. expo-notifications plugin added to app.json.
+- Verified: 24/24 backend pytest + all frontend flows (iteration_43).

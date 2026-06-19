@@ -2000,6 +2000,344 @@ COMPLINE_SECTIONS: List[Dict[str, Any]] = [
 
 
 # ===========================================================================
+# DAYTIME PRAYER — The Little Hours (Terce · Sext · None)
+# ===========================================================================
+#
+# The "Little Hours" sanctify the working day at the third, sixth, and ninth
+# hours (≈ 9 a.m., noon, 3 p.m.). In the traditional Roman Breviary each has
+# the same shape — a proper hymn, a portion of Psalm 118 (the longest psalm,
+# spread across the week), a little chapter, a versicle, and the day's
+# collect. The psalmody and collect follow the day's proper; what is printed
+# here is the ferial *per annum* form, with a representative portion of
+# Psalm 118. Pray whichever Hour matches the time of day.
+
+DAYTIME_INTRO = _section(
+    title="About the Little Hours",
+    latin_title="De Horis Minóribus",
+    note=(
+        "Pray Terce in mid-morning (the third hour), Sext at midday (the "
+        "sixth hour), and None in mid-afternoon (the ninth hour). Each Hour "
+        "is short — a hymn, a portion of Psalm 118, a little chapter, a "
+        "versicle, and a collect. The chapter and collect change with the "
+        "day and season; for the exact proper of today, open iBreviary from "
+        "the previous screen."
+    ),
+    english=(
+        "The Apostles kept the ancient Jewish hours of prayer: \u201cPeter "
+        "and John went up into the temple at the ninth hour of prayer\u201d "
+        "(Acts 3:1); the Spirit descended at the third hour (Acts 2:15); "
+        "Peter prayed on the housetop about the sixth hour (Acts 10:9). The "
+        "Church keeps watch with them, hallowing the whole course of the day."
+    ),
+)
+
+# --- TERCE (Ad Tértiam) -----------------------------------------------------
+
+TERCE_HYMN = _section(
+    title="Terce — Hymn",
+    latin_title="Nunc, Sancte, nobis, Spíritus",
+    rubric="The hymn of Terce, invoking the Holy Ghost who came at the third hour.",
+    english=(
+        "Come, Holy Ghost, who ever One\n"
+        "Art with the Father and the Son,\n"
+        "It is the hour, our souls possess\n"
+        "With thy full flood of holiness.\n\n"
+        "Let flesh and heart and lips and mind\n"
+        "Sound forth our witness to mankind;\n"
+        "And love light up our mortal frame,\n"
+        "Till others catch the living flame.\n\n"
+        "Almighty Father, hear our cry\n"
+        "Through Jesus Christ our Lord most high,\n"
+        "Who with the Holy Ghost and thee\n"
+        "Doth live and reign eternally. Amen."
+    ),
+    latin=(
+        "Nunc, Sancte, nobis, Spíritus,\n"
+        "Unum Patri cum Fílio,\n"
+        "Dignáre promptus íngeri\n"
+        "Nostro refúsus péctori.\n\n"
+        "Os, lingua, mens, sensus, vigor\n"
+        "Confessiónem pérsonent,\n"
+        "Flamméscat igne cáritas,\n"
+        "Accéndat ardor próximos.\n\n"
+        "Præsta, Pater piíssime,\n"
+        "Patríque compar Únice,\n"
+        "Cum Spíritu Paráclito\n"
+        "Regnans per omne sǽculum. Amen."
+    ),
+)
+
+TERCE_PSALMODY = _section(
+    title="Terce — Psalmody",
+    latin_title="Psalmus 118 (Legem pone)",
+    rubric=(
+        "A portion of Psalm 118 is said under one antiphon. The opening of the "
+        "\u201cLegem pone\u201d section is given here."
+    ),
+    english=(
+        "Ant. Blessed are the undefiled in the way, who walk in the law of the Lord.\n\n"
+        "Psalm 118 (He).\n"
+        "Set before me for a law the way of thy justifications, O Lord: and I "
+        "will always seek after it. Give me understanding, and I will search "
+        "thy law; and I will keep it with my whole heart. Lead me into the "
+        "path of thy commandments; for this same I have desired. Incline my "
+        "heart into thy testimonies and not to covetousness. Turn away my eyes "
+        "that they may not behold vanity: quicken me in thy way. Glory be to "
+        "the Father…"
+    ),
+    latin=(
+        "Ant. Beáti immaculáti in via, qui ámbulant in lege Dómini.\n\n"
+        "Psalmus 118 (He).\n"
+        "Legem pone mihi, Dómine, viam justificatiónum tuárum, et exquíram eam "
+        "semper. Da mihi intelléctum, et scrutábor legem tuam, et custódiam "
+        "illam in toto corde meo. Deduc me in sémitam mandatórum tuórum, quia "
+        "ipsam vólui. Inclína cor meum in testimónia tua, et non in avarítiam. "
+        "Avérte óculos meos ne vídeant vanitátem: in via tua vivífica me. "
+        "Glória Patri…"
+    ),
+)
+
+TERCE_CHAPTER = _section(
+    title="Terce — Chapter, Versicle & Collect",
+    latin_title="Capítulum, Versus et Orátio",
+    rubric=(
+        "The little chapter and the collect are proper to the day; the ferial "
+        "per annum form is given."
+    ),
+    english=(
+        "Chapter (Jeremiah 17:14).\n"
+        "Heal me, O Lord, and I shall be healed: save me, and I shall be "
+        "saved, for thou art my praise.\n"
+        "R. Thanks be to God.\n\n"
+        "V. I have run the way of thy commandments.\n"
+        "R. When thou didst enlarge my heart.\n\n"
+        "Let us pray.\n"
+        "O Lord, our God, by whose providence the labour of the day is "
+        "ordered: pour out upon us thy grace, that we may begin and end this "
+        "day in thy service; through Christ our Lord. R. Amen."
+    ),
+    latin=(
+        "Capítulum (Jeremías 17:14).\n"
+        "Sana me, Dómine, et sanábor: salvum me fac, et salvus ero: quóniam "
+        "laus mea tu es.\n"
+        "R. Deo grátias.\n\n"
+        "V. Viam mandatórum tuórum cucúrri.\n"
+        "R. Cum dilatásti cor meum.\n\n"
+        "Orémus.\n"
+        "Dómine Deus noster, cujus providéntia labor diéi ordinátur: effúnde "
+        "super nos grátiam tuam, ut hunc diem in servítio tuo incipiámus et "
+        "perficiámus; per Christum Dóminum nostrum. R. Amen."
+    ),
+)
+
+# --- SEXT (Ad Sextam) -------------------------------------------------------
+
+SEXT_HYMN = _section(
+    title="Sext — Hymn",
+    latin_title="Rector potens, verax Deus",
+    rubric="The hymn of Sext, prayed at midday when the sun is at its height.",
+    english=(
+        "O God of truth, O Lord of might,\n"
+        "Who orderest time and change aright,\n"
+        "And send'st the early morning ray,\n"
+        "And light'st the glow of perfect day:\n\n"
+        "Extinguish thou each sinful fire,\n"
+        "And banish every ill desire;\n"
+        "And while thou keep'st the body whole,\n"
+        "Shed forth thy peace upon the soul.\n\n"
+        "Almighty Father, hear our cry\n"
+        "Through Jesus Christ our Lord most high,\n"
+        "Who with the Holy Ghost and thee\n"
+        "Doth live and reign eternally. Amen."
+    ),
+    latin=(
+        "Rector potens, verax Deus,\n"
+        "Qui témperas rerum vices,\n"
+        "Splendóre mane illúminas,\n"
+        "Et ígnibus merídiem:\n\n"
+        "Exstíngue flammas lítium,\n"
+        "Aufer calórem nóxium,\n"
+        "Confer salútem córporum,\n"
+        "Verámque pacem córdium.\n\n"
+        "Præsta, Pater piíssime,\n"
+        "Patríque compar Únice,\n"
+        "Cum Spíritu Paráclito\n"
+        "Regnans per omne sǽculum. Amen."
+    ),
+)
+
+SEXT_PSALMODY = _section(
+    title="Sext — Psalmody",
+    latin_title="Psalmus 118 (Defécit)",
+    rubric="A further portion of Psalm 118 is said under one antiphon.",
+    english=(
+        "Ant. Let thy mercies come unto me, O Lord, and I shall live.\n\n"
+        "Psalm 118 (Caph).\n"
+        "My soul hath fainted after thy salvation: and in thy word I have very "
+        "much hoped. My eyes have failed for thy word, saying: When wilt thou "
+        "comfort me? For I am become like a bottle in the frost: yet have I "
+        "not forgotten thy justifications. How many are the days of thy "
+        "servant: when wilt thou execute judgment on them that persecute me? "
+        "Glory be to the Father…"
+    ),
+    latin=(
+        "Ant. Véniant mihi miseratiónes tuæ, Dómine, et vivam.\n\n"
+        "Psalmus 118 (Caph).\n"
+        "Defécit in salutáre tuum ánima mea: et in verbum tuum supersperávi. "
+        "Defecérunt óculi mei in elóquium tuum, dicéntes: Quando consoláberis "
+        "me? Quia factus sum sicut uter in pruína: justificatiónes tuas non "
+        "sum oblítus. Quot sunt dies servi tui: quando fácies de persequéntibus "
+        "me judícium? Glória Patri…"
+    ),
+)
+
+SEXT_CHAPTER = _section(
+    title="Sext — Chapter, Versicle & Collect",
+    latin_title="Capítulum, Versus et Orátio",
+    rubric=(
+        "The little chapter and collect are proper to the day; the ferial per "
+        "annum form is given."
+    ),
+    english=(
+        "Chapter (Romans 13:12).\n"
+        "The night is passed, and the day is at hand. Let us therefore cast off "
+        "the works of darkness, and put on the armour of light.\n"
+        "R. Thanks be to God.\n\n"
+        "V. Direct my steps according to thy word.\n"
+        "R. And let no iniquity have dominion over me.\n\n"
+        "Let us pray.\n"
+        "O God, who at the sixth hour didst stretch out thine arms upon the "
+        "Cross for the salvation of the world: keep us this day from every "
+        "evil, and bring us to the peace of thy kingdom; through Christ our "
+        "Lord. R. Amen."
+    ),
+    latin=(
+        "Capítulum (Románi 13:12).\n"
+        "Nox præcéssit, dies autem appropinquávit. Abjiciámus ergo ópera "
+        "tenebrárum, et induámur arma lucis.\n"
+        "R. Deo grátias.\n\n"
+        "V. Gressus meos dírige secúndum elóquium tuum.\n"
+        "R. Et non dominétur mei omnis injustítia.\n\n"
+        "Orémus.\n"
+        "Deus, qui hora sexta pro mundi redemptióne in Cruce manus extendísti: "
+        "custódi nos hódie ab omni malo, et ad regni tui pacem perdúc nos; per "
+        "Christum Dóminum nostrum. R. Amen."
+    ),
+)
+
+# --- NONE (Ad Nonam) --------------------------------------------------------
+
+NONE_HYMN = _section(
+    title="None — Hymn",
+    latin_title="Rerum, Deus, tenax vigor",
+    rubric="The hymn of None, prayed in mid-afternoon as the day declines.",
+    english=(
+        "O God, unchangeable and true,\n"
+        "Of all the Life and Power,\n"
+        "Dispensing light in silence through\n"
+        "Each successive hour:\n\n"
+        "Lord, brighten our declining day,\n"
+        "That it may never wane,\n"
+        "Till death, when all things round decay,\n"
+        "Brings back the morn again.\n\n"
+        "Almighty Father, hear our cry\n"
+        "Through Jesus Christ our Lord most high,\n"
+        "Who with the Holy Ghost and thee\n"
+        "Doth live and reign eternally. Amen."
+    ),
+    latin=(
+        "Rerum, Deus, tenax vigor,\n"
+        "Immótus in te pérmanens,\n"
+        "Lucis diúrnæ témpora\n"
+        "Succéssibus detérminans:\n\n"
+        "Largíre lumen véspere,\n"
+        "Quo vita nusquam décidat,\n"
+        "Sed prǽmium mortis sacræ\n"
+        "Perénnis instet glória.\n\n"
+        "Præsta, Pater piíssime,\n"
+        "Patríque compar Únice,\n"
+        "Cum Spíritu Paráclito\n"
+        "Regnans per omne sǽculum. Amen."
+    ),
+)
+
+NONE_PSALMODY = _section(
+    title="None — Psalmody",
+    latin_title="Psalmus 118 (Mirabília)",
+    rubric="The closing portion of Psalm 118 is said under one antiphon.",
+    english=(
+        "Ant. Let my cry come near in thy sight, O Lord: give me understanding "
+        "according to thy word.\n\n"
+        "Psalm 118 (Pe).\n"
+        "Thy testimonies are wonderful: therefore my soul hath sought them. "
+        "The declaration of thy words giveth light: and giveth understanding "
+        "to little ones. I opened my mouth, and panted: because I longed for "
+        "thy commandments. Look thou upon me, and have mercy on me, according "
+        "to the judgment of them that love thy name. Glory be to the Father…"
+    ),
+    latin=(
+        "Ant. Appropínquet deprecátio mea in conspéctu tuo, Dómine: juxta "
+        "elóquium tuum da mihi intelléctum.\n\n"
+        "Psalmus 118 (Pe).\n"
+        "Mirabília testimónia tua: ídeo scrutáta est ea ánima mea. Declarátio "
+        "sermónum tuórum illúminat: et intelléctum dat párvulis. Os meum "
+        "apérui, et attráxi spíritum: quia mandáta tua desiderábam. Aspice in "
+        "me, et miserére mei, secúndum judícium diligéntium nomen tuum. Glória "
+        "Patri…"
+    ),
+)
+
+NONE_CHAPTER = _section(
+    title="None — Chapter, Versicle & Collect",
+    latin_title="Capítulum, Versus et Orátio",
+    rubric=(
+        "The little chapter and collect are proper to the day; the ferial per "
+        "annum form is given. None concludes with the dismissal below."
+    ),
+    english=(
+        "Chapter (Daniel 9:19).\n"
+        "Hear, O Lord; be appeased, O Lord: hearken and do: delay not, for thy "
+        "own sake, O my God.\n"
+        "R. Thanks be to God.\n\n"
+        "V. From the rising of the sun unto the going down of the same.\n"
+        "R. The name of the Lord is worthy of praise.\n\n"
+        "Let us pray.\n"
+        "O God, who at the ninth hour didst will thy Son to taste death upon "
+        "the Cross for us sinners: grant that, dying daily to sin, we may live "
+        "to thee alone; through the same Christ our Lord. R. Amen.\n\n"
+        "V. Let us bless the Lord. R. Thanks be to God."
+    ),
+    latin=(
+        "Capítulum (Dániel 9:19).\n"
+        "Exáudi, Dómine; placáre, Dómine: atténde et fac: ne moréris propter "
+        "temetípsum, Deus meus.\n"
+        "R. Deo grátias.\n\n"
+        "V. A solis ortu usque ad occásum.\n"
+        "R. Laudábile nomen Dómini.\n\n"
+        "Orémus.\n"
+        "Deus, qui hora nona pro nobis peccatóribus Fílium tuum mortem in Cruce "
+        "gustáre voluísti: præsta; ut, peccáto quotídie moriéntes, tibi soli "
+        "vivámus; per eúndem Christum Dóminum nostrum. R. Amen.\n\n"
+        "V. Benedicámus Dómino. R. Deo grátias."
+    ),
+)
+
+DAYTIME_SECTIONS: List[Dict[str, Any]] = [
+    DAYTIME_INTRO,
+    TERCE_HYMN,
+    TERCE_PSALMODY,
+    TERCE_CHAPTER,
+    SEXT_HYMN,
+    SEXT_PSALMODY,
+    SEXT_CHAPTER,
+    NONE_HYMN,
+    NONE_PSALMODY,
+    NONE_CHAPTER,
+]
+
+
+
+# ===========================================================================
 # Days catalogue (weekday rotation)
 # ===========================================================================
 
@@ -2039,6 +2377,12 @@ COMPLINE_BY_DAY: Dict[str, List[Dict[str, Any]]] = {
     d["key"]: COMPLINE_SECTIONS for d in DAYS
 }
 
+# Daytime Prayer (the Little Hours) is fixed in structure across the week;
+# the psalmody/collect propers vary but we present the ferial per annum form.
+DAYTIME_BY_DAY: Dict[str, List[Dict[str, Any]]] = {
+    d["key"]: DAYTIME_SECTIONS for d in DAYS
+}
+
 
 HOURS: List[Dict[str, Any]] = [
     {
@@ -2060,6 +2404,27 @@ HOURS: List[Dict[str, Any]] = [
         ),
         "psalms_vary_by_day": True,
         "sections_by_day": LAUDS_BY_DAY,
+    },
+    {
+        "slug": "daytime",
+        "name": "Daytime Prayer",
+        "subtitle": "The Little Hours · Terce, Sext, None",
+        "latin_name": "Ad Horas Minóres",
+        "icon": "sunny",
+        "accent_color": "#B8842C",  # midday amber
+        "time_of_day": "Mid-morning, midday & mid-afternoon",
+        "duration": "~6 min each",
+        "intro": (
+            "Daytime Prayer sanctifies the working day at the third, sixth, "
+            "and ninth hours — Terce (\u2248 9 a.m.), Sext (noon), and None "
+            "(\u2248 3 p.m.). Each \u201cLittle Hour\u201d is brief: a proper "
+            "hymn invoking God for that moment of the day, a portion of Psalm "
+            "118, a little chapter, a versicle, and a collect. The Apostles "
+            "kept these same hours of prayer in the Temple. Pray whichever "
+            "Hour matches the time of day."
+        ),
+        "psalms_vary_by_day": False,
+        "sections_by_day": DAYTIME_BY_DAY,
     },
     {
         "slug": "vespers",

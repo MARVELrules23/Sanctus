@@ -585,3 +585,25 @@ VERIFIED: backend curl (list/hour/day 200, bad hour 404, no-auth 401), lint clea
 NEEDS TESTING (backend): the 3 endpoints above — auth gating (401 w/o token), 404s, day-varying psalmody differs between weekdays for Lauds/Vespers, Compline identical across days, response shapes.
 NEEDS TESTING (frontend): /bible → 'Liturgy of the Hours' link routes to /liturgy; hub renders 3 tiles + external link; tap a tile → reader; mode toggle switches Latin-only/English-only/both; weekday chips change the psalmody; Compline reader hides the weekday selector."
 
+
+main_agent_daytime_virtus_2026-06-19: "TWO NEW FEATURES shipped.
+
+A) DAYTIME PRAYER added to Liturgy of the Hours. New HOUR slug 'daytime' (Little Hours: Terce, Sext, None) in liturgy_of_hours.py, psalms_vary_by_day=false (fixed across week), 10 sections. Hub now lists [lauds, daytime, vespers, compline]. No new frontend — existing /liturgy hub + reader handle it. Verified: GET /api/liturgy lists daytime; /api/liturgy/daytime and /api/liturgy/daytime/monday return 10 sections.
+
+B) VIRTUS (new). backend/virtues.py wired into server.py with EMERGENT_LLM_KEY. Content is AI-authored by Claude (claude-sonnet-4-5) on first GET and cached in Mongo `virtue_content`; plans in `virtue_plans`. FREE for all EXCEPT per-virtue Resources (Premium, 402 for free users).
+  Catalogue (9): chastity, charity, humility, patience, temperance, fortitude, spiritual-warfare, habits-discipline (kind=virtue/topic, have what_is/life_stages{singleness,dating,marriage}/overcoming_vice/saints[]/resources[]); saints-of-virtue (kind=saints, has intro + saints_by_virtue[]).
+  Endpoints (all /api/virtues, auth required):
+   - GET /virtues → {items[], user_is_premium, is_admin}
+   - GET /virtues/{slug} → free content (NO resources body), generates+caches on first hit (~15s)
+   - GET /virtues/{slug}/resources → Premium-gated (402 free, 200 premium)
+   - POST /virtues/plans {virtue_slugs[], days, note?} → AI goals (do/refrain), returns plan
+   - GET /virtues/plans ; GET /virtues/plans/{id} ; POST /virtues/plans/{id}/goals/{goal_id}/toggle ; DELETE /virtues/plans/{id}
+   - Admin only: GET /virtues/{slug}/admin, PUT /virtues/{slug}, POST /virtues/{slug}/regenerate (403 for non-admin)
+  Frontend: /virtus (hub: plan builder + active plans + virtue list), /virtus/[slug] (expandable subsections; resources locked w/ 'Unlock with Premium' for free users; admin edit pencil), /virtus/plan/[id] (checkable goals, progress, delete), /virtus/edit/[slug] (admin editor + regenerate). Home: VirtusHomeCard REPLACED the Journal preview card under Catechism (journal still reachable via the Journal quick-tile + Examen).
+
+VERIFIED via curl: list, humility (AI gen ok), resources 402 free / 200 admin, saints-of-virtue gen ok, create plan ok. Lint clean. Smoke screenshots: home shows VIRTUS card, /virtus hub, humility detail with subsections, resources expanded (admin) — all render.
+
+NEEDS TESTING (backend): all virtues endpoints incl. premium gating (402 free / 200 premium on /resources), admin gating (403 non-admin on PUT/regenerate/admin), plan CRUD + goal toggle updates completed count, AI generation+caching (2nd GET fast), and daytime liturgy endpoints.
+NEEDS TESTING (frontend): home VIRTUS card → /virtus; plan builder (select virtues + days → create → plan screen with checkable goals); virtue detail subsections expand; free user sees locked Resources w/ unlock CTA; admin sees Edit pencil → editor; Liturgy hub shows Daytime Prayer tile → reader (no weekday selector).
+NOTE: free test user user_virtus_free (token mint via Mongo). Admin user_ade7a898e281 is premium+admin."
+

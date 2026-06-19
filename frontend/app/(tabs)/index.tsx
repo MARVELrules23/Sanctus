@@ -12,10 +12,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
-import { api, DayDoc, JournalEntry, LiturgicalDay, MealPlan, Readings, WorkoutPlan } from "@/src/api";
+import { api, DayDoc, LiturgicalDay, MealPlan, Readings, WorkoutPlan } from "@/src/api";
 import { useAuth } from "@/src/auth-context";
 import DailyPracticeCard from "@/src/components/DailyPracticeCard";
 import CatechismCard from "@/src/components/CatechismCard";
+import VirtusHomeCard from "@/src/components/VirtusHomeCard";
 import SaintOfTheDayCard from "@/src/components/SaintOfTheDayCard";
 import ChallengeHomeCard from "@/src/components/ChallengeHomeCard";
 import LiturgicalBadge from "@/src/components/LiturgicalBadge";
@@ -51,7 +52,6 @@ export default function TodayScreen() {
   const [meal, setMeal] = useState<DayDoc<MealPlan> | null>(null);
   const [workout, setWorkout] = useState<DayDoc<WorkoutPlan> | null>(null);
   const [readings, setReadings] = useState<Readings | null>(null);
-  const [journals, setJournals] = useState<JournalEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [genMeal, setGenMeal] = useState(false);
@@ -66,9 +66,8 @@ export default function TodayScreen() {
     setLit(l);
     setMeal("plan" in m ? (m as DayDoc<MealPlan>) : null);
     setWorkout("plan" in w ? (w as DayDoc<WorkoutPlan>) : null);
-    // Readings + journal are slower / non-critical — load in background.
+    // Readings are slower / non-critical — load in background.
     api<Readings>(`/readings?date=${date}`).then(setReadings).catch(() => undefined);
-    api<{ items: JournalEntry[] }>(`/journal?limit=3`).then((r) => setJournals(r.items || [])).catch(() => undefined);
   }, [date]);
 
   useEffect(() => {
@@ -279,65 +278,8 @@ export default function TodayScreen() {
         {/* Catechism in 90 seconds */}
         <CatechismCard date={date} />
 
-        {/* Journal preview */}
-        <View style={styles.card} testID="journal-preview-card">
-          <View style={styles.cardHeader}>
-            <Ionicons name="create-outline" size={18} color={colors.gold} />
-            <Text style={styles.cardHeaderText}>JOURNAL</Text>
-            <View style={{ flex: 1 }} />
-            <Pressable
-              testID="journal-new-button"
-              onPress={() => router.push({ pathname: "/journal", params: { date } })}
-              hitSlop={8}
-            >
-              <Ionicons name="add" size={22} color={colors.gold} />
-            </Pressable>
-          </View>
-          {journals.length === 0 ? (
-            <>
-              <Text style={styles.empty}>
-                Where did you meet the Lord today? A line is enough.
-              </Text>
-              <Pressable
-                testID="journal-empty-add"
-                onPress={() => router.push({ pathname: "/journal", params: { date } })}
-                style={({ pressed }) => [styles.primaryBtn, pressed && styles.pressed]}
-              >
-                <Ionicons name="add" size={16} color={colors.gold} />
-                <Text style={styles.primaryBtnText}>Write today&apos;s entry</Text>
-              </Pressable>
-            </>
-          ) : (
-            <>
-              {journals.slice(0, 2).map((j) => (
-                <Pressable
-                  key={j.entry_id}
-                  testID={`journal-preview-${j.entry_id}`}
-                  onPress={() => router.push({ pathname: "/journal", params: { entry: j.entry_id } })}
-                  style={({ pressed }) => [styles.journalRow, pressed && styles.pressed]}
-                >
-                  <View style={{ flex: 1 }}>
-                    {j.title ? (
-                      <Text style={styles.journalTitle} numberOfLines={1}>{j.title}</Text>
-                    ) : null}
-                    <Text style={styles.journalBody} numberOfLines={2}>
-                      {j.body}
-                    </Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-                </Pressable>
-              ))}
-              <Pressable
-                testID="view-journal-button"
-                onPress={() => router.push("/journal-list")}
-                style={({ pressed }) => [styles.linkBtn, pressed && styles.pressed]}
-              >
-                <Text style={styles.linkBtnText}>View all entries</Text>
-                <Ionicons name="chevron-forward" size={16} color={colors.gold} />
-              </Pressable>
-            </>
-          )}
-        </View>
+        {/* Virtus — grow in virtue */}
+        <VirtusHomeCard />
 
         {/* Meal */}
         <View style={styles.card} testID="today-meal-card">

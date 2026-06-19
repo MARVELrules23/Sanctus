@@ -1702,3 +1702,107 @@ export async function getLiturgyHour(slug: string): Promise<LiturgyHourDetail> {
 export async function getLiturgyDay(slug: string, dayKey: string): Promise<LiturgyDayPayload> {
   return await api(`/liturgy/${encodeURIComponent(slug)}/${encodeURIComponent(dayKey)}`);
 }
+
+// ---------------------------------------------------------------------------
+// Virtus (virtues study + plans)
+// ---------------------------------------------------------------------------
+
+export type VirtueMeta = {
+  slug: string;
+  name: string;
+  kind: "virtue" | "topic" | "saints";
+  icon: string;
+  accent_color: string;
+  tagline: string;
+  opposite_vice?: string | null;
+};
+
+export type VirtueListItem = VirtueMeta & { has_content: boolean };
+
+export type VirtueSaint = { name: string; years?: string; why?: string; prayer?: string };
+export type VirtueResource = { title: string; kind?: string; author?: string; description?: string };
+export type SaintsByVirtue = { virtue: string; saints: VirtueSaint[] };
+
+export type VirtueContent = VirtueMeta & {
+  edited: boolean;
+  is_premium_resources: boolean;
+  has_resources: boolean;
+  resource_count: number;
+  user_is_premium: boolean;
+  // virtue/topic kind
+  what_is?: string;
+  life_stages?: { singleness: string; dating: string; marriage: string };
+  overcoming_vice?: string;
+  saints?: VirtueSaint[];
+  // saints kind
+  intro?: string;
+  saints_by_virtue?: SaintsByVirtue[];
+  // admin full only
+  resources?: VirtueResource[];
+};
+
+export type VirtuePlanGoal = {
+  id: string;
+  virtue_slug: string;
+  type: "do" | "refrain";
+  text: string;
+  done: boolean;
+  done_at?: string | null;
+};
+
+export type VirtuePlan = {
+  id: string;
+  virtue_slugs: string[];
+  virtues: VirtueMeta[];
+  start_date: string;
+  end_date: string;
+  days: number;
+  note?: string | null;
+  goals: VirtuePlanGoal[];
+  total: number;
+  completed: number;
+  active: boolean;
+  created_at: string;
+};
+
+export async function listVirtues(): Promise<{ items: VirtueListItem[]; user_is_premium: boolean; is_admin: boolean }> {
+  return await api(`/virtues`);
+}
+export async function getVirtue(slug: string): Promise<VirtueContent> {
+  return await api(`/virtues/${encodeURIComponent(slug)}`);
+}
+export async function getVirtueResources(slug: string): Promise<{ slug: string; resources: VirtueResource[] }> {
+  return await api(`/virtues/${encodeURIComponent(slug)}/resources`);
+}
+export async function adminGetVirtue(slug: string): Promise<VirtueContent> {
+  return await api(`/virtues/${encodeURIComponent(slug)}/admin`);
+}
+export async function adminEditVirtue(slug: string, body: Partial<{
+  what_is: string;
+  life_stages: { singleness?: string; dating?: string; marriage?: string };
+  overcoming_vice: string;
+  saints: VirtueSaint[];
+  resources: VirtueResource[];
+  intro: string;
+  saints_by_virtue: SaintsByVirtue[];
+}>): Promise<VirtueContent> {
+  return await api(`/virtues/${encodeURIComponent(slug)}`, { method: "PUT", body });
+}
+export async function adminRegenerateVirtue(slug: string): Promise<VirtueContent> {
+  return await api(`/virtues/${encodeURIComponent(slug)}/regenerate`, { method: "POST" });
+}
+export async function listVirtuePlans(): Promise<{ items: VirtuePlan[] }> {
+  return await api(`/virtues/plans`);
+}
+export async function createVirtuePlan(body: { virtue_slugs: string[]; days: number; note?: string }): Promise<VirtuePlan> {
+  return await api(`/virtues/plans`, { method: "POST", body });
+}
+export async function getVirtuePlan(id: string): Promise<VirtuePlan> {
+  return await api(`/virtues/plans/${encodeURIComponent(id)}`);
+}
+export async function toggleVirtueGoal(planId: string, goalId: string): Promise<VirtuePlan> {
+  return await api(`/virtues/plans/${encodeURIComponent(planId)}/goals/${encodeURIComponent(goalId)}/toggle`, { method: "POST" });
+}
+export async function deleteVirtuePlan(id: string): Promise<{ ok: boolean }> {
+  return await api(`/virtues/plans/${encodeURIComponent(id)}`, { method: "DELETE" });
+}

@@ -2,13 +2,14 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 
-import { api, ChallengeSummary, JournalEntry, LiturgicalDay, listChallenges } from "@/src/api";
+import { api, ChallengeSummary, JournalEntry, LiturgicalDay, listChallenges, listSchedule, ScheduleItem } from "@/src/api";
 import { useChallengeMasterPref } from "@/src/use-challenge-pref";
 import LiturgicalBadge from "@/src/components/LiturgicalBadge";
 import { colorForLiturgical, colors, fonts, radius, shadow, spacing } from "@/src/theme";
 import { formatLongFromISO, monthName, todayISO } from "@/src/date-utils";
+import { dowOf, format12 } from "@/src/schedule-utils";
 
 const DOW_HEAD = ["S", "M", "T", "W", "T", "F", "S"];
 
@@ -24,6 +25,7 @@ export default function CalendarScreen() {
   const [entriesLoading, setEntriesLoading] = useState(false);
   const [entryDates, setEntryDates] = useState<Set<string>>(new Set());
   const [challenges, setChallenges] = useState<ChallengeSummary[]>([]);
+  const [scheduleItems, setScheduleItems] = useState<ScheduleItem[]>([]);
   const { enabled: challengeMasterOn, setEnabled: setChallengeMasterOn } = useChallengeMasterPref();
 
   // Pull every published challenge — we'll decorate calendar cells whose
@@ -42,6 +44,15 @@ export default function CalendarScreen() {
     const res = await api<{ days: LiturgicalDay[] }>(`/liturgical/month?year=${year}&month=${month}`);
     setDays(res.days);
   }, [year, month]);
+
+  const loadSchedule = useCallback(async () => {
+    try {
+      const r = await listSchedule();
+      setScheduleItems(r.items || []);
+    } catch {
+      setScheduleItems([]);
+    }
+  }, []);
 
   // Load journal entries from a window around the visible month so we can show dots.
   const loadEntryDates = useCallback(async () => {
@@ -78,7 +89,7 @@ export default function CalendarScreen() {
     setLoading(true);
     (async () => {
       try {
-        await Promise.all([load(), loadEntryDates(), loadChallenges()]);
+        await Promise.all([load(), loadEntryDates(), loadChallenges(), loadSchedule()]);
       } finally {
         if (!cancel) setLoading(false);
       }
@@ -86,7 +97,10 @@ export default function CalendarScreen() {
     return () => {
       cancel = true;
     };
-  }, [load, loadEntryDates, loadChallenges]);
+  }, [load, loadEntryDates, loadChallenges, loadSchedule]);
+
+  // Refresh the schedule whenever the screen regains focus (e.g. after adding).
+  useFocusEffect(useCallback(() => { void loadSchedule(); }, [loadSchedule]));
 
   useEffect(() => {
     void loadEntriesFor(selected);
@@ -104,6 +118,25 @@ export default function CalendarScreen() {
   }, [days, year, month]);
 
   const sel = days.find((d) => d.date === selected);
+
+  // Does a given date have any schedule items? (weekly by weekday, or one-off).
+  const hasSchedule = useCallback(
+    (dStr: string): boolean => {
+      const dw = dowOf(dStr);
+      return scheduleItems.some((it) =>
+        it.recurrence === "once" ? it.date === dStr : (it.days_of_week || []).includes(dw),
+      );
+    },
+    [scheduleItems],
+  );
+
+  // Schedule items that fall on the selected day, timed first.
+  const scheduleForSel = useMemo(() => {
+    const dw = dowOf(selected);
+    return scheduleItems
+      .filter((it) => (it.recurrence === "once" ? it.date === selected : (it.days_of_week || []).includes(dw)))
+      .sort((a, b) => (a.time || "99:99").localeCompare(b.time || "99:99"));
+  }, [scheduleItems, selected]);
 
   // Lookup: which published challenge does this date belong to (if any)?
   // Returns null whenever the master "Liturgical Challenges" toggle is off —
@@ -206,6 +239,9 @@ export default function CalendarScreen() {
                     )}
                     {entryDates.has(cell.date) && (
                       <View style={styles.entryDot} testID={`entry-dot-${cell.date}`} />
+                    )}
+                    {hasSchedule(cell.date) && (
+                      <View style={styles.scheduleDot} testID={`schedule-dot-${cell.date}`} />
                     )}
                     {cellChallenge ? (
                       <View
@@ -323,6 +359,51 @@ export default function CalendarScreen() {
                 ) : null}
               </View>
             ) : null}
+
+            {/* Schedule for selected day */}
+            <View style={styles.scheduleSection} testID="cal-schedule-section">
+              <View style={styles.journalHead}>
+                <Text style={styles.journalTitle}>Schedule</Text>
+                <Pressable
+                  testID="cal-schedule-add"
+                  onPress={() =>
+                    router.push({
+                      pathname: "/schedule/edit",
+                      params: { date: selected, dow: String(dowOf(selected)), rec: "once" },
+                    })
+                  }
+                  style={({ pressed }) => [styles.addBtn, pressed && styles.pressed]}
+                >
+                  <Ionicons name="add" size={16} color={colors.gold} />
+                  <Text style={styles.addBtnText}>Add</Text>
+                </Pressable>
+              </View>
+              {scheduleForSel.length === 0 ? (
+                <Text style={styles.scheduleEmpty}>Nothing scheduled for this day.</Text>
+              ) : (
+                scheduleForSel.map((it) => (
+                  <Pressable
+                    key={it.id}
+                    testID={`cal-schedule-item-${it.id}`}
+                    onPress={() => router.push({ pathname: "/schedule/edit", params: { id: it.id } })}
+                    style={({ pressed }) => [styles.schedRow, { borderLeftColor: it.color || colors.gold }, pressed && styles.pressed]}
+                  >
+                    <Ionicons name={(it.icon as keyof typeof Ionicons.glyphMap) || "ellipse-outline"} size={16} color={it.color || colors.gold} />
+                    <Text style={styles.schedTime}>{format12(it.time)}</Text>
+                    <Text style={styles.schedTitle} numberOfLines={1}>{it.title}</Text>
+                    {it.notify ? <Ionicons name="notifications" size={13} color={colors.gold} /> : null}
+                  </Pressable>
+                ))
+              )}
+              <Pressable
+                testID="cal-schedule-open"
+                onPress={() => router.push("/schedule")}
+                style={({ pressed }) => [styles.schedOpen, pressed && styles.pressed]}
+              >
+                <Text style={styles.schedOpenText}>Open full schedule</Text>
+                <Ionicons name="chevron-forward" size={15} color={colors.gold} />
+              </Pressable>
+            </View>
 
             {/* Journal entries for selected day */}
             <View style={styles.journalSection} testID="cal-journal-section">
@@ -555,4 +636,50 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   pressed: { opacity: 0.7 },
+  scheduleDot: {
+    position: "absolute",
+    bottom: 4,
+    left: 6,
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: colors.primary,
+  },
+  scheduleSection: {
+    marginTop: spacing.lg,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    padding: spacing.md,
+    ...shadow.card,
+  },
+  scheduleEmpty: {
+    fontFamily: fonts.bodyItalic,
+    fontStyle: "italic",
+    fontSize: 13,
+    color: colors.textMuted,
+    paddingVertical: spacing.sm,
+  },
+  schedRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 9,
+    paddingHorizontal: spacing.sm,
+    borderLeftWidth: 3,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSoft,
+  },
+  schedTime: { fontFamily: fonts.uiSemi, fontSize: 11.5, color: colors.textMuted, minWidth: 62 },
+  schedTitle: { flex: 1, fontFamily: fonts.headingSemi, fontSize: 14, color: colors.textPrimary },
+  schedOpen: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    marginTop: spacing.sm,
+    paddingVertical: 8,
+  },
+  schedOpenText: { fontFamily: fonts.uiSemi, fontSize: 13, color: colors.gold, letterSpacing: 0.3 },
 });

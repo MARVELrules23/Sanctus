@@ -1,0 +1,34 @@
+{
+  "summary": "Iter43 — Schedule feature (weekly + one-off personal items on the liturgical calendar). BACKEND: 24/24 pytest tests pass in /app/backend/tests/test_schedule_iter43.py. Auth gating (401 anon on /api/schedule, /day/{date}, /sources, POST). Validations all return 400: weekly with empty days_of_week, once with missing date, once with invalid date format, invalid 24h time '25:99', empty/whitespace title. CRUD verified end-to-end: POST weekly {days_of_week:[1,3,5],time:'08:00',notify:true} returns id sch_*; POST once {date:'2026-06-25',time:'18:30'}; GET /api/schedule lists them; PUT /{id} updates persistently (verified via GET); PUT /{id}/notif-ids stores array and persists; DELETE returns {ok:true, notif_ids:[...]} with the cancelled IDs. Day matching: GET /api/schedule/day/{date} returns weekly items whose dow (Sun=0..Sat=6) matches and one-offs whose date equals; timed items sort before all-day; bad date string returns 400. /api/schedule/sources returns {virtue_plans:[ref_id,title,end_date], challenges:[ref_slug,title,color,icon,patron_saint]} and only active plans (end_date >= today) are included. Free user gets a valid 200 with empty arrays. FRONTEND (mobile viewport 390x844): Home shows 'Schedule' quick-tile (quick-schedule) which routes to /schedule. /schedule renders schedule-screen with all 7 day-of-week chips (schedule-dow-0..6, today highlighted by default). Tapping schedule-add opens schedule-edit-screen. Created a CUSTOM WEEKLY item: title 'UI_Custom_Weekly', recurrence weekly, day-3 (Wed) selected, all-day toggle OFF revealed the 12-hour picker, picked hour 6 / min 30 / PM, saved → returned to schedule, item appears under 'EVERY WED' with the 12-hour label '6:30 PM · Wed, Fri'. Created a ONE-OFF item via schedule-rec-once + schedule-date-next stepper + save → appears under 'UPCOMING ONE-OFF' with the formatted date label. Calendar tab integration: cal-schedule-section renders for the selected day (today shows 2 items: 9:00 AM Workout and 6:30 PM UI_Custom_Weekly — both 12-hour format). 10 schedule-dot-{date} cells render on the calendar grid for days that have items. cal-schedule-add opens the editor pre-routed with ?date=YYYY-MM-DD&dow=N&rec=once. cal-schedule-open routes to /schedule. Tapping an item from /schedule opens the editor PREFILLED with the saved values (title, time, days). Free user (test_sched_free_001) can also access the schedule UI (no premium gating on this feature). 12-HOUR DISPLAY confirmed across both the /schedule list and the calendar Schedule section.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_schedule_iter43.py",
+    "/app/test_reports/pytest/iteration_43_schedule.xml"
+  ],
+  "action_items": [
+    "(non-blocking) Delete confirmation on /schedule/edit uses React Native Alert.alert which on web preview renders a custom modal (not a browser native confirm()). page.on('dialog') from Playwright will NOT capture it; future UI tests for delete should target the modal's 'Delete' Pressable directly. Backend DELETE endpoint and the schedule-edit-delete testID are both verified working — this is purely a test-tooling note.",
+    "(non-blocking, app-wide) Web preview console emits the long-standing deprecation warnings 'shadow* style props are deprecated. Use boxShadow' and 'props.pointerEvents is deprecated. Use style.pointerEvents'. Not specific to schedule files."
+  ],
+  "critical_code_review_comments": [
+    "/app/backend/schedule.py (235 lines) is clean: KINDS whitelist, regex-validated time/date, title trimmed+capped to 120, note capped to 500, notif_ids list capped to 31 (matches expo-notifications iOS limit). _dow_of correctly maps Sunday=0..Saturday=6 (isoweekday % 7). _occurs_on/_time_sort_key are pure and easy to reason about. MongoDB _id is excluded everywhere via projection. All endpoints require auth via Depends(get_current_user).",
+    "Validation returns 400 with helpful messages (not generic 422) — good UX for the client error banner.",
+    "DELETE returns notif_ids so the client can cancel scheduled notifications — clean contract.",
+    "Sources endpoint correctly filters virtue_plans by end_date >= today and only lists enrolled challenges (not all challenges).",
+    "Frontend /app/frontend/app/schedule/index.tsx and /app/frontend/app/schedule/edit.tsx use testIDs consistently on every interactive element. 12-hour formatting routed through src/schedule-utils.format12() — verified rendering '6:30 PM', '9:00 AM' in both the list and the calendar section."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_schedule_iter43.py (NEW — 24 pytest tests, all PASSING)"
+  ],
+  "success_rate": {"backend": "100% (24/24)", "frontend": "100% (home tile→/schedule; dow chips; add→editor; custom weekly with 12-hr time; one-off via date stepper; calendar dots + section with 12-hr times; cal-schedule-add prefill; cal-schedule-open; item tap → prefilled editor; free user access)"},
+  "seed_data_creation": "Seeded /collection user_sessions in sanctus_db with two 12-hour TTL sessions: admin 'test_sched_admin_001' → user_ade7a898e281 (philipwils13@gmail.com, is_admin+premium, has virtue plans); free 'test_sched_free_001' → user_virtus_free. Stored expires_at as a real datetime (not ISO string) so get_current_user works. Re-mint when sessions expire. All test schedule items prefixed with UI_/TEST_ were cleaned up at end of run.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Schedule feature fully working both backend and frontend. To run backend tests: EXPO_PUBLIC_BACKEND_URL=https://divine-office.preview.emergentagent.com pytest /app/backend/tests/test_schedule_iter43.py -v. To inspect UI: localStorage['sanctus_session_token']=JSON.stringify('test_sched_admin_001'), then visit /schedule, /schedule/edit, /calendar. Note: schedule-edit-delete uses RN Alert.alert (custom modal on web) — page.on('dialog') will not catch it; target the modal button directly if you need to test delete via UI.",
+  "rca_of_issue": "No bugs found. One first-run pytest pass returned 500s because the seed script stored expires_at as an ISO string but server.py get_current_user expects datetime.tzinfo — re-seeded as a real datetime and all 24 tests pass."
+}

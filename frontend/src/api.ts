@@ -1806,3 +1806,71 @@ export async function toggleVirtueGoal(planId: string, goalId: string): Promise<
 export async function deleteVirtuePlan(id: string): Promise<{ ok: boolean }> {
   return await api(`/virtues/plans/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
+
+// ---------------------------------------------------------------------------
+// Schedule
+// ---------------------------------------------------------------------------
+
+export type ScheduleKind = "meal" | "workout" | "virtue" | "challenge" | "custom";
+
+export type ScheduleItem = {
+  id: string;
+  kind: ScheduleKind;
+  title: string;
+  note?: string | null;
+  recurrence: "weekly" | "once";
+  days_of_week: number[]; // 0=Sun..6=Sat
+  date?: string | null;   // YYYY-MM-DD for once
+  time?: string | null;   // 24h HH:MM, null = all day
+  ref_slug?: string | null;
+  ref_id?: string | null;
+  icon?: string | null;
+  color?: string | null;
+  notify: boolean;
+  notif_ids: string[];
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type ScheduleItemInput = {
+  kind: ScheduleKind;
+  title: string;
+  note?: string;
+  recurrence: "weekly" | "once";
+  days_of_week?: number[];
+  date?: string | null;
+  time?: string | null;
+  ref_slug?: string | null;
+  ref_id?: string | null;
+  icon?: string | null;
+  color?: string | null;
+  notify?: boolean;
+  notif_ids?: string[];
+};
+
+export type ScheduleSources = {
+  virtue_plans: { ref_id: string; title: string; end_date?: string }[];
+  challenges: { ref_slug: string; title: string; color?: string; icon?: string; patron_saint?: string }[];
+};
+
+export async function listSchedule(): Promise<{ items: ScheduleItem[] }> {
+  return await api(`/schedule`);
+}
+export async function scheduleForDay(date: string): Promise<{ date: string; items: ScheduleItem[] }> {
+  return await api(`/schedule/day/${encodeURIComponent(date)}`);
+}
+export async function getScheduleSources(): Promise<ScheduleSources> {
+  return await api(`/schedule/sources`);
+}
+export async function createScheduleItem(body: ScheduleItemInput): Promise<ScheduleItem> {
+  return await api(`/schedule`, { method: "POST", body });
+}
+export async function updateScheduleItem(id: string, body: ScheduleItemInput): Promise<ScheduleItem> {
+  return await api(`/schedule/${encodeURIComponent(id)}`, { method: "PUT", body });
+}
+export async function setScheduleNotifIds(id: string, notif_ids: string[]): Promise<{ ok: boolean }> {
+  return await api(`/schedule/${encodeURIComponent(id)}/notif-ids`, { method: "PUT", body: { notif_ids } });
+}
+export async function deleteScheduleItem(id: string): Promise<{ ok: boolean; notif_ids: string[] }> {
+  return await api(`/schedule/${encodeURIComponent(id)}`, { method: "DELETE" });
+}

@@ -223,6 +223,12 @@ export default function TodayScreen() {
             label="Charities"
             onPress={() => router.push("/charities")}
           />
+          <QuickTile
+            testID="quick-schedule"
+            icon="time-outline"
+            label="Schedule"
+            onPress={() => router.push("/schedule")}
+          />
         </View>
 
         {/* Mass Readings */}

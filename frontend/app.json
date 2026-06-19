@@ -51,6 +51,12 @@
       "expo-font",
       "expo-audio",
       [
+        "expo-notifications",
+        {
+          "color": "#1A2233"
+        }
+      ],
+      [
         "expo-calendar",
         {
           "calendarPermission": "Save parish events to your calendar"

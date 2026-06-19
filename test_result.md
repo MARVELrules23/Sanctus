@@ -607,3 +607,26 @@ NEEDS TESTING (backend): all virtues endpoints incl. premium gating (402 free / 
 NEEDS TESTING (frontend): home VIRTUS card → /virtus; plan builder (select virtues + days → create → plan screen with checkable goals); virtue detail subsections expand; free user sees locked Resources w/ unlock CTA; admin sees Edit pencil → editor; Liturgy hub shows Daytime Prayer tile → reader (no weekday selector).
 NOTE: free test user user_virtus_free (token mint via Mongo). Admin user_ade7a898e281 is premium+admin."
 
+
+main_agent_schedule_2026-06-19: "SCHEDULE feature shipped (linked to calendar + reminders).
+
+BACKEND: backend/schedule.py wired into server.py. Collection `schedule_items`. All /api/schedule endpoints auth-required, free for all.
+  - GET /schedule → {items[]}
+  - GET /schedule/day/{YYYY-MM-DD} → items occurring that day (weekly dow match OR once date match), timed first
+  - GET /schedule/sources → {virtue_plans[] (active), challenges[] (enrolled)} for the add screen
+  - POST /schedule {kind, title, recurrence(weekly|once), days_of_week[0=Sun..6=Sat], date, time(24h HH:MM|null), ref_id, ref_slug, notify, notif_ids} → item. Validation: weekly needs >=1 day (400), once needs valid date (400), bad time (400), title required (400).
+  - PUT /schedule/{id}; PUT /schedule/{id}/notif-ids; DELETE /schedule/{id} (returns notif_ids so client cancels OS notifications).
+  Kinds: meal, workout, virtue, challenge, custom.
+FRONTEND:
+  - /schedule (schedule-screen): day-of-week chips (schedule-dow-{0..6}, default today), 'Every <Day>' weekly list + 'Upcoming one-off' list, add (schedule-add / schedule-add-cta).
+  - /schedule/edit (schedule-edit-screen): kind chips (schedule-kind-{meal|workout|virtue|challenge|custom}); source picker for virtue/challenge (schedule-source-{id}); title (schedule-title); recurrence seg (schedule-rec-weekly|once); weekly day buttons (schedule-day-{0..6}) OR one-off date stepper (schedule-date-prev/next); time: All-day Switch (schedule-allday) + 12-hour picker (schedule-hour-{1..12}, schedule-min-{0..55}, schedule-ampm-AM|PM); notify Switch (schedule-notify); note; save (schedule-save); delete (schedule-edit-delete).
+  - Calendar tab: schedule dot on cells with items (schedule-dot-{date}); day-detail 'Schedule' section (cal-schedule-section) listing items for selected day with Add (cal-schedule-add → opens editor in one-off mode for that date) + 'Open full schedule' (cal-schedule-open → /schedule).
+  - Home: 'Schedule' quick-tile (quick-schedule → /schedule).
+  - TIME shown 12-hour American (AM/PM); stored 24h.
+REMINDERS: on-device via expo-notifications (src/notifications.ts) — LOCAL only, no keys. WEB = graceful no-op (Schedule UI still works in preview). Real reminders fire only on a built iOS/Android app. expo-notifications plugin added to app.json. Client schedules WEEKLY (weekday=dow+1) or DATE triggers and stores notif_ids back via PUT; cancels on edit/delete.
+
+VERIFIED via curl: sources, create weekly+once, list, day matching (Mon dow=1, one-off date), 400 validation, delete. Lint clean. Smoke screenshots: /schedule, editor (12h picker), calendar schedule section + dots all render; a saved weekly-Friday workout persisted and appears as Friday calendar dots.
+
+NEEDS TESTING (backend): schedule CRUD, day-matching (weekly dow + one-off date), sources (active virtue plans + enrolled challenges), all 400 validations, notif-ids endpoint, auth 401.
+NEEDS TESTING (frontend): home Schedule tile → /schedule; add item (custom weekly with time, and one-off) → appears under correct day; calendar shows schedule dot + day-detail Schedule section with the item; edit + delete; 12-hour time picker works. NOTE: notification reminders cannot be validated in web/Expo Go preview (build required) — do NOT fail the feature for that; just confirm the UI toggle + save works."
+

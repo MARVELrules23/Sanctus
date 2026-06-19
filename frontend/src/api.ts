@@ -1828,6 +1828,7 @@ export type ScheduleItem = {
   color?: string | null;
   notify: boolean;
   notif_ids: string[];
+  ics_token?: string | null;
   created_at?: string;
   updated_at?: string;
 };

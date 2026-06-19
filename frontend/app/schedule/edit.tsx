@@ -43,6 +43,7 @@ import {
   scheduleItemNotifications,
 } from "@/src/notifications";
 import { build24, DOW_SHORT, parse24 } from "@/src/schedule-utils";
+import { googleCalUrl, icsLink } from "@/src/calendar-export";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 import { formatLongFromISO, todayISO } from "@/src/date-utils";
 
@@ -437,6 +438,34 @@ export default function ScheduleEditScreen() {
             multiline
           />
 
+          {/* Add to external calendar (saved items only) */}
+          {editing && original?.ics_token ? (
+            <View style={styles.exportCard} testID="schedule-export">
+              <Text style={styles.label}>ADD TO YOUR CALENDAR</Text>
+              <Text style={styles.exportHint}>
+                Put this on Google or your phone's calendar so it sends the reminders.
+              </Text>
+              <Pressable
+                testID="export-google"
+                onPress={() => Linking.openURL(googleCalUrl(original))}
+                style={({ pressed }) => [styles.exportBtn, pressed && { opacity: 0.85 }]}
+              >
+                <Ionicons name="logo-google" size={16} color={colors.primary} />
+                <Text style={styles.exportBtnText}>Google Calendar</Text>
+                <Ionicons name="open-outline" size={15} color={colors.textMuted} />
+              </Pressable>
+              <Pressable
+                testID="export-ics"
+                onPress={() => { const u = icsLink(original); if (u) Linking.openURL(u); }}
+                style={({ pressed }) => [styles.exportBtn, pressed && { opacity: 0.85 }]}
+              >
+                <Ionicons name="calendar-outline" size={16} color={colors.primary} />
+                <Text style={styles.exportBtnText}>Apple / phone calendar</Text>
+                <Ionicons name="download-outline" size={15} color={colors.textMuted} />
+              </Pressable>
+            </View>
+          ) : null}
+
           <Pressable
             testID="schedule-save"
             onPress={save}
@@ -532,4 +561,15 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl, paddingVertical: 14, borderRadius: radius.round, ...shadow.card,
   },
   saveText: { fontFamily: fonts.uiSemi, fontSize: 15, color: colors.gold, letterSpacing: 0.4 },
+  exportCard: {
+    marginTop: spacing.lg, padding: spacing.md, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.borderSoft, backgroundColor: colors.surface, gap: spacing.sm,
+  },
+  exportHint: { fontFamily: fonts.bodyRegular, fontSize: 12.5, lineHeight: 18, color: colors.textMuted, marginTop: -4 },
+  exportBtn: {
+    flexDirection: "row", alignItems: "center", gap: 10,
+    paddingVertical: 11, paddingHorizontal: spacing.md, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.borderSoft, backgroundColor: colors.background,
+  },
+  exportBtnText: { flex: 1, fontFamily: fonts.uiSemi, fontSize: 14, color: colors.textPrimary },
 });

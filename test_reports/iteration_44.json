@@ -1,0 +1,31 @@
+{
+  "summary": "Iter44 — Calendar export for Schedule (Google Calendar link + .ics download). BACKEND (8/8 new + 24/24 regression pytest tests pass): GET /api/schedule/ics/{token}.ics is PUBLIC (no auth header) and returns Content-Type 'text/calendar; charset=utf-8' with Content-Disposition attachment .ics. Body is a valid VCALENDAR with BEGIN/END markers, a VEVENT, a VALARM (TRIGGER:-PT15M for timed events, -PT0M for all-day), and DTSTART/DTSTAMP/SUMMARY/DESCRIPTION lines. For a weekly item with days_of_week=[1,3,5] and time '08:00' the body contains RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR and a timed DTSTART (YYYYMMDDTHHMMSS). For a one-off item (date=2026-06-25, time=18:30) the body has DTSTART:20260625T183000 and NO RRULE. Unknown token returns 404. Commas/semicolons in DESCRIPTION are RFC5545-escaped (\\, and \\;). Every create returns ics_token (32-hex chars); listing /api/schedule returns ics_token on every item; older items without ics_token are LAZILY assigned one on list (verified by inserting a legacy doc into MongoDB and seeing the GET response add+persist the token). The 24 regression tests in test_schedule_iter43.py (auth, validations, CRUD, day-matching, sources) all still pass. FRONTEND (mobile viewport 390x844): /schedule loads schedule-screen with the admin session injected via localStorage['sanctus_session_token']. Tapping schedule-add opens schedule-edit-screen and the testID schedule-export is ABSENT (export section hidden until the item is saved — confirmed by query_selector returning null). For an existing saved item (tapped from the list), the editor shows the testID schedule-export block with both buttons present and visible: export-google (Google Calendar) and export-ics (Apple / phone calendar). Both buttons are tappable (click force=True succeeded — Linking.openURL fires; the external navigation cannot be followed inside the harness, which is expected). Screenshot of editor shows the 'ADD TO YOUR CALENDAR' card with proper styling, hint copy 'Put this on Google or your phone's calendar so it sends the reminders', and the two buttons with the correct icons.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_schedule_ics_iter44.py",
+    "/app/test_reports/pytest/iteration_44_schedule_ics.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "/app/backend/schedule.py build_ics() correctly emits PRODID, CALSCALE:GREGORIAN, METHOD:PUBLISH, and CRLF line endings (joined with \\r\\n + trailing \\r\\n) per RFC 5545. _ics_escape handles backslash, semicolon, comma and newline.",
+    "Public ics endpoint is unauthenticated by design (capability URL via unguessable ics_token=uuid4 hex). _id excluded from the projection. Safe from enumeration since 32-hex token space is large.",
+    "ics_token is generated on create (uuid4().hex) and lazily on list for legacy items — clean migration path; the lazy-write happens inside the async cursor loop which is fine for the expected volume.",
+    "Frontend src/calendar-export.ts mirrors the backend's BYDAY logic (Sun=0..Sat=6 -> SU,MO,..,SA) and the next-weekly-date algorithm, so the Google Calendar 'render' URL and the .ics file will start on the same calendar date. EXPO_PUBLIC_BACKEND_URL is read at module load — fine in Expo.",
+    "edit.tsx hides the export section unless `editing && original?.ics_token` is truthy, which correctly suppresses it during ADD mode and also gracefully degrades if a legacy item is opened before its ics_token is hydrated."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_schedule_ics_iter44.py (NEW — 8 pytest tests, all PASSING)"
+  ],
+  "success_rate": {"backend": "100% (8/8 new + 24/24 regression)", "frontend": "100% (export hidden in ADD; both buttons visible+tappable in EDIT)"},
+  "seed_data_creation": "Re-minted admin session: user_sessions {session_token:'test_sched_admin_001', user_id:'user_ade7a898e281', expires_at: now+12h as real datetime}. Test items prefixed TEST_ICS_ / UI_ICS_ are cleaned up by fixture teardown; one legacy-doc insertion into schedule_items is removed in finally.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Calendar export verified end-to-end. To re-run backend: EXPO_PUBLIC_BACKEND_URL=https://divine-office.preview.emergentagent.com pytest /app/backend/tests/test_schedule_ics_iter44.py /app/backend/tests/test_schedule_iter43.py -v. For frontend UI: inject localStorage['sanctus_session_token']=JSON.stringify('test_sched_admin_001') then /schedule. The export section testID is 'schedule-export'; buttons are 'export-google' and 'export-ics'. Re-mint session if expired (12h TTL).",
+  "rca_of_issue": "No bugs found."
+}

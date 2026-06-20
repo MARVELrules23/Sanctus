@@ -20,7 +20,11 @@ current_lang: ContextVar[str] = ContextVar("current_lang", default="en")
 def resolve_lang(accept_language: str | None) -> str:
     """Map an Accept-Language header value to a supported language code."""
     al = (accept_language or "").strip().lower()
-    return "es" if al.startswith("es") else "en"
+    if al.startswith("es"):
+        return "es"
+    if al.startswith("it"):
+        return "it"
+    return "en"
 
 
 def get_lang() -> str:
@@ -30,11 +34,19 @@ def get_lang() -> str:
 def lang_instruction() -> str:
     """A directive appended to AI prompts so output is written in the user's
     language. JSON keys stay English; only human-readable values translate."""
-    if get_lang() == "es":
+    lang = get_lang()
+    if lang == "es":
         return (
             " IMPORTANT: Write ALL human-readable text in natural, fluent "
             "Latin American Spanish (español). Keep every JSON key exactly as "
             "specified in English, but translate every string VALUE into Spanish. "
             "Use reverent, pastoral Catholic Spanish."
+        )
+    if lang == "it":
+        return (
+            " IMPORTANT: Write ALL human-readable text in natural, fluent "
+            "Italian (italiano). Keep every JSON key exactly as "
+            "specified in English, but translate every string VALUE into Italian. "
+            "Use reverent, pastoral Catholic Italian."
         )
     return ""

@@ -121,6 +121,13 @@ export default function TodayScreen() {
           >
             <Text style={[styles.langText, lang === "es" && styles.langTextOn]}>Español</Text>
           </Pressable>
+          <Pressable
+            testID="lang-it"
+            onPress={() => setLang("it")}
+            style={[styles.langChip, lang === "it" && styles.langChipOn]}
+          >
+            <Text style={[styles.langText, lang === "it" && styles.langTextOn]}>Italiano</Text>
+          </Pressable>
         </View>
 
         {/* Header */}

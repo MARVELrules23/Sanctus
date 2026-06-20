@@ -1820,7 +1820,7 @@ export async function saveVirtueJournal(planId: string, date: string, text: stri
   return await api(`/virtues/plans/${encodeURIComponent(planId)}/journal`, { method: "PUT", body: { date, text } });
 }
 export async function translateTexts(texts: string[], target: string): Promise<string[]> {
-  if (target !== "es" || texts.length === 0) return texts;
+  if ((target !== "es" && target !== "it") || texts.length === 0) return texts;
   const res = await api<{ items: string[] }>("/translate", { method: "POST", body: { texts, target } });
   return res.items;
 }

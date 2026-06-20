@@ -24,11 +24,11 @@ export function useTranslator(strings: string[]): { tr: (s: string) => string; r
 
   useEffect(() => {
     let alive = true;
-    if (lang !== "es" || uniq.length === 0) {
+    if (lang === "en" || uniq.length === 0) {
       setMap({});
       return;
     }
-    translateTexts(uniq, "es")
+    translateTexts(uniq, lang)
       .then((items) => {
         if (!alive) return;
         const m: Record<string, string> = {};
@@ -40,6 +40,6 @@ export function useTranslator(strings: string[]): { tr: (s: string) => string; r
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lang, sig]);
 
-  const tr = (s: string) => (lang === "es" ? map[s] || s : s);
-  return { tr, ready: lang !== "es" || Object.keys(map).length > 0 };
+  const tr = (s: string) => (lang !== "en" ? map[s] || s : s);
+  return { tr, ready: lang === "en" || Object.keys(map).length > 0 };
 }

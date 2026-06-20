@@ -11,7 +11,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-export type Lang = "en" | "es";
+export type Lang = "en" | "es" | "it";
 const STORAGE_KEY = "sanctus_lang";
 
 let _currentLang: Lang = "en";
@@ -322,7 +322,157 @@ const es: Dict = {
   "virtus.detail.unlock": "Desbloquea con Sanctus Premium",
 };
 
-const DICTS: Record<Lang, Dict> = { en, es };
+const it: Dict = {
+  // common
+  "common.today": "Oggi",
+  "common.save": "Salva",
+  "common.saveChanges": "Salva modifiche",
+  "common.add": "Aggiungi",
+  "common.edit": "Modifica",
+  "common.delete": "Elimina",
+  "common.cancel": "Annulla",
+  "common.tryAgain": "Riprova",
+  "common.allDay": "Tutto il giorno",
+  "common.loading": "Caricamento…",
+  "common.openSettings": "Apri Impostazioni",
+  "common.notNow": "Non ora",
+  "common.somethingWrong": "Qualcosa è andato storto.",
+  // tabs
+  "tab.today": "Oggi",
+  "tab.meals": "Pasti",
+  "tab.workouts": "Allenamenti",
+  "tab.wellness": "Benessere",
+  "tab.calendar": "Calendario",
+  "tab.parish": "Parrocchia",
+  "tab.sanctuary": "Santuario",
+  "tab.profile": "Profilo",
+  // home quick tiles
+  "home.prayer": "Preghiera",
+  "home.journal": "Diario",
+  "home.grocery": "Spesa",
+  "home.bible": "Bibbia",
+  "home.calendar": "Calendario",
+  "home.churches": "Chiese",
+  "home.examen": "Esame",
+  "home.selfDefense": "Autodifesa",
+  "home.charities": "Opere di carità",
+  "home.schedule": "Orario",
+  "home.scheduleSub": "Il tuo ritmo di preghiera e pratica",
+  "home.world": "Nel Mondo",
+  "home.worldSub": "La vita pubblica alla luce della Chiesa",
+  "home.quickActions": "Azioni rapide",
+  "home.language": "Lingua",
+  // virtus home card
+  "virtus.home.tagline": "Cresci nella santità — studia una virtù e poniti un obiettivo per viverla bene.",
+  "virtus.home.explore": "Esplora le virtù",
+  // virtus hub
+  "virtus.subtitle": "Cresci nella santità, una virtù alla volta",
+  "virtus.heroTitle": "La scuola della virtù",
+  "virtus.heroSub": "Studia le virtù, impara a viverle in ogni stagione della vita e poniti un obiettivo per crescere in quelle a cui il Signore ti chiama.",
+  "virtus.workOn": "Lavora su una virtù",
+  "virtus.chooseHint": "Scegli una o più virtù su cui concentrarti.",
+  "virtus.timeframe": "In quale arco di tempo?",
+  "virtus.days": "{n} giorni",
+  "virtus.notePlaceholder": "C'è qualcosa che vorresti il piano affrontasse? (facoltativo)",
+  "virtus.pickToBegin": "Scegli una virtù per iniziare",
+  "virtus.buildPlan": "Crea il mio piano di {n} giorni",
+  "virtus.yourPlans": "I TUOI PIANI",
+  "virtus.theVirtues": "LE VIRTÙ",
+  "virtus.goalsEnds": "{done}/{total} obiettivi · termina il {date}",
+  // schedule
+  "schedule.title": "Orario",
+  "schedule.subtitle": "Pianifica la settimana con la Chiesa",
+  "schedule.every": "OGNI {day}",
+  "schedule.nothing": "Niente in programma per questo giorno.",
+  "schedule.upcoming": "PROSSIMO EVENTO SINGOLO",
+  "schedule.addToSchedule": "Aggiungi all'orario",
+  "schedule.remindersNote": "I promemoria arrivano sull'app iOS/Android compilata, non in questa anteprima web.",
+  // schedule editor
+  "schedule.addTitle": "Aggiungi all'orario",
+  "schedule.editTitle": "Modifica voce",
+  "schedule.type": "TIPO",
+  "schedule.kind.meal": "Pasto",
+  "schedule.kind.workout": "Allenamento",
+  "schedule.kind.virtue": "Virtù",
+  "schedule.kind.challenge": "Sfida",
+  "schedule.kind.custom": "Personalizzato",
+  "schedule.titleLabel": "TITOLO",
+  "schedule.repeats": "RIPETIZIONE",
+  "schedule.weekly": "Settimanale",
+  "schedule.oneDate": "Una data",
+  "schedule.time": "ORA",
+  "schedule.hour": "Ora",
+  "schedule.minute": "Minuto",
+  "schedule.remindMe": "Ricordamelo",
+  "schedule.remindOn": "Una notifica all'ora prevista.",
+  "schedule.remindBuild": "I promemoria arrivano sull'app compilata, non nell'anteprima.",
+  "schedule.noteOptional": "NOTA (FACOLTATIVA)",
+  "schedule.notePlaceholder": "Qualcosa da ricordare…",
+  "schedule.activePlan": "PIANO DI VIRTÙ ATTIVO",
+  "schedule.enrolledChallenge": "SFIDA ISCRITTA",
+  "schedule.noPlans": "Nessun piano di virtù attivo — iniziane uno in Virtus.",
+  "schedule.noChallenges": "Non sei ancora iscritto a nessuna sfida.",
+  "schedule.addToCalendar": "AGGIUNGI AL TUO CALENDARIO",
+  "schedule.calendarHint": "Mettilo su Google o sul calendario del telefono così invierà i promemoria.",
+  "schedule.googleCal": "Google Calendar",
+  "schedule.appleCal": "Calendario Apple / telefono",
+  "schedule.openFull": "Apri l'orario completo",
+  "schedule.nothingDay": "Niente in programma per questo giorno.",
+  // settings / profile
+  "settings.language": "Lingua",
+  "settings.languageHint": "Scegli la lingua per l'app e i contenuti IA.",
+  "profile.title": "Profilo",
+  "profile.defaultName": "Anima fedele",
+  "profile.myEvents": "I miei eventi",
+  "profile.journal": "Diario",
+  "profile.nourishment": "Nutrimento",
+  "profile.dietary": "Regime alimentare",
+  "profile.allergies": "Allergie / cose da evitare",
+  "profile.allergiesPh": "es. noci, crostacei",
+  "profile.discipline": "Disciplina",
+  "profile.fitnessLevel": "Livello di forma",
+  "profile.goal": "Obiettivo",
+  "profile.goalPh": "es. costruire resistenza, perdere peso",
+  "profile.devotion": "Devozione",
+  "profile.focus": "Focus",
+  "profile.focusPh": "es. Messa quotidiana, rosario, Liturgia delle Ore",
+  "profile.saved": "Salvato",
+  "profile.about": "Informazioni",
+  "profile.premium": "Sanctus Premium",
+  "profile.premiumManage": "Sanctus Premium · Gestisci",
+  "profile.shop": "Sanctus Shop",
+  "profile.orders": "I miei ordini",
+  "profile.support": "Aiuto e supporto",
+  "profile.privacy": "Informativa sulla privacy",
+  "profile.signOut": "Esci",
+  "profile.footer": "Ad maiorem Dei gloriam — per la maggior gloria di Dio.",
+  // schedule editor extras
+  "schedule.deleteTitle": "Eliminare questa voce?",
+  "schedule.deleteMsg": "Sarà rimossa dal tuo orario.",
+  "schedule.remindOffTitle": "I promemoria sono disattivati",
+  "schedule.remindOffMsg": "Abilita le notifiche per Sanctus nelle Impostazioni per ricevere i promemoria.",
+  "schedule.needTitle": "Aggiungi un titolo",
+  "schedule.needTitleMsg": "Dai un nome a questa voce.",
+  "schedule.pickDay": "Scegli un giorno",
+  "schedule.pickDayMsg": "Scegli almeno un giorno della settimana.",
+  "schedule.cantSave": "Impossibile salvare",
+  "schedule.tryAgain": "Riprova per favore.",
+  "schedule.phMeal": "es. Colazione",
+  "schedule.phWorkout": "es. Giorno gambe",
+  "schedule.phWhat": "Di cosa si tratta?",
+  // virtue detail
+  "virtus.detail.whatIs": "Che cos'è",
+  "virtus.detail.whyMatters": "Perché è importante",
+  "virtus.detail.living": "Viverla in ogni stagione",
+  "virtus.detail.saints": "Santi che l'hanno vissuta",
+  "virtus.detail.prayer": "Una preghiera",
+  "virtus.detail.resources": "Risorse per approfondire",
+  "virtus.detail.startPlan": "Inizia un piano per questa virtù",
+  "virtus.detail.premiumLocked": "Risorse premium",
+  "virtus.detail.unlock": "Sblocca con Sanctus Premium",
+};
+
+const DICTS: Record<Lang, Dict> = { en, es, it };
 
 function translate(lang: Lang, key: string, vars?: Record<string, string | number>): string {
   let s = DICTS[lang][key] ?? DICTS.en[key] ?? key;
@@ -351,7 +501,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY).then((v) => {
-      if (v === "es" || v === "en") {
+      if (v === "es" || v === "en" || v === "it") {
         _currentLang = v;
         setLangState(v);
       }

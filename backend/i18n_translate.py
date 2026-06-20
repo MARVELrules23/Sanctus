@@ -26,7 +26,12 @@ from pydantic import BaseModel
 logger = logging.getLogger("sanctus.translate")
 
 MODEL = "claude-sonnet-4-5-20250929"
-SUPPORTED = {"es"}
+SUPPORTED = {"es", "it"}
+
+_LANG_NAMES = {
+    "es": "Latin American Spanish (español)",
+    "it": "Italian (italiano)",
+}
 
 
 def _key(text: str, target: str) -> str:
@@ -50,14 +55,15 @@ async def _ai_translate(emergent_llm_key: str, texts: List[str], target: str) ->
     caller can retry / fall back WITHOUT caching a bad (English) result."""
     from emergentintegrations.llm.chat import LlmChat, UserMessage
 
-    lang_name = {"es": "Latin American Spanish (español)"}.get(target, target)
+    lang_name = _LANG_NAMES.get(target, target)
     system = (
         "You are a faithful Catholic translator. Translate each input string into "
         f"{lang_name}. For well-known Catholic prayers, devotions, antiphons and "
         "Scripture (Sign of the Cross, Our Father, Hail Mary, Glory Be, the "
         "Apostles'/Nicene Creed, Hail Holy Queen, Fatima prayer, St Michael prayer, "
-        "rosary mysteries, chaplet prayers, etc.) use the TRADITIONAL official "
-        "Spanish liturgical text rather than a literal word-for-word translation. "
+        "rosary mysteries, chaplet prayers, psalms, canticles, etc.) use the "
+        f"TRADITIONAL official liturgical text of the Catholic Church in {lang_name} "
+        "rather than a literal word-for-word translation. "
         "Translate EVERY item; never leave an item in English. "
         "Preserve line breaks and any trailing ellipses. Keep a reverent register. "
         'Return STRICT JSON: {"items": ["...", ...]} with EXACTLY the same number '

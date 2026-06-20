@@ -1,0 +1,64 @@
+{
+  "summary": "Iteration 47 - Italian (IT) language support. Backend: 6/6 pytest passed (POST /api/translate target=it returns traditional Italian for Sign of the Cross / Padre nostro / Gloria al Padre; cache hit <5s; target=en passthrough; anon rejected; GET /api/liturgy/lauds/saturday with Accept-Language: it returns Italian liturgy text; EN default does not leak Italian). Frontend (mobile 390x844): Home language toggle correctly shows three chips (lang-en / lang-es / lang-it). Tapping 'Italiano' switches all home strings to Italian (verified: 'Preghiera', 'Bibbia', 'Orario · Il tuo ritmo di preghiera e pratica', 'Nel Mondo · La vita pubblica alla luce della Chiesa'). Switching to ES still works ('Oración', 'En el Mundo'). Switching back to EN restores English. Liturgy of the Hours → Lauds renders Italian end-to-end after ~5-30s (verified markers: 'O Dio, vieni in mio aiuto', 'Gloria al Padre', 'Salmo', 'Cantico', plus translated body 'Le Lodi sono l\\'Ora mattutina dell\\'Ufficio Divino…'). Prayer / Rosary / Chaplets initially did NOT translate to Italian because frontend src/api.ts:translateTexts() early-returned for any target ≠ 'es'. APPLIED 1-LINE FIX: allow target=='it' as well. After fix verified: Rosary shows 'Santo Rosario / Segno della Croce / Nel nome del Padre e del Figlio e dello Spirito Santo. Amen.' and St Michael Chaplet shows 'Corona di San Michele / Segno della Croce / Nel nome del Padre…'. Remaining minor i18n gap: hardcoded ES/EN ternaries in /app/frontend/app/prayer/[kind].tsx (lines 75-84) for accessory UI strings — 'Bead i of n', 'Prev', 'Next Bead', 'Amen — Continue', 'Journal this', 'Good work for today' — stay in English when IT is active. Prayer hub index (/prayer) hero/blurb/chaplet card titles/subtitles are also hardcoded English (no useTranslator). Daily Devotion card on home (Anima Christi / Morning Offering / Glory Be) is hardcoded English on the home screen.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "translateTexts (api helper)",
+        "issue": "FIXED in this iteration: api.ts line 1823 early-returned untranslated text for any target ≠ 'es', so /prayer/* screens never received Italian. Changed condition to `target !== 'es' && target !== 'it'`. Reference: /app/frontend/src/api.ts:1822-1826.",
+        "testID": "n/a",
+        "priority": "RESOLVED"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "/prayer/[kind]",
+        "issues": [
+          "Accessory UI strings ('Bead i of n', 'Prev', 'Next Bead', 'Amen — Continue', 'Amen — Done', 'Journal this', 'Good work for today', 'Buena obra para hoy') only have EN/ES branches via `es ? ... : ...` ternaries (lines 75-84). When IT is active these fall back to English. Should be migrated to t() with IT entries in i18n.tsx, or extend ternaries to include `it` branch.",
+          "Mystery selector chips (Joyful/Sorrowful/Glorious/Luminous) on Rosary are hardcoded English literals."
+        ]
+      },
+      {
+        "screen": "/prayer (Prayer Hub)",
+        "issues": [
+          "Hero strings ('Anchor the day in prayer', 'Choose the Rosary or a chaplet…'), section labels ('ORATIO', 'TODAY', '~XX min'), and chaplet card titles + subtitles are hardcoded English. None of these go through useTranslator. With IT (or ES) selected the entire prayer hub still reads in English. The user-visible bug from this iteration's user story ('open Preghiera section') therefore renders an English hub then Italian content inside. Consider piping these strings through useTranslator(arr) at the hub level."
+        ]
+      },
+      {
+        "screen": "/(tabs) — home Daily Devotion card",
+        "issues": [
+          "DEVOTIONS array (Morning Offering / Glory Be / Anima Christi) in /app/frontend/app/(tabs)/index.tsx is hardcoded English and never passed through useTranslator, so it stays English in both ES and IT. Pre-existing minor gap (not introduced by this iteration)."
+        ]
+      }
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_italian_iter47.py",
+    "/app/test_reports/pytest/iteration_47_italian.xml"
+  ],
+  "action_items": [
+    "MEDIUM: in /app/frontend/app/prayer/[kind].tsx lines 75-84, extend the `es ? a : b` ternaries to handle IT, or move these strings into i18n.tsx t() lookups. Otherwise IT users see Italian prayer body but English navigation controls.",
+    "MEDIUM: pipe the Prayer Hub (/app/frontend/app/prayer/index.tsx) hero copy, chaplet titles, and subtitles through useTranslator so the hub itself reads in IT/ES when those langs are active.",
+    "LOW: optionally translate the home Daily Devotion card (DEVOTIONS array in /app/frontend/app/(tabs)/index.tsx) via useTranslator for consistency.",
+    "OPTIONAL: clean up unused export `translateTexts` parameter validation — current shape is fine but could use the SUPPORTED set from i18n.tsx in the future."
+  ],
+  "critical_code_review_comments": [
+    "Backend lang_ctx.resolve_lang correctly maps any Accept-Language starting with 'it' to 'it' and falls back to 'en' — robust.",
+    "i18n_translate.SUPPORTED set + _LANG_NAMES mapping is clean; adding new languages is a 2-line change.",
+    "Backend translation is cached per (text, target) sha1 in db.translations_cache — second-call latency is sub-100ms, confirmed in test_translate_cache_hit_is_fast.",
+    "Frontend i18n.tsx Lang type already includes 'it' and AsyncStorage check accepts it — provider plumbing is sound.",
+    "The bug fix in api.ts:translateTexts is the canonical place to add language support, but consider centralizing the supported-target set (currently duplicated as inline check)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_italian_iter47.py (new)",
+    "/app/frontend/src/api.ts (1-line fix at line 1823: allow target=='it' to reach the /translate endpoint)"
+  ],
+  "success_rate": { "backend": "100%", "frontend": "100% (after 1-line frontend fix applied here)" },
+  "seed_data_creation": "Upserted user_sessions row {session_token: 'test_home_layout_24h', user_id: 'user_ade7a898e281', expires_at: now+24h as Python datetime}. No other state created. translations_cache will accumulate Italian rows for tested prayers / Lauds Saturday — these are intentional caches and safe to keep.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Italian translation now works end-to-end. Backend translate accepts target='it'; frontend translateTexts() was patched to call the endpoint for IT (was previously a no-op for any non-ES target). When testing UI, force a chip tap (page.click('[data-testid=lang-it]')) rather than relying solely on localStorage seeding — the JSON-stringified AsyncStorage shim works on reload, but a tap also exercises setLang() and is more reliable. Live liturgy translation takes ~5-30s on first open; chaplet/rosary takes ~15-25s for first open then cached. Note three known i18n gaps (still EN under IT): Prayer hub screen titles/blurbs/chaplet cards, prayer detail nav controls ('Prev'/'Next Bead'/'Bead i of n'), and home Daily Devotion card — see action_items.",
+  "rca_of_issue": "RCA: /app/frontend/src/api.ts:1823 had `if (target !== 'es' || texts.length === 0) return texts;` which short-circuited any non-Spanish translation request, returning the original English strings. The /api/translate backend supported 'it' all along, but the frontend never sent the request when lang was 'it'. The Liturgy of the Hours pages worked because they fetch /api/liturgy/{hour}/{day} directly with the active Accept-Language header (server-side translation), bypassing the broken helper. Fix: extend the guard to also allow 'it'. Verified by re-running UI tests post-fix — Rosary and St Michael chaplet rendered fully in traditional Italian liturgical text."
+}

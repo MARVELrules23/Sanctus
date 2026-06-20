@@ -786,36 +786,40 @@ async def _ai_reflection(lit: dict, date_str: str) -> str:
         return ""
 
 
-async def _translate_readings_es(base: dict, date: str) -> dict:
-    """Produce a Spanish rendering of an English readings doc. Scripture citations
+async def _translate_readings(base: dict, date: str, lang: str) -> dict:
+    """Produce a localized rendering of an English readings doc. Scripture citations
     (e.g. 'Mt 5:1-12') are preserved; titles, excerpts and the reflection are
-    faithfully translated to Latin American Spanish."""
+    faithfully translated into the target language (Spanish or Italian)."""
+    lang_name = {
+        "es": "reverent, accurate Latin American Spanish",
+        "it": "reverent, accurate Italian (italiano)",
+    }.get(lang, "the target language")
     fields = [
         "liturgical_title", "first_reading_excerpt", "psalm_excerpt",
         "second_reading_excerpt", "gospel_acclamation_excerpt",
         "gospel_excerpt", "reflection",
     ]
-    es = dict(base)
-    es.pop("_id", None)
-    es["date"] = date
-    es["lang"] = "es"
-    es["cached_at"] = datetime.now(timezone.utc).isoformat()
+    out = dict(base)
+    out.pop("_id", None)
+    out["date"] = date
+    out["lang"] = lang
+    out["cached_at"] = datetime.now(timezone.utc).isoformat()
     payload = {k: base.get(k, "") for k in fields if (base.get(k) or "").strip()}
     if payload:
         system = (
             "You are a faithful Catholic translator. Translate the given liturgical "
-            "texts from English into reverent, accurate Latin American Spanish. "
+            f"texts from English into {lang_name}. "
             "Return STRICT JSON with the SAME keys, each value translated. Do not add, "
             "remove or rename keys. Preserve the sense of Scripture faithfully; no markdown."
         )
         try:
-            data = await _chat_json(system, json.dumps(payload, ensure_ascii=False), session_id=f"readings-es-{date}")
+            data = await _chat_json(system, json.dumps(payload, ensure_ascii=False), session_id=f"readings-{lang}-{date}")
             for k, v in (data or {}).items():
                 if k in fields and isinstance(v, str) and v.strip():
-                    es[k] = v.strip()
+                    out[k] = v.strip()
         except Exception as e:  # noqa: BLE001
-            logger.warning("readings es translation failed: %s", e)
-    return es
+            logger.warning("readings %s translation failed: %s", lang, e)
+    return out
 
 
 @api.get("/readings")
@@ -824,15 +828,18 @@ async def daily_readings(date: str, user: User = Depends(get_current_user)):
         datetime.strptime(date, "%Y-%m-%d")
     except ValueError:
         raise HTTPException(status_code=400, detail="date must be YYYY-MM-DD")
-    if get_lang() != "es":
+    lang = get_lang()
+    if lang == "en":
         return await _readings_en(date)
-    cached_es = await db.readings_es.find_one({"date": date}, {"_id": 0})
-    if cached_es:
-        return cached_es
+    cached = await db.readings_i18n.find_one({"date": date, "lang": lang}, {"_id": 0})
+    if cached:
+        return cached
     base = await _readings_en(date)
-    es = await _translate_readings_es(base, date)
-    await db.readings_es.update_one({"date": date}, {"$set": es}, upsert=True)
-    return es
+    loc = await _translate_readings(base, date, lang)
+    await db.readings_i18n.update_one(
+        {"date": date, "lang": lang}, {"$set": loc}, upsert=True
+    )
+    return loc
 
 
 async def _readings_en(date: str) -> dict:

@@ -12,7 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
-import { api, DayDoc, LiturgicalDay, MealPlan, Readings, WorkoutPlan } from "@/src/api";
+import { api, LiturgicalDay, Readings } from "@/src/api";
 import { useAuth } from "@/src/auth-context";
 import DailyPracticeCard from "@/src/components/DailyPracticeCard";
 import CatechismCard from "@/src/components/CatechismCard";
@@ -51,23 +51,13 @@ export default function TodayScreen() {
   const router = useRouter();
   const [date] = useState(() => todayISO());
   const [lit, setLit] = useState<LiturgicalDay | null>(null);
-  const [meal, setMeal] = useState<DayDoc<MealPlan> | null>(null);
-  const [workout, setWorkout] = useState<DayDoc<WorkoutPlan> | null>(null);
   const [readings, setReadings] = useState<Readings | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [genMeal, setGenMeal] = useState(false);
-  const [genWorkout, setGenWorkout] = useState(false);
 
   const load = useCallback(async () => {
-    const [l, m, w] = await Promise.all([
-      api<LiturgicalDay>(`/liturgical/day?date=${date}`),
-      api<DayDoc<MealPlan> | Record<string, never>>(`/meals?date=${date}`),
-      api<DayDoc<WorkoutPlan> | Record<string, never>>(`/workouts?date=${date}`),
-    ]);
+    const l = await api<LiturgicalDay>(`/liturgical/day?date=${date}`);
     setLit(l);
-    setMeal("plan" in m ? (m as DayDoc<MealPlan>) : null);
-    setWorkout("plan" in w ? (w as DayDoc<WorkoutPlan>) : null);
     // Readings are slower / non-critical — load in background.
     api<Readings>(`/readings?date=${date}`).then(setReadings).catch(() => undefined);
   }, [date]);
@@ -94,30 +84,6 @@ export default function TodayScreen() {
       setRefreshing(false);
     }
   }, [load]);
-
-  const generateMeal = async () => {
-    setGenMeal(true);
-    try {
-      const res = await api<DayDoc<MealPlan>>("/meals/generate", { method: "POST", body: { date } });
-      setMeal(res);
-    } catch (e) {
-      console.warn("meal gen failed", e);
-    } finally {
-      setGenMeal(false);
-    }
-  };
-
-  const generateWorkout = async () => {
-    setGenWorkout(true);
-    try {
-      const res = await api<DayDoc<WorkoutPlan>>("/workouts/generate", { method: "POST", body: { date } });
-      setWorkout(res);
-    } catch (e) {
-      console.warn("workout gen failed", e);
-    } finally {
-      setGenWorkout(false);
-    }
-  };
 
   const devotion = pickDevotion(date);
   const longDate = formatLongFromISO(date);
@@ -243,12 +209,6 @@ export default function TodayScreen() {
             label={t("home.charities")}
             onPress={() => router.push("/charities")}
           />
-          <QuickTile
-            testID="quick-schedule"
-            icon="time-outline"
-            label={t("home.schedule")}
-            onPress={() => router.push("/schedule")}
-          />
         </View>
 
         {/* Mass Readings */}
@@ -307,103 +267,59 @@ export default function TodayScreen() {
         {/* Virtus — grow in virtue */}
         <VirtusHomeCard />
 
-        {/* Meal */}
-        <View style={styles.card} testID="today-meal-card">
-          <View style={styles.cardHeader}>
-            <Ionicons name="restaurant-outline" size={18} color={colors.gold} />
-            <Text style={styles.cardHeaderText}>TODAY&apos;S NOURISHMENT</Text>
-          </View>
-          {meal ? (
-            <>
-              <Text style={styles.mealName}>{meal.plan.dinner.name}</Text>
-              <Text style={styles.mealDesc}>{meal.plan.dinner.description}</Text>
-              <Text style={styles.reflection}>{meal.plan.reflection}</Text>
-              <Pressable
-                testID="view-meals-button"
-                onPress={() => router.push("/(tabs)/meals")}
-                style={({ pressed }) => [styles.linkBtn, pressed && styles.pressed]}
-              >
-                <Text style={styles.linkBtnText}>View all meals</Text>
-                <Ionicons name="chevron-forward" size={16} color={colors.gold} />
-              </Pressable>
-            </>
-          ) : (
-            <>
-              <Text style={styles.empty}>
-                {lit?.is_abstinence
-                  ? "A day of abstinence — let us prepare a humble fish or vegetable meal."
-                  : "No meal planned yet. Let Sanctus craft one fit for today."}
-              </Text>
-              <Pressable
-                testID="generate-today-meal-button"
-                onPress={generateMeal}
-                disabled={genMeal}
-                style={({ pressed }) => [styles.primaryBtn, pressed && styles.pressed]}
-              >
-                {genMeal ? (
-                  <ActivityIndicator color={colors.gold} />
-                ) : (
-                  <>
-                    <Ionicons name="sparkles-outline" size={16} color={colors.gold} />
-                    <Text style={styles.primaryBtnText}>Generate Meal Plan</Text>
-                  </>
-                )}
-              </Pressable>
-            </>
-          )}
-        </View>
-
-        {/* Workout */}
-        <View style={styles.card} testID="today-workout-card">
-          <View style={styles.cardHeader}>
-            <Ionicons name="barbell-outline" size={18} color={colors.gold} />
-            <Text style={styles.cardHeaderText}>TODAY&apos;S DISCIPLINE</Text>
-          </View>
-          {workout ? (
-            <>
-              <Text style={styles.mealName}>{workout.plan.title}</Text>
-              <Text style={styles.mealDesc}>
-                {workout.plan.focus} · {workout.plan.duration_minutes} min
-              </Text>
-              <Text style={styles.reflection}>{workout.plan.reflection}</Text>
-              <Pressable
-                testID="view-workouts-button"
-                onPress={() => router.push("/(tabs)/workouts")}
-                style={({ pressed }) => [styles.linkBtn, pressed && styles.pressed]}
-              >
-                <Text style={styles.linkBtnText}>Begin with prayer</Text>
-                <Ionicons name="chevron-forward" size={16} color={colors.gold} />
-              </Pressable>
-            </>
-          ) : (
-            <>
-              <Text style={styles.empty}>
-                {lit?.is_sunday
-                  ? "The Lord's Day — a day of rest. Sanctus will suggest gentle movement only."
-                  : "No workout planned yet. Let Sanctus shape one to the season."}
-              </Text>
-              <Pressable
-                testID="generate-today-workout-button"
-                onPress={generateWorkout}
-                disabled={genWorkout}
-                style={({ pressed }) => [styles.primaryBtn, pressed && styles.pressed]}
-              >
-                {genWorkout ? (
-                  <ActivityIndicator color={colors.gold} />
-                ) : (
-                  <>
-                    <Ionicons name="sparkles-outline" size={16} color={colors.gold} />
-                    <Text style={styles.primaryBtnText}>Generate Workout</Text>
-                  </>
-                )}
-              </Pressable>
-            </>
-          )}
+        {/* Schedule + In the World — side by side */}
+        <View style={styles.featureRow}>
+          <FeatureBox
+            testID="feature-schedule"
+            icon="time-outline"
+            title={t("home.schedule")}
+            subtitle={t("home.scheduleSub")}
+            accent={colors.liturgical.purple}
+            onPress={() => router.push("/schedule")}
+          />
+          <FeatureBox
+            testID="feature-world"
+            icon="earth-outline"
+            title={t("home.world")}
+            subtitle={t("home.worldSub")}
+            accent={colors.liturgical.red}
+            onPress={() => router.push("/in-the-world")}
+          />
         </View>
 
         <View style={{ height: spacing.xxl }} />
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function FeatureBox({
+  testID,
+  icon,
+  title,
+  subtitle,
+  accent,
+  onPress,
+}: {
+  testID: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  subtitle: string;
+  accent: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      testID={testID}
+      onPress={onPress}
+      style={({ pressed }) => [styles.featureBox, { borderTopColor: accent }, pressed && styles.pressed]}
+    >
+      <View style={[styles.featureIconWrap, { backgroundColor: accent + "1A" }]}>
+        <Ionicons name={icon} size={22} color={accent} />
+      </View>
+      <Text style={styles.featureTitle}>{title}</Text>
+      <Text style={styles.featureSubtitle}>{subtitle}</Text>
+    </Pressable>
   );
 }
 
@@ -587,6 +503,40 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textPrimary,
     letterSpacing: 0.6,
+  },
+  featureRow: {
+    flexDirection: "row",
+    gap: spacing.md,
+    marginTop: spacing.md,
+  },
+  featureBox: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    borderTopWidth: 3,
+    padding: spacing.lg,
+    gap: spacing.sm,
+    ...shadow.card,
+  },
+  featureIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  featureTitle: {
+    fontFamily: fonts.headingSemi,
+    fontSize: 17,
+    color: colors.textPrimary,
+  },
+  featureSubtitle: {
+    fontFamily: fonts.bodyRegular,
+    fontSize: 13,
+    color: colors.textSecondary,
+    lineHeight: 19,
   },
   readingRow: {
     flexDirection: "row",

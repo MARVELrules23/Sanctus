@@ -57,6 +57,9 @@ const en: Dict = {
   "home.selfDefense": "Self-Defense",
   "home.charities": "Charities",
   "home.schedule": "Schedule",
+  "home.scheduleSub": "Your rhythm of prayer & practice",
+  "home.world": "In the World",
+  "home.worldSub": "Public life through Catholic teaching",
   "home.quickActions": "Quick actions",
   "home.language": "Language",
   // virtus home card
@@ -204,6 +207,9 @@ const es: Dict = {
   "home.selfDefense": "Defensa Personal",
   "home.charities": "Caridades",
   "home.schedule": "Horario",
+  "home.scheduleSub": "Tu ritmo de oración y práctica",
+  "home.world": "En el Mundo",
+  "home.worldSub": "La vida pública a la luz de la Iglesia",
   "home.quickActions": "Acciones rápidas",
   "home.language": "Idioma",
   // virtus home card

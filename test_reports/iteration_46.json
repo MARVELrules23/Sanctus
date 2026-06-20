@@ -1,0 +1,34 @@
+{
+  "summary": "Iteration 46 - Home layout change ('In the World' feature) verified end-to-end. Backend: 6/6 pytest tests pass (auth required, list returns 10 issues with correct slugs/shape, invalid slug -> 404, common-good lazy AI generation produces non-empty summary/church_teaching/principles/where_the_church_is_clear/prudential_judgment/how_to_engage/prayer, second call is cached <10s). NOTE: review request mentions /api/in-the-world/divine-office but 'divine-office' is NOT a valid slug in ISSUES — backend correctly returns 404 for it. Frontend (mobile 390x844, pre-minted bearer 'test_home_layout_24h'): on Home (/), old 'TODAY'S NOURISHMENT' and 'TODAY'S DISCIPLINE' cards are GONE (verified by full innerText scan). New feature row renders at the bottom with two side-by-side boxes: 'Schedule' (testID feature-schedule) and 'In the World' (testID feature-world) — confirmed visually. Tapping 'In the World' navigates to /in-the-world (testID in-the-world-screen) showing exactly 10 issue rows in expected order (life-and-dignity, common-good, poverty-and-the-poor, immigration, religious-liberty, family-and-marriage, work-and-economy, solidarity-and-peace, care-for-creation, subsidiarity-and-the-state). Tapping world-issue-common-good opens detail (testID world-issue-screen) and AI sections render: WHAT THE CHURCH TEACHES, WHERE THE CHURCH IS CLEAR, A PRAYER. Tapping feature-schedule navigates to /schedule correctly. Test session bootstrap required storing expires_at as a real datetime in user_sessions (server.get_current_user expects datetime, not ISO string) — see context_for_next_testing_agent.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_in_the_world_iter46.py",
+    "/app/test_reports/pytest/iteration_46_in_the_world.xml"
+  ],
+  "action_items": [
+    "OPTIONAL: review request mentions GET /api/in-the-world/divine-office returning full AI content, but 'divine-office' is not a slug in backend/in_the_world.py ISSUES — current behaviour returns 404. If divine-office was intended as a valid issue, add it to ISSUES; otherwise update the review note."
+  ],
+  "critical_code_review_comments": [
+    "in_the_world.py uses lazy generation + per-(slug,lang) caching in db.world_content with _content_filter handling missing lang key for EN — robust.",
+    "_extract_json strips markdown fences before parsing — defensive against Claude returning ```json blocks.",
+    "FeatureBox component on Home uses Pressable with hitSlop-less Pressable; touch targets are large (full box ~150x110), well above 44pt minimum.",
+    "in-the-world list and detail screens both hide the stack header (Stack.Screen headerShown:false) and roll their own top bar with back chevron — consistent UX.",
+    "Detail screen handles loading + error states with retry — good.",
+    "Minor: detail screen's Section helper silently returns null for empty body, which is fine but the JSON contract guarantees those fields; consider asserting in tests."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_in_the_world_iter46.py (new)"
+  ],
+  "success_rate": { "backend": "100%", "frontend": "100%" },
+  "seed_data_creation": "Upserted user_sessions row {session_token: 'test_home_layout_24h', user_id: 'user_ade7a898e281', expires_at: now+24h as datetime}; did not modify any other production-like data.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Two things to know: (1) sanctus's server.get_current_user requires user_sessions.expires_at to be a real BSON Date / Python datetime (it does exp.tzinfo). If you upsert a string, every authed endpoint returns 500. (2) Expo bundle on web preview can be served stale after recent file changes; doing supervisorctl restart expo (and a cache-busted reload like /?_t=<timestamp>) gives a fresh bundle. The web AsyncStorage shim stores values JSON-stringified, so localStorage.setItem('sanctus_session_token', JSON.stringify('<token>')) is what the app reads.",
+  "rca_of_issue": "N/A - feature works end-to-end. Backend /api/in-the-world list and /api/in-the-world/{slug} both return the documented data; home layout swap is correct; navigation to /schedule and /in-the-world both work."
+}

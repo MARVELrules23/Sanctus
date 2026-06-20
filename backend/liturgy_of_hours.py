@@ -61,6 +61,9 @@ from typing import Any, Callable, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
+from lang_ctx import get_lang
+from i18n_translate import translate_texts
+
 logger = logging.getLogger("sanctus.liturgy")
 
 
@@ -2552,24 +2555,44 @@ def _section_payload(
 def build_router(
     db: AsyncIOMotorDatabase,
     get_current_user: Callable,
+    emergent_llm_key: str = "",
 ) -> APIRouter:
     router = APIRouter(prefix="/liturgy", tags=["liturgy"])
 
+    async def _tr_fields(containers_fields):
+        """Translate (dict, key) value pairs in place into the request language.
+        Latin text is never passed in, so it is preserved untouched."""
+        lang = get_lang()
+        if lang == "en" or not containers_fields:
+            return
+        originals = [str(c.get(k) or "") for c, k in containers_fields]
+        translated = await translate_texts(db, emergent_llm_key, originals, lang)
+        for (c, k), val in zip(containers_fields, translated):
+            if val:
+                c[k] = val
+
     @router.get("")
     async def list_hours(user=Depends(get_current_user)):
+        hours = [_hour_summary(h) for h in HOURS]
+        external = {
+            "url": "https://www.ibreviary.com/m2/breviario.php",
+            "label": "iBreviary (modern Liturgy of the Hours)",
+            "description": (
+                "For the modern post-Vatican II text in your own "
+                "language, open the official iBreviary website. Texts "
+                "there are kept up to date with the day's proper."
+            ),
+        }
+        cf = []
+        for h in hours:
+            cf += [(h, "name"), (h, "subtitle")]
+        cf.append((external, "description"))
+        await _tr_fields(cf)
         return {
-            "hours": [_hour_summary(h) for h in HOURS],
+            "hours": hours,
             "days": DAYS,
             "today": _today_key(),
-            "external_link": {
-                "url": "https://www.ibreviary.com/m2/breviario.php",
-                "label": "iBreviary (modern Liturgy of the Hours)",
-                "description": (
-                    "For the modern post-Vatican II text in your own "
-                    "language, open the official iBreviary website. Texts "
-                    "there are kept up to date with the day's proper."
-                ),
-            },
+            "external_link": external,
         }
 
     @router.get("/{hour_slug}")
@@ -2577,7 +2600,9 @@ def build_router(
         h = HOURS_BY_SLUG.get(hour_slug)
         if not h:
             raise HTTPException(status_code=404, detail="Hour not found")
-        return _hour_detail(h)
+        detail = _hour_detail(h)
+        await _tr_fields([(detail, "name"), (detail, "subtitle"), (detail, "intro")])
+        return detail
 
     @router.get("/{hour_slug}/{day_key}")
     async def get_hour_for_day(
@@ -2588,6 +2613,11 @@ def build_router(
         h = HOURS_BY_SLUG.get(hour_slug)
         if not h:
             raise HTTPException(status_code=404, detail="Hour not found")
-        return _section_payload(h, day_key)
+        payload = _section_payload(h, day_key)
+        cf = [(payload["hour"], "name"), (payload["hour"], "subtitle")]
+        for s in payload["sections"]:
+            cf += [(s, "title"), (s, "english"), (s, "rubric"), (s, "note")]
+        await _tr_fields(cf)
+        return payload
 
     return router

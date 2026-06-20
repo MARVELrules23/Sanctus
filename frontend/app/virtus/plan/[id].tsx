@@ -30,6 +30,7 @@ import {
   VirtuePlan,
 } from "@/src/api";
 import { confirm } from "@/src/utils/confirm";
+import { todayISO } from "@/src/date-utils";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -82,7 +83,7 @@ export default function VirtuePlanScreen() {
     try {
       const p = await getVirtuePlan(id);
       setPlan(p);
-      setSelectedDate((cur) => cur ?? clampDate(p.today, p.start_date, p.end_date));
+      setSelectedDate((cur) => cur ?? clampDate(todayISO(), p.start_date, p.end_date));
     } catch (e: any) {
       setError(e?.message || "Could not load this plan.");
     } finally {
@@ -104,7 +105,7 @@ export default function VirtuePlanScreen() {
     [plan],
   );
 
-  const isFuture = !!plan && !!selectedDate && selectedDate > plan.today;
+  const isFuture = !!plan && !!selectedDate && selectedDate > todayISO();
 
   const toggle = async (goalId: string) => {
     if (!id || !selectedDate || busy || isFuture) return;
@@ -230,8 +231,8 @@ export default function VirtuePlanScreen() {
                 const count = (plan.checkins?.[d] || []).length;
                 const ratio = plan.total ? count / plan.total : 0;
                 const sel = d === selectedDate;
-                const isToday = d === plan.today;
-                const future = d > plan.today;
+                const isToday = d === todayISO();
+                const future = d > todayISO();
                 return (
                   <Pressable
                     key={d}

@@ -35,6 +35,7 @@ client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ["DB_NAME"]]
 
 EMERGENT_LLM_KEY = os.environ.get("EMERGENT_LLM_KEY", "")
+bible_svc.set_llm_key(EMERGENT_LLM_KEY)
 SESSION_DATA_URL = "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data"
 
 logger = logging.getLogger("sanctus")
@@ -1861,7 +1862,7 @@ class HighlightRequest(BaseModel):
 
 @api.get("/bible/books")
 async def bible_books():
-    return {"items": bible_svc.all_books()}
+    return {"items": await bible_svc.all_books_localized(db)}
 
 
 @api.get("/bible/chapter/{book_slug}/{chapter}")

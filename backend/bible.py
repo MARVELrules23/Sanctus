@@ -20,9 +20,20 @@ from typing import Any, Dict, List, Optional, Tuple
 import httpx
 from fastapi import HTTPException
 
+from lang_ctx import get_lang
+from i18n_translate import translate_texts
+
 GETBIBLE_BASE = "https://api.getbible.net/v2/douayrheims"
 USER_AGENT = "SanctusApp/1.0 (+https://sanctus.app)"
 ALLOWED_COLORS = {"rose", "gold", "sage", "violet"}
+
+# Emergent LLM key for on-demand Spanish translation of chapters (set at startup).
+_LLM_KEY = ""
+
+
+def set_llm_key(key: str) -> None:
+    global _LLM_KEY
+    _LLM_KEY = key or ""
 
 
 # Canonical 73-book Catholic order with our internal slugs and the upstream
@@ -185,6 +196,65 @@ async def _ensure_book_cached(db, book: Dict[str, Any]) -> None:
                 pass
 
 
+async def all_books_localized(db) -> List[Dict[str, Any]]:
+    """Book list with names translated into the request language (es)."""
+    books = all_books()
+    if get_lang() != "es":
+        return books
+    names = [b["name"] for b in books]
+    tr = await translate_texts(db, _LLM_KEY, names, "es")
+    for b, n in zip(books, tr):
+        if n:
+            b["name"] = n
+    return books
+
+
+async def _localize_chapter_es(db, book: Dict[str, Any], chapter: int, en_doc: Dict[str, Any]) -> Dict[str, Any]:
+    """Return a Spanish rendering of an English (Douay-Rheims) chapter, cached as
+    its own `{slug}-{chapter}-es` document. Verses are translated faithfully in
+    bounded batches so large chapters (e.g. Psalm 118) stay within model limits."""
+    cid = f"{book['slug']}-{chapter}-es"
+    cached = await db.bible_books.find_one({"_id": cid}, {"_id": 0, "fetched_at": 0})
+    if cached and cached.get("verses"):
+        cached["book_name"] = cached.get("book_name") or book["name"]
+        return cached
+    verses = en_doc.get("verses") or []
+    texts = [v.get("text") or "" for v in verses]
+    translated: List[str] = []
+    for i in range(0, len(texts), 60):
+        translated += await translate_texts(db, _LLM_KEY, texts[i : i + 60], "es")
+    es_verses = [
+        {"n": verses[i].get("n"), "text": (translated[i] if i < len(translated) else texts[i])}
+        for i in range(len(verses))
+    ]
+    es_book_name = (await translate_texts(db, _LLM_KEY, [book["name"]], "es"))[0] or book["name"]
+    es_doc = {
+        **en_doc,
+        "book_name": es_book_name,
+        "verses": es_verses,
+        "lang": "es",
+    }
+    try:
+        await db.bible_books.update_one(
+            {"_id": cid},
+            {"$set": {
+                "_id": cid,
+                "book_slug": book["slug"],
+                "book_name": es_book_name,
+                "book_order": book["order"],
+                "chapter": chapter,
+                "verses": es_verses,
+                "chapters_total": book["chapters"],
+                "lang": "es",
+                "fetched_at": datetime.now(timezone.utc).isoformat(),
+            }},
+            upsert=True,
+        )
+    except Exception:
+        pass
+    return es_doc
+
+
 async def get_chapter(db, book_slug: str, chapter: int) -> Dict[str, Any]:
     book = book_meta(book_slug)
     if not book:
@@ -214,6 +284,10 @@ async def get_chapter(db, book_slug: str, chapter: int) -> Dict[str, Any]:
     doc["book_name"] = book["name"]
     doc["dr_name"] = book["dr_name"]
     doc["chapters_total"] = book["chapters"]
+    if get_lang() == "es":
+        doc = await _localize_chapter_es(db, book, chapter, doc)
+        doc["dr_name"] = book["dr_name"]
+        doc["chapters_total"] = book["chapters"]
     return doc
 
 

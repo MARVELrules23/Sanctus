@@ -76,7 +76,7 @@ export default function PrayerHubScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} testID="prayer-hub-back">
           <Ionicons name="chevron-back" size={26} color={colors.primary} />
         </Pressable>
-        <Text style={styles.headerTitle}>{lang === "es" ? "Oración" : "Prayer"}</Text>
+        <Text style={styles.headerTitle}>{lang === "es" ? "Oración" : lang === "it" ? "Preghiera" : "Prayer"}</Text>
         <View style={{ width: 26 }} />
       </View>
 
@@ -108,7 +108,7 @@ export default function PrayerHubScreen() {
                 <Text style={styles.cardTitle}>{tr(it.title)}</Text>
                 {it.featured ? (
                   <View style={styles.featuredPill}>
-                    <Text style={styles.featuredPillText}>{lang === "es" ? "HOY" : "TODAY"}</Text>
+                    <Text style={styles.featuredPillText}>{lang === "es" ? "HOY" : lang === "it" ? "OGGI" : "TODAY"}</Text>
                   </View>
                 ) : null}
               </View>

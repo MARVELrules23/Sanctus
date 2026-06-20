@@ -27,6 +27,7 @@ export default function PrayerRunnerScreen() {
   const router = useRouter();
   const { lang } = useI18n();
   const es = lang === "es";
+  const it = lang === "it";
   const params = useLocalSearchParams<{ kind?: string; date?: string; season?: string }>();
   const kind = String(params.kind || "rosary");
   const initialDate = params.date && typeof params.date === "string" ? params.date : todayISO();
@@ -73,14 +74,15 @@ export default function PrayerRunnerScreen() {
   const { tr } = useTranslator(allStrings);
 
   const ui = {
-    goodWork: es ? "Buena obra para hoy" : "Good work for today",
-    goodWorkUpper: es ? "BUENA OBRA PARA HOY" : "GOOD WORK FOR TODAY",
-    bead: (i: number, t: number) => (es ? `Cuenta ${i} de ${t}` : `Bead ${i} of ${t}`),
-    prev: es ? "Atrás" : "Prev",
-    nextBead: es ? "Siguiente" : "Next Bead",
-    amenContinue: es ? "Amén — Continuar" : "Amen — Continue",
-    journalThis: es ? "Anotar en el diario" : "Journal this",
-    amenDone: es ? "Amén — Hecho" : "Amen — Done",
+    goodWork: es ? "Buena obra para hoy" : it ? "Buona opera per oggi" : "Good work for today",
+    goodWorkUpper: es ? "BUENA OBRA PARA HOY" : it ? "BUONA OPERA PER OGGI" : "GOOD WORK FOR TODAY",
+    bead: (i: number, t: number) =>
+      es ? `Cuenta ${i} de ${t}` : it ? `Grano ${i} di ${t}` : `Bead ${i} of ${t}`,
+    prev: es ? "Atrás" : it ? "Indietro" : "Prev",
+    nextBead: es ? "Siguiente" : it ? "Avanti" : "Next Bead",
+    amenContinue: es ? "Amén — Continuar" : it ? "Amen — Continua" : "Amen — Continue",
+    journalThis: es ? "Anotar en el diario" : it ? "Annota nel diario" : "Journal this",
+    amenDone: es ? "Amén — Hecho" : it ? "Amen — Fatto" : "Amen — Done",
   };
 
   const [idx, setIdx] = useState(0);

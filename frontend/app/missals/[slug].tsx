@@ -135,7 +135,7 @@ export default function MissalReaderScreen() {
           {(
             [
               { key: "both", label: "Side by Side", icon: "swap-horizontal" },
-              { key: "english", label: "English", icon: "language" },
+              { key: "english", label: detail.vernacular_label, icon: "language" },
               { key: "latin", label: "Latin", icon: "book" },
             ] as { key: DisplayMode; label: string; icon: keyof typeof Ionicons.glyphMap }[]
           ).map((opt) => {
@@ -239,7 +239,7 @@ export default function MissalReaderScreen() {
                         {renderParas(sec.latin, styles.latinText)}
                       </View>
                       <View style={[styles.col, { paddingLeft: spacing.sm }]}>
-                        <Text style={[styles.colLabel, { color: accent }]}>ENGLISH</Text>
+                        <Text style={[styles.colLabel, { color: accent }]}>{detail.vernacular_label.toUpperCase()}</Text>
                         {renderParas(sec.english, styles.englishText)}
                       </View>
                     </View>
@@ -251,7 +251,7 @@ export default function MissalReaderScreen() {
                         {renderParas(sec.latin, styles.latinText)}
                       </View>
                       <View style={[styles.stackedBlock, { borderTopColor: colors.borderSoft, borderTopWidth: StyleSheet.hairlineWidth, paddingTop: spacing.sm, marginTop: spacing.sm }]}>
-                        <Text style={[styles.colLabel, { color: accent }]}>ENGLISH</Text>
+                        <Text style={[styles.colLabel, { color: accent }]}>{detail.vernacular_label.toUpperCase()}</Text>
                         {renderParas(sec.english, styles.englishText)}
                       </View>
                     </View>
@@ -266,7 +266,7 @@ export default function MissalReaderScreen() {
                       {showEnglish ? (
                         <View>
                           {hasLatin ? (
-                            <Text style={[styles.colLabel, { color: accent }]}>ENGLISH</Text>
+                            <Text style={[styles.colLabel, { color: accent }]}>{detail.vernacular_label.toUpperCase()}</Text>
                           ) : null}
                           {renderParas(sec.english, styles.englishText)}
                         </View>

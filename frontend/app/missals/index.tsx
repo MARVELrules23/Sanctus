@@ -51,7 +51,7 @@ export default function MissalsIndexScreen() {
         </Pressable>
         <View style={styles.headerTitleWrap}>
           <Text style={styles.headerTitle}>Mass Missals</Text>
-          <Text style={styles.headerSub}>Order of Mass · Latin & English</Text>
+          <Text style={styles.headerSub}>Order of Mass · Latin, English, Español & Italiano</Text>
         </View>
         <View style={{ width: 26 }} />
       </View>
@@ -71,9 +71,10 @@ export default function MissalsIndexScreen() {
             <Ornament />
             <Text style={styles.heroIntroTitle}>Read the Mass with us</Text>
             <Text style={styles.heroIntroSub}>
-              Follow along in the pew, on retreat, or at home. Three missals of
+              Follow along in the pew, on retreat, or at home. Five missals of
               the Roman Rite — the Ordinary Form, the Traditional Latin Mass,
-              and the Ordinariate Use — each with the unchanging Order of Mass.
+              the Ordinariate Use, and the Order of Mass in Spanish and Italian —
+              each with the unchanging Order of Mass.
             </Text>
           </View>
 

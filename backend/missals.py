@@ -1513,6 +1513,592 @@ ORDINARIATE_SECTIONS: List[Dict[str, Any]] = [
 
 
 # ===========================================================================
+# 4) ROMAN MISSAL — Spanish (Misal Romano) — Ordinary Form, Spanish + Latin
+# 5) ROMAN MISSAL — Italian (Messale Romano) — Ordinary Form, Italian + Latin
+# ---------------------------------------------------------------------------
+# The Order of Mass (Ordinary) of the 1970 Roman Missal as it is celebrated
+# in Spanish and Italian. The vernacular text is the official approved
+# translation; the Latin editio typica is provided alongside for reference.
+# We reuse the Latin and Latin-titles already defined in NOVUS_ORDO_SECTIONS
+# (same Ordinary, same order) so the two columns stay perfectly aligned.
+# ===========================================================================
+
+
+def _vern_section(
+    no_idx: int,
+    title: str,
+    vernacular: str,
+    rubric: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Build a vernacular (Spanish/Italian) Order-of-Mass section that reuses
+    the Latin original + Latin title from the matching Novus Ordo section."""
+    base = NOVUS_ORDO_SECTIONS[no_idx]
+    return _section(
+        title=title,
+        english=vernacular,  # primary column = vernacular
+        latin=base.get("latin"),
+        latin_title=base.get("latin_title"),
+        rubric=rubric,
+    )
+
+
+SPANISH_NOVUS_ORDO_SECTIONS: List[Dict[str, Any]] = [
+    _vern_section(
+        0,
+        "Ritos Iniciales · Señal de la Cruz y Saludo",
+        "En el nombre del Padre, y del Hijo, y del Espíritu Santo.\n"
+        "R. Amén.\n\n"
+        "La gracia de nuestro Señor Jesucristo, el amor del Padre y la comunión "
+        "del Espíritu Santo estén con todos vosotros.\n"
+        "R. Y con tu espíritu.",
+        rubric="El sacerdote, junto con el pueblo, se signa con la señal de la cruz y saluda a la asamblea.",
+    ),
+    _vern_section(
+        1,
+        "Acto Penitencial",
+        "Yo confieso ante Dios todopoderoso\n"
+        "y ante vosotros, hermanos,\n"
+        "que he pecado mucho\n"
+        "de pensamiento, palabra, obra y omisión.\n"
+        "Por mi culpa, por mi culpa, por mi gran culpa.\n"
+        "Por eso ruego a santa María, siempre Virgen,\n"
+        "a los ángeles, a los santos\n"
+        "y a vosotros, hermanos,\n"
+        "que intercedáis por mí ante Dios, nuestro Señor.\n\n"
+        "Dios todopoderoso tenga misericordia de nosotros,\n"
+        "perdone nuestros pecados\n"
+        "y nos lleve a la vida eterna.\n"
+        "R. Amén.",
+        rubric="El sacerdote invita a los fieles a reconocer sus pecados. Tras un breve silencio se dice el Confíteor (una de las tres fórmulas).",
+    ),
+    _vern_section(
+        2,
+        "Señor, ten piedad",
+        "Señor, ten piedad.\n"
+        "R. Señor, ten piedad.\n"
+        "Cristo, ten piedad.\n"
+        "R. Cristo, ten piedad.\n"
+        "Señor, ten piedad.\n"
+        "R. Señor, ten piedad.",
+    ),
+    _vern_section(
+        3,
+        "Gloria",
+        "Gloria a Dios en el cielo,\n"
+        "y en la tierra paz a los hombres que ama el Señor.\n"
+        "Por tu inmensa gloria te alabamos, te bendecimos, te adoramos,\n"
+        "te glorificamos, te damos gracias,\n"
+        "Señor Dios, Rey celestial, Dios Padre todopoderoso.\n\n"
+        "Señor, Hijo único, Jesucristo.\n"
+        "Señor Dios, Cordero de Dios, Hijo del Padre;\n"
+        "tú que quitas el pecado del mundo, ten piedad de nosotros;\n"
+        "tú que quitas el pecado del mundo, atiende nuestra súplica;\n"
+        "tú que estás sentado a la derecha del Padre, ten piedad de nosotros.\n\n"
+        "Porque sólo tú eres Santo, sólo tú Señor,\n"
+        "sólo tú Altísimo, Jesucristo,\n"
+        "con el Espíritu Santo en la gloria de Dios Padre. Amén.",
+        rubric="Se canta o se dice los domingos fuera de Adviento y Cuaresma, en las solemnidades y fiestas.",
+    ),
+    _vern_section(
+        4,
+        "Oración Colecta",
+        "Oremos.\n\n"
+        "[El sacerdote proclama la oración colecta del día.]\n\n"
+        "Por nuestro Señor Jesucristo, tu Hijo,\n"
+        "que vive y reina contigo en la unidad del Espíritu Santo\n"
+        "y es Dios por los siglos de los siglos.\n"
+        "R. Amén.",
+        rubric="El sacerdote invita a orar. Tras un breve silencio, proclama la colecta, que reúne las intenciones del día. El texto cambia cada día; sólo el diálogo es fijo.",
+    ),
+    _vern_section(
+        5,
+        "Liturgia de la Palabra",
+        "Después de la primera lectura:\n"
+        "Palabra de Dios.\n"
+        "R. Te alabamos, Señor.\n\n"
+        "Antes del Evangelio:\n"
+        "El Señor esté con vosotros.\n"
+        "R. Y con tu espíritu.\n"
+        "Lectura del santo Evangelio según san N.\n"
+        "R. Gloria a ti, Señor.\n\n"
+        "Después del Evangelio:\n"
+        "Palabra del Señor.\n"
+        "R. Gloria a ti, Señor Jesús.\n\n"
+        "[A continuación, la homilía.]",
+        rubric="Se proclama la primera lectura y el salmo responsorial; los domingos y solemnidades, también la segunda lectura. El aleluya prepara para el Evangelio.",
+    ),
+    _vern_section(
+        6,
+        "Profesión de Fe · Credo Niceno",
+        "Creo en un solo Dios,\n"
+        "Padre todopoderoso,\n"
+        "Creador del cielo y de la tierra,\n"
+        "de todo lo visible y lo invisible.\n\n"
+        "Creo en un solo Señor, Jesucristo,\n"
+        "Hijo único de Dios,\n"
+        "nacido del Padre antes de todos los siglos:\n"
+        "Dios de Dios, Luz de Luz,\n"
+        "Dios verdadero de Dios verdadero,\n"
+        "engendrado, no creado,\n"
+        "de la misma naturaleza que el Padre,\n"
+        "por quien todo fue hecho;\n"
+        "que por nosotros, los hombres,\n"
+        "y por nuestra salvación bajó del cielo,\n"
+        "y por obra del Espíritu Santo\n"
+        "se encarnó de María, la Virgen, y se hizo hombre;\n"
+        "y por nuestra causa fue crucificado\n"
+        "en tiempos de Poncio Pilato;\n"
+        "padeció y fue sepultado,\n"
+        "y resucitó al tercer día, según las Escrituras,\n"
+        "y subió al cielo,\n"
+        "y está sentado a la derecha del Padre;\n"
+        "y de nuevo vendrá con gloria\n"
+        "para juzgar a vivos y muertos,\n"
+        "y su reino no tendrá fin.\n\n"
+        "Creo en el Espíritu Santo, Señor y dador de vida,\n"
+        "que procede del Padre y del Hijo,\n"
+        "que con el Padre y el Hijo\n"
+        "recibe una misma adoración y gloria,\n"
+        "y que habló por los profetas.\n\n"
+        "Creo en la Iglesia,\n"
+        "que es una, santa, católica y apostólica.\n"
+        "Confieso que hay un solo Bautismo\n"
+        "para el perdón de los pecados.\n"
+        "Espero la resurrección de los muertos\n"
+        "y la vida del mundo futuro. Amén.",
+        rubric="Se dice los domingos y solemnidades. Todos se inclinan a las palabras «y por obra del Espíritu Santo… y se hizo hombre».",
+    ),
+    _vern_section(
+        7,
+        "Oración Universal · Oración de los Fieles",
+        "Roguemos al Señor.\n"
+        "R. Te rogamos, óyenos.\n\n"
+        "[Se formulan las intenciones.]\n\n"
+        "Escucha, Señor, las oraciones de tu pueblo,\n"
+        "y concédenos lo que te pedimos con fe.\n"
+        "Por Jesucristo, nuestro Señor.\n"
+        "R. Amén.",
+    ),
+    _vern_section(
+        8,
+        "Liturgia Eucarística · Presentación de las Ofrendas",
+        "Bendito seas, Señor, Dios del universo,\n"
+        "por este pan, fruto de la tierra y del trabajo del hombre,\n"
+        "que recibimos de tu generosidad y ahora te presentamos;\n"
+        "él será para nosotros pan de vida.\n"
+        "R. Bendito seas por siempre, Señor.\n\n"
+        "Bendito seas, Señor, Dios del universo,\n"
+        "por este vino, fruto de la vid y del trabajo del hombre,\n"
+        "que recibimos de tu generosidad y ahora te presentamos;\n"
+        "él será para nosotros bebida de salvación.\n"
+        "R. Bendito seas por siempre, Señor.\n\n"
+        "Orad, hermanos,\n"
+        "para que este sacrificio, mío y vuestro,\n"
+        "sea agradable a Dios, Padre todopoderoso.\n"
+        "R. El Señor reciba de tus manos este sacrificio,\n"
+        "para alabanza y gloria de su nombre,\n"
+        "para nuestro bien y el de toda su santa Iglesia.",
+        rubric="Se llevan al altar el pan y el vino.",
+    ),
+    _vern_section(
+        9,
+        "Prefacio y Santo",
+        "El Señor esté con vosotros.\n"
+        "R. Y con tu espíritu.\n"
+        "Levantemos el corazón.\n"
+        "R. Lo tenemos levantado hacia el Señor.\n"
+        "Demos gracias al Señor, nuestro Dios.\n"
+        "R. Es justo y necesario.\n\n"
+        "[El sacerdote proclama el prefacio del día.]\n\n"
+        "Santo, Santo, Santo es el Señor, Dios del universo.\n"
+        "Llenos están el cielo y la tierra de tu gloria.\n"
+        "Hosanna en el cielo.\n"
+        "Bendito el que viene en nombre del Señor.\n"
+        "Hosanna en el cielo.",
+    ),
+    _vern_section(
+        10,
+        "Plegaria Eucarística II",
+        "Santo eres en verdad, Señor, fuente de toda santidad;\n"
+        "por eso te pedimos que santifiques estos dones\n"
+        "con la efusión de tu Espíritu,\n"
+        "de manera que sean para nosotros\n"
+        "Cuerpo y Sangre de Jesucristo, nuestro Señor.\n\n"
+        "El cual, cuando iba a ser entregado a su Pasión,\n"
+        "voluntariamente aceptada,\n"
+        "tomó pan, dándote gracias, lo partió,\n"
+        "y lo dio a sus discípulos, diciendo:\n"
+        "TOMAD Y COMED TODOS DE ÉL,\n"
+        "PORQUE ESTO ES MI CUERPO,\n"
+        "QUE SERÁ ENTREGADO POR VOSOTROS.\n\n"
+        "Del mismo modo, acabada la cena,\n"
+        "tomó el cáliz, y, dándote gracias de nuevo,\n"
+        "lo pasó a sus discípulos, diciendo:\n"
+        "TOMAD Y BEBED TODOS DE ÉL,\n"
+        "PORQUE ESTE ES EL CÁLIZ DE MI SANGRE,\n"
+        "SANGRE DE LA ALIANZA NUEVA Y ETERNA,\n"
+        "QUE SERÁ DERRAMADA POR VOSOTROS Y POR MUCHOS\n"
+        "PARA EL PERDÓN DE LOS PECADOS.\n"
+        "HACED ESTO EN CONMEMORACIÓN MÍA.\n\n"
+        "Este es el Misterio de la fe.\n"
+        "R. Anunciamos tu muerte, proclamamos tu resurrección.\n"
+        "¡Ven, Señor Jesús!",
+        rubric="De las cuatro plegarias eucarísticas principales, la segunda es la más breve, basada en un antiguo texto atribuido a san Hipólito (c. 215).",
+    ),
+    _vern_section(
+        11,
+        "Doxología Final",
+        "Por Cristo, con él y en él,\n"
+        "a ti, Dios Padre omnipotente,\n"
+        "en la unidad del Espíritu Santo,\n"
+        "todo honor y toda gloria\n"
+        "por los siglos de los siglos.\n"
+        "R. Amén.",
+    ),
+    _vern_section(
+        12,
+        "Rito de la Comunión · Padre Nuestro",
+        "Fieles a la recomendación del Salvador\n"
+        "y siguiendo su divina enseñanza, nos atrevemos a decir:\n\n"
+        "Padre nuestro, que estás en el cielo,\n"
+        "santificado sea tu Nombre;\n"
+        "venga a nosotros tu reino;\n"
+        "hágase tu voluntad en la tierra como en el cielo.\n"
+        "Danos hoy nuestro pan de cada día;\n"
+        "perdona nuestras ofensas,\n"
+        "como también nosotros perdonamos a los que nos ofenden;\n"
+        "no nos dejes caer en la tentación,\n"
+        "y líbranos del mal.\n\n"
+        "Líbranos de todos los males, Señor,\n"
+        "y concédenos la paz en nuestros días,\n"
+        "para que, ayudados por tu misericordia,\n"
+        "vivamos siempre libres de pecado\n"
+        "y protegidos de toda perturbación,\n"
+        "mientras esperamos la gloriosa venida\n"
+        "de nuestro Salvador Jesucristo.\n"
+        "R. Tuyo es el reino, tuyo el poder y la gloria, por siempre, Señor.",
+    ),
+    _vern_section(
+        13,
+        "Rito de la Paz · Cordero de Dios",
+        "Señor Jesucristo, que dijiste a tus apóstoles:\n"
+        "«La paz os dejo, mi paz os doy»,\n"
+        "no tengas en cuenta nuestros pecados,\n"
+        "sino la fe de tu Iglesia\n"
+        "y, conforme a tu palabra, concédele la paz y la unidad.\n"
+        "Tú que vives y reinas por los siglos de los siglos.\n"
+        "R. Amén.\n\n"
+        "La paz del Señor esté siempre con vosotros.\n"
+        "R. Y con tu espíritu.\n\n"
+        "Daos fraternalmente la paz.\n\n"
+        "Cordero de Dios, que quitas el pecado del mundo, ten piedad de nosotros.\n"
+        "Cordero de Dios, que quitas el pecado del mundo, ten piedad de nosotros.\n"
+        "Cordero de Dios, que quitas el pecado del mundo, danos la paz.",
+    ),
+    _vern_section(
+        14,
+        "Comunión",
+        "Este es el Cordero de Dios,\n"
+        "que quita el pecado del mundo.\n"
+        "Dichosos los invitados a la cena del Señor.\n\n"
+        "R. Señor, no soy digno de que entres en mi casa,\n"
+        "pero una palabra tuya bastará para sanarme.\n\n"
+        "[En el momento de comulgar:]\n"
+        "El Cuerpo de Cristo. R. Amén.\n"
+        "La Sangre de Cristo. R. Amén.",
+        rubric="El sacerdote muestra al pueblo el pan eucarístico, ligeramente elevado sobre la patena o el cáliz.",
+    ),
+    _vern_section(
+        15,
+        "Ritos de Conclusión · Bendición y Despedida",
+        "El Señor esté con vosotros.\n"
+        "R. Y con tu espíritu.\n\n"
+        "La bendición de Dios todopoderoso,\n"
+        "Padre, Hijo y Espíritu Santo,\n"
+        "descienda sobre vosotros.\n"
+        "R. Amén.\n\n"
+        "Podéis ir en paz.\n"
+        "R. Demos gracias a Dios.",
+    ),
+]
+
+
+ITALIAN_NOVUS_ORDO_SECTIONS: List[Dict[str, Any]] = [
+    _vern_section(
+        0,
+        "Riti di Introduzione · Segno della Croce e Saluto",
+        "Nel nome del Padre e del Figlio e dello Spirito Santo.\n"
+        "R. Amen.\n\n"
+        "La grazia del Signore nostro Gesù Cristo, l'amore di Dio Padre e la "
+        "comunione dello Spirito Santo siano con tutti voi.\n"
+        "R. E con il tuo spirito.",
+        rubric="Il sacerdote, insieme al popolo, si fa il segno della croce e saluta l'assemblea.",
+    ),
+    _vern_section(
+        1,
+        "Atto Penitenziale",
+        "Confesso a Dio onnipotente e a voi, fratelli e sorelle,\n"
+        "che ho molto peccato\n"
+        "in pensieri, parole, opere e omissioni,\n"
+        "per mia colpa, mia colpa, mia grandissima colpa.\n"
+        "E supplico la beata sempre Vergine Maria,\n"
+        "gli angeli, i santi e voi, fratelli e sorelle,\n"
+        "di pregare per me il Signore Dio nostro.\n\n"
+        "Dio onnipotente abbia misericordia di noi,\n"
+        "perdoni i nostri peccati\n"
+        "e ci conduca alla vita eterna.\n"
+        "R. Amen.",
+        rubric="Il sacerdote invita i fedeli a riconoscere i propri peccati. Dopo una breve pausa di silenzio si dice il Confesso (una delle tre formule).",
+    ),
+    _vern_section(
+        2,
+        "Signore, pietà",
+        "Signore, pietà.\n"
+        "R. Signore, pietà.\n"
+        "Cristo, pietà.\n"
+        "R. Cristo, pietà.\n"
+        "Signore, pietà.\n"
+        "R. Signore, pietà.",
+    ),
+    _vern_section(
+        3,
+        "Gloria",
+        "Gloria a Dio nell'alto dei cieli\n"
+        "e pace in terra agli uomini, amati dal Signore.\n"
+        "Noi ti lodiamo, ti benediciamo, ti adoriamo, ti glorifichiamo,\n"
+        "ti rendiamo grazie per la tua gloria immensa,\n"
+        "Signore Dio, Re del cielo, Dio Padre onnipotente.\n\n"
+        "Signore, Figlio unigenito, Gesù Cristo,\n"
+        "Signore Dio, Agnello di Dio, Figlio del Padre,\n"
+        "tu che togli i peccati del mondo, abbi pietà di noi;\n"
+        "tu che togli i peccati del mondo, accogli la nostra supplica;\n"
+        "tu che siedi alla destra del Padre, abbi pietà di noi.\n\n"
+        "Perché tu solo il Santo, tu solo il Signore,\n"
+        "tu solo l'Altissimo, Gesù Cristo,\n"
+        "con lo Spirito Santo: nella gloria di Dio Padre. Amen.",
+        rubric="Si canta o si dice nelle domeniche fuori di Avvento e Quaresima, nelle solennità e nelle feste.",
+    ),
+    _vern_section(
+        4,
+        "Colletta",
+        "Preghiamo.\n\n"
+        "[Il sacerdote proclama la colletta del giorno.]\n\n"
+        "Per il nostro Signore Gesù Cristo, tuo Figlio, che è Dio,\n"
+        "e vive e regna con te, nell'unità dello Spirito Santo,\n"
+        "per tutti i secoli dei secoli.\n"
+        "R. Amen.",
+        rubric="Il sacerdote invita alla preghiera. Dopo un breve silenzio proclama la colletta, che raccoglie le intenzioni del giorno. Il testo cambia ogni giorno; solo il dialogo è fisso.",
+    ),
+    _vern_section(
+        5,
+        "Liturgia della Parola",
+        "Dopo la prima lettura:\n"
+        "Parola di Dio.\n"
+        "R. Rendiamo grazie a Dio.\n\n"
+        "Prima del Vangelo:\n"
+        "Il Signore sia con voi.\n"
+        "R. E con il tuo spirito.\n"
+        "Dal Vangelo secondo N.\n"
+        "R. Gloria a te, o Signore.\n\n"
+        "Dopo il Vangelo:\n"
+        "Parola del Signore.\n"
+        "R. Lode a te, o Cristo.\n\n"
+        "[Segue l'omelia.]",
+        rubric="Si proclama la prima lettura e il salmo responsoriale; nelle domeniche e solennità, anche la seconda lettura. Il canto al Vangelo prepara all'ascolto.",
+    ),
+    _vern_section(
+        6,
+        "Professione di Fede · Credo Niceno",
+        "Credo in un solo Dio, Padre onnipotente,\n"
+        "creatore del cielo e della terra,\n"
+        "di tutte le cose visibili e invisibili.\n\n"
+        "Credo in un solo Signore, Gesù Cristo,\n"
+        "unigenito Figlio di Dio,\n"
+        "nato dal Padre prima di tutti i secoli:\n"
+        "Dio da Dio, Luce da Luce,\n"
+        "Dio vero da Dio vero;\n"
+        "generato, non creato,\n"
+        "della stessa sostanza del Padre;\n"
+        "per mezzo di lui tutte le cose sono state create.\n"
+        "Per noi uomini e per la nostra salvezza\n"
+        "discese dal cielo,\n"
+        "e per opera dello Spirito Santo\n"
+        "si è incarnato nel seno della Vergine Maria\n"
+        "e si è fatto uomo.\n"
+        "Fu crocifisso per noi sotto Ponzio Pilato,\n"
+        "morì e fu sepolto.\n"
+        "Il terzo giorno è risuscitato, secondo le Scritture,\n"
+        "è salito al cielo, siede alla destra del Padre.\n"
+        "E di nuovo verrà, nella gloria,\n"
+        "per giudicare i vivi e i morti,\n"
+        "e il suo regno non avrà fine.\n\n"
+        "Credo nello Spirito Santo, che è Signore e dà la vita,\n"
+        "e procede dal Padre e dal Figlio.\n"
+        "Con il Padre e il Figlio è adorato e glorificato,\n"
+        "e ha parlato per mezzo dei profeti.\n"
+        "Credo la Chiesa, una, santa, cattolica e apostolica.\n"
+        "Professo un solo Battesimo per il perdono dei peccati.\n"
+        "Aspetto la risurrezione dei morti\n"
+        "e la vita del mondo che verrà. Amen.",
+        rubric="Si dice nelle domeniche e solennità. Tutti si inchinano alle parole «e per opera dello Spirito Santo… e si è fatto uomo».",
+    ),
+    _vern_section(
+        7,
+        "Preghiera Universale · Preghiera dei Fedeli",
+        "Preghiamo.\n"
+        "R. Ascoltaci, Signore.\n\n"
+        "[Si formulano le intenzioni.]\n\n"
+        "Accogli, o Padre, le preghiere del tuo popolo,\n"
+        "e concedi ciò che con fede ti chiediamo.\n"
+        "Per Cristo nostro Signore.\n"
+        "R. Amen.",
+    ),
+    _vern_section(
+        8,
+        "Liturgia Eucaristica · Presentazione dei Doni",
+        "Benedetto sei tu, Signore, Dio dell'universo:\n"
+        "dalla tua bontà abbiamo ricevuto questo pane,\n"
+        "frutto della terra e del lavoro dell'uomo;\n"
+        "lo presentiamo a te, perché diventi per noi cibo di vita eterna.\n"
+        "R. Benedetto nei secoli il Signore.\n\n"
+        "Benedetto sei tu, Signore, Dio dell'universo:\n"
+        "dalla tua bontà abbiamo ricevuto questo vino,\n"
+        "frutto della vite e del lavoro dell'uomo;\n"
+        "lo presentiamo a te, perché diventi per noi bevanda di salvezza.\n"
+        "R. Benedetto nei secoli il Signore.\n\n"
+        "Pregate, fratelli e sorelle,\n"
+        "perché il mio e vostro sacrificio\n"
+        "sia gradito a Dio, Padre onnipotente.\n"
+        "R. Il Signore riceva dalle tue mani questo sacrificio\n"
+        "a lode e gloria del suo nome,\n"
+        "per il bene nostro e di tutta la sua santa Chiesa.",
+        rubric="Si portano all'altare il pane e il vino.",
+    ),
+    _vern_section(
+        9,
+        "Prefazio e Santo",
+        "Il Signore sia con voi.\n"
+        "R. E con il tuo spirito.\n"
+        "In alto i nostri cuori.\n"
+        "R. Sono rivolti al Signore.\n"
+        "Rendiamo grazie al Signore, nostro Dio.\n"
+        "R. È cosa buona e giusta.\n\n"
+        "[Il sacerdote proclama il prefazio del giorno.]\n\n"
+        "Santo, Santo, Santo il Signore Dio dell'universo.\n"
+        "I cieli e la terra sono pieni della tua gloria.\n"
+        "Osanna nell'alto dei cieli.\n"
+        "Benedetto colui che viene nel nome del Signore.\n"
+        "Osanna nell'alto dei cieli.",
+    ),
+    _vern_section(
+        10,
+        "Preghiera Eucaristica II",
+        "Veramente santo sei tu, o Padre,\n"
+        "fonte di ogni santità.\n"
+        "Ti preghiamo: santifica questi doni\n"
+        "con la rugiada del tuo Spirito,\n"
+        "perché diventino per noi\n"
+        "il Corpo e il Sangue del Signore nostro Gesù Cristo.\n\n"
+        "Egli, offrendosi liberamente alla sua passione,\n"
+        "prese il pane e rese grazie,\n"
+        "lo spezzò, lo diede ai suoi discepoli, e disse:\n"
+        "PRENDETE, E MANGIATENE TUTTI:\n"
+        "QUESTO È IL MIO CORPO\n"
+        "OFFERTO IN SACRIFICIO PER VOI.\n\n"
+        "Allo stesso modo, dopo aver cenato,\n"
+        "prese il calice, di nuovo ti rese grazie,\n"
+        "lo diede ai suoi discepoli, e disse:\n"
+        "PRENDETE, E BEVETENE TUTTI:\n"
+        "QUESTO È IL CALICE DEL MIO SANGUE\n"
+        "PER LA NUOVA ED ETERNA ALLEANZA,\n"
+        "VERSATO PER VOI E PER TUTTI\n"
+        "IN REMISSIONE DEI PECCATI.\n"
+        "FATE QUESTO IN MEMORIA DI ME.\n\n"
+        "Mistero della fede.\n"
+        "R. Annunciamo la tua morte, Signore,\n"
+        "proclamiamo la tua risurrezione,\n"
+        "nell'attesa della tua venuta.",
+        rubric="Delle quattro principali preghiere eucaristiche, la seconda è la più breve, basata su un antico testo attribuito a sant'Ippolito (c. 215).",
+    ),
+    _vern_section(
+        11,
+        "Dossologia Finale",
+        "Per Cristo, con Cristo e in Cristo,\n"
+        "a te, Dio Padre onnipotente,\n"
+        "nell'unità dello Spirito Santo,\n"
+        "ogni onore e gloria\n"
+        "per tutti i secoli dei secoli.\n"
+        "R. Amen.",
+    ),
+    _vern_section(
+        12,
+        "Riti di Comunione · Padre Nostro",
+        "Obbedienti alla parola del Salvatore\n"
+        "e formati al suo divino insegnamento, osiamo dire:\n\n"
+        "Padre nostro, che sei nei cieli,\n"
+        "sia santificato il tuo nome,\n"
+        "venga il tuo regno,\n"
+        "sia fatta la tua volontà, come in cielo così in terra.\n"
+        "Dacci oggi il nostro pane quotidiano,\n"
+        "e rimetti a noi i nostri debiti\n"
+        "come anche noi li rimettiamo ai nostri debitori,\n"
+        "e non abbandonarci alla tentazione,\n"
+        "ma liberaci dal male.\n\n"
+        "Liberaci, o Signore, da tutti i mali,\n"
+        "concedi la pace ai nostri giorni,\n"
+        "e con l'aiuto della tua misericordia\n"
+        "vivremo sempre liberi dal peccato\n"
+        "e sicuri da ogni turbamento,\n"
+        "nell'attesa che si compia la beata speranza\n"
+        "e venga il nostro Salvatore Gesù Cristo.\n"
+        "R. Tuo è il regno, tua la potenza e la gloria nei secoli.",
+    ),
+    _vern_section(
+        13,
+        "Rito della Pace · Agnello di Dio",
+        "Signore Gesù Cristo, che hai detto ai tuoi apostoli:\n"
+        "«Vi lascio la pace, vi do la mia pace»,\n"
+        "non guardare ai nostri peccati,\n"
+        "ma alla fede della tua Chiesa,\n"
+        "e donale unità e pace secondo la tua volontà.\n"
+        "Tu che vivi e regni nei secoli dei secoli.\n"
+        "R. Amen.\n\n"
+        "La pace del Signore sia sempre con voi.\n"
+        "R. E con il tuo spirito.\n\n"
+        "Scambiatevi un segno di pace.\n\n"
+        "Agnello di Dio, che togli i peccati del mondo, abbi pietà di noi.\n"
+        "Agnello di Dio, che togli i peccati del mondo, abbi pietà di noi.\n"
+        "Agnello di Dio, che togli i peccati del mondo, dona a noi la pace.",
+    ),
+    _vern_section(
+        14,
+        "Comunione",
+        "Ecco l'Agnello di Dio,\n"
+        "ecco colui che toglie i peccati del mondo.\n"
+        "Beati gli invitati alla cena dell'Agnello.\n\n"
+        "R. O Signore, non sono degno di partecipare alla tua mensa,\n"
+        "ma di' soltanto una parola e io sarò salvato.\n\n"
+        "[Al momento della comunione:]\n"
+        "Il Corpo di Cristo. R. Amen.\n"
+        "Il Sangue di Cristo. R. Amen.",
+        rubric="Il sacerdote mostra ai fedeli il pane eucaristico, leggermente elevato sulla patena o sul calice.",
+    ),
+    _vern_section(
+        15,
+        "Riti di Conclusione · Benedizione e Congedo",
+        "Il Signore sia con voi.\n"
+        "R. E con il tuo spirito.\n\n"
+        "Vi benedica Dio onnipotente,\n"
+        "Padre e Figlio e Spirito Santo.\n"
+        "R. Amen.\n\n"
+        "Andate in pace.\n"
+        "R. Rendiamo grazie a Dio.",
+    ),
+]
+
+
+
+# ===========================================================================
 # Missal catalogue
 # ===========================================================================
 
@@ -1525,6 +2111,7 @@ MISSALS: List[Dict[str, Any]] = [
         "language_note": "English (ICEL 2010) with Latin original",
         "accent_color": "#A87B3E",  # warm gold
         "icon": "book-outline",
+        "vernacular_label": "English",
         "intro": (
             "Promulgated by Pope Paul VI in 1969 and received in the Latin editio typica of "
             "1970, the Novus Ordo Missae is the most widely-celebrated form of the Mass in "
@@ -1541,6 +2128,7 @@ MISSALS: List[Dict[str, Any]] = [
         "language_note": "Latin original with English translation",
         "accent_color": "#6B3A2E",  # ember claret
         "icon": "flame-outline",
+        "vernacular_label": "English",
         "intro": (
             "The Tridentine Mass — codified by St. Pius V in 1570 and refined to its 1962 "
             "form by St. John XXIII — is the ancient Mass of the Roman Rite, prayed almost "
@@ -1558,6 +2146,7 @@ MISSALS: List[Dict[str, Any]] = [
         "language_note": "Sacral (Cranmerian) English",
         "accent_color": "#3F5A4A",  # english sage
         "icon": "leaf-outline",
+        "vernacular_label": "English",
         "intro": (
             "Divine Worship: The Missal is the proper missal of the three Personal "
             "Ordinariates for former Anglicans now in full communion with the Catholic "
@@ -1567,6 +2156,40 @@ MISSALS: List[Dict[str, Any]] = [
             "cadence of Cranmer's translations of the Roman liturgy."
         ),
         "sections": ORDINARIATE_SECTIONS,
+    },
+    {
+        "slug": "roman-missal-es",
+        "name": "El Misal Romano",
+        "subtitle": "Novus Ordo · Forma Ordinaria · Español",
+        "tradition": "Rito Romano · Forma Ordinaria",
+        "language_note": "Español con el original en latín",
+        "accent_color": "#9C5B2E",  # spanish ochre
+        "icon": "book-outline",
+        "vernacular_label": "Español",
+        "intro": (
+            "El Ordinario de la Misa del Misal Romano (Forma Ordinaria, 1970) tal como se "
+            "celebra en español. Se ofrece el texto litúrgico oficial en castellano junto "
+            "al original latino de la editio typica, para rezar y meditar la Misa en la "
+            "propia lengua sin perder de vista la lengua de la Iglesia."
+        ),
+        "sections": SPANISH_NOVUS_ORDO_SECTIONS,
+    },
+    {
+        "slug": "roman-missal-it",
+        "name": "Il Messale Romano",
+        "subtitle": "Novus Ordo · Forma Ordinaria · Italiano",
+        "tradition": "Rito Romano · Forma Ordinaria",
+        "language_note": "Italiano con l'originale latino",
+        "accent_color": "#3E6B8A",  # italian azure
+        "icon": "book-outline",
+        "vernacular_label": "Italiano",
+        "intro": (
+            "L'Ordinario della Messa del Messale Romano (Forma Ordinaria, 1970) come si "
+            "celebra in italiano, secondo la terza edizione italiana. Il testo liturgico "
+            "ufficiale è posto accanto all'originale latino della editio typica, per "
+            "pregare e meditare la Messa nella propria lingua."
+        ),
+        "sections": ITALIAN_NOVUS_ORDO_SECTIONS,
     },
 ]
 
@@ -1587,6 +2210,7 @@ def _summary(m: Dict[str, Any]) -> Dict[str, Any]:
         "language_note": m["language_note"],
         "accent_color": m["accent_color"],
         "icon": m["icon"],
+        "vernacular_label": m.get("vernacular_label", "English"),
         "section_count": len(m["sections"]),
     }
 
@@ -1616,6 +2240,7 @@ def _section_payload(m: Dict[str, Any], idx: int) -> Dict[str, Any]:
         "slug": m["slug"],
         "missal_name": m["name"],
         "accent_color": m["accent_color"],
+        "vernacular_label": m.get("vernacular_label", "English"),
         "index": idx,
         "total": len(sections),
         "title": s["title"],

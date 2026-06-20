@@ -1593,6 +1593,7 @@ export type MissalSummary = {
   language_note: string;
   accent_color: string;
   icon: string;
+  vernacular_label: string;
   section_count: number;
 };
 
@@ -1612,6 +1613,7 @@ export type MissalSection = {
   slug: string;
   missal_name: string;
   accent_color: string;
+  vernacular_label: string;
   index: number;
   total: number;
   title: string;

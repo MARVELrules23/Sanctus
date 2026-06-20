@@ -11,6 +11,7 @@ machine translation.
 """
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import logging
@@ -45,6 +46,8 @@ def _extract_json(raw: str) -> Dict:
 
 
 async def _ai_translate(emergent_llm_key: str, texts: List[str], target: str) -> List[str]:
+    """Translate a batch. Raises on any failure or item-count mismatch so the
+    caller can retry / fall back WITHOUT caching a bad (English) result."""
     from emergentintegrations.llm.chat import LlmChat, UserMessage
 
     lang_name = {"es": "Latin American Spanish (español)"}.get(target, target)
@@ -55,6 +58,7 @@ async def _ai_translate(emergent_llm_key: str, texts: List[str], target: str) ->
         "Apostles'/Nicene Creed, Hail Holy Queen, Fatima prayer, St Michael prayer, "
         "rosary mysteries, chaplet prayers, etc.) use the TRADITIONAL official "
         "Spanish liturgical text rather than a literal word-for-word translation. "
+        "Translate EVERY item; never leave an item in English. "
         "Preserve line breaks and any trailing ellipses. Keep a reverent register. "
         'Return STRICT JSON: {"items": ["...", ...]} with EXACTLY the same number '
         "of items in the same order, each value translated. No commentary."
@@ -67,8 +71,49 @@ async def _ai_translate(emergent_llm_key: str, texts: List[str], target: str) ->
     ).with_model("anthropic", MODEL)
     resp = await chat.send_message(UserMessage(text=payload))
     data = _extract_json(resp or "")
-    items = data.get("items") or []
-    return [items[i] if i < len(items) and isinstance(items[i], str) else texts[i] for i in range(len(texts))]
+    items = data.get("items")
+    if not isinstance(items, list) or len(items) != len(texts):
+        raise ValueError(
+            f"item count mismatch: got {len(items) if isinstance(items, list) else 'none'} want {len(texts)}"
+        )
+    out: List[str] = []
+    for i, t in enumerate(texts):
+        v = items[i]
+        out.append(v.strip() if isinstance(v, str) and v.strip() else t)
+    return out
+
+
+async def _translate_segment(emergent_llm_key: str, items: List[str], target: str) -> List[str]:
+    """Translate a list of strings. On failure (e.g. a single verse tripping the
+    model's content filter) the batch is BISECTED and retried, so one
+    problematic item can't block its whole chapter. Items that still cannot be
+    translated are returned unchanged (English) rather than poisoning the cache."""
+    for attempt in range(2):
+        try:
+            return await _ai_translate(emergent_llm_key, items, target)
+        except Exception as e:  # noqa: BLE001
+            logger.warning("translate segment(%d) failed: %s", len(items), str(e)[:140])
+            await asyncio.sleep(0.4)
+    if len(items) <= 1:
+        return list(items)  # give up on this single item; keep English
+    mid = len(items) // 2
+    left = await _translate_segment(emergent_llm_key, items[:mid], target)
+    right = await _translate_segment(emergent_llm_key, items[mid:], target)
+    return left + right
+
+
+async def _translate_chunked(emergent_llm_key: str, originals: List[str], target: str) -> Dict[int, str]:
+    """Translate `originals`, returning index -> translated text ONLY for items
+    that were genuinely translated (Spanish always differs from English)."""
+    result: Dict[int, str] = {}
+    CHUNK = 25
+    for start in range(0, len(originals), CHUNK):
+        part = originals[start : start + CHUNK]
+        translated = await _translate_segment(emergent_llm_key, part, target)
+        for j, val in enumerate(translated):
+            if val and val != part[j]:
+                result[start + j] = val
+    return result
 
 
 async def translate_texts(
@@ -78,31 +123,32 @@ async def translate_texts(
     target: str,
 ) -> List[str]:
     """Return `texts` translated into `target`. English / unsupported langs and
-    empty strings pass through unchanged. Results are cached per string."""
+    empty strings pass through unchanged. Only successful translations are
+    cached — failures fall back to English for this call and are retried later."""
     if target not in SUPPORTED or not texts:
         return texts
     keys = [_key(t, target) for t in texts]
     cached: Dict[str, str] = {}
-    # Dedup the DB lookup.
     uniq_keys = list({k for k, t in zip(keys, texts) if t.strip()})
     if uniq_keys:
         async for d in db.translations_cache.find({"_id": {"$in": uniq_keys}}):
-            cached[d["_id"]] = d.get("text", "")
+            if d.get("text"):
+                cached[d["_id"]] = d["text"]
 
-    # Which unique strings still need translating?
-    need: Dict[str, str] = {}  # key -> original text
+    # Unique strings still needing translation (preserve first-seen order).
+    need_keys: List[str] = []
+    need_texts: List[str] = []
+    seen = set()
     for k, t in zip(keys, texts):
-        if t.strip() and k not in cached:
-            need[k] = t
-    if need and emergent_llm_key:
-        need_keys = list(need.keys())
-        originals = [need[k] for k in need_keys]
-        try:
-            translated = await _ai_translate(emergent_llm_key, originals, target)
-        except Exception as e:  # noqa: BLE001
-            logger.warning("translate failed: %s", e)
-            translated = originals
-        for k, val in zip(need_keys, translated):
+        if t.strip() and k not in cached and k not in seen:
+            seen.add(k)
+            need_keys.append(k)
+            need_texts.append(t)
+
+    if need_texts and emergent_llm_key:
+        got = await _translate_chunked(emergent_llm_key, need_texts, target)
+        for idx, val in got.items():
+            k = need_keys[idx]
             cached[k] = val
             try:
                 await db.translations_cache.update_one(

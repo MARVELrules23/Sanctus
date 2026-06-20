@@ -1817,6 +1817,11 @@ export async function checkinVirtueGoal(planId: string, date: string, goalId: st
 export async function saveVirtueJournal(planId: string, date: string, text: string): Promise<VirtuePlan> {
   return await api(`/virtues/plans/${encodeURIComponent(planId)}/journal`, { method: "PUT", body: { date, text } });
 }
+export async function translateTexts(texts: string[], target: string): Promise<string[]> {
+  if (target !== "es" || texts.length === 0) return texts;
+  const res = await api<{ items: string[] }>("/translate", { method: "POST", body: { texts, target } });
+  return res.items;
+}
 export async function deleteVirtuePlan(id: string): Promise<{ ok: boolean }> {
   return await api(`/virtues/plans/${encodeURIComponent(id)}`, { method: "DELETE" });
 }

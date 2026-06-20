@@ -8,6 +8,8 @@ import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 import { mysteryForDate, MYSTERY_SETS, MysterySet } from "@/src/rosary";
 import { CHAPLETS, CHAPLET_ORDER } from "@/src/prayers/chaplets";
 import { todayISO } from "@/src/date-utils";
+import { useI18n } from "@/src/i18n";
+import { useTranslator } from "@/src/translate";
 
 type CardItem = {
   testID: string;
@@ -57,6 +59,16 @@ export default function PrayerHubScreen() {
     return arr;
   }, [router, today, todayMystery]);
 
+  const { lang } = useI18n();
+  const introTitle = "Anchor the day in prayer.";
+  const introBody = "Choose the Rosary or a chaplet. Each prayer closes with a small good work — a way to live the grace into your day.";
+  const allStrings = useMemo(() => {
+    const a: string[] = [introTitle, introBody];
+    items.forEach((it) => { a.push(it.title, it.subtitle, it.meta || ""); });
+    return a;
+  }, [items]);
+  const { tr } = useTranslator(allStrings);
+
   return (
     <SafeAreaView style={styles.safe} edges={["top"]} testID="prayer-hub-screen">
       <Stack.Screen options={{ headerShown: false }} />
@@ -64,17 +76,16 @@ export default function PrayerHubScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} testID="prayer-hub-back">
           <Ionicons name="chevron-back" size={26} color={colors.primary} />
         </Pressable>
-        <Text style={styles.headerTitle}>Prayer</Text>
+        <Text style={styles.headerTitle}>{lang === "es" ? "Oración" : "Prayer"}</Text>
         <View style={{ width: 26 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.intro}>
           <Text style={styles.eyebrow}>ORATIO</Text>
-          <Text style={styles.introTitle}>Anchor the day in prayer.</Text>
+          <Text style={styles.introTitle}>{tr(introTitle)}</Text>
           <Text style={styles.introBody}>
-            Choose the Rosary or a chaplet. Each prayer closes with a small good work — a way to
-            live the grace into your day.
+            {tr(introBody)}
           </Text>
         </View>
 
@@ -94,15 +105,15 @@ export default function PrayerHubScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <View style={styles.titleRow}>
-                <Text style={styles.cardTitle}>{it.title}</Text>
+                <Text style={styles.cardTitle}>{tr(it.title)}</Text>
                 {it.featured ? (
                   <View style={styles.featuredPill}>
-                    <Text style={styles.featuredPillText}>TODAY</Text>
+                    <Text style={styles.featuredPillText}>{lang === "es" ? "HOY" : "TODAY"}</Text>
                   </View>
                 ) : null}
               </View>
-              <Text style={styles.cardSub}>{it.subtitle}</Text>
-              <Text style={styles.cardMeta}>{it.meta}</Text>
+              <Text style={styles.cardSub}>{tr(it.subtitle)}</Text>
+              <Text style={styles.cardMeta}>{tr(it.meta)}</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
           </Pressable>

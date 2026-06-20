@@ -18,6 +18,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from pydantic import BaseModel
 
+from lang_ctx import get_lang
+from i18n_translate import translate_texts
+
 logger = logging.getLogger("sanctus.daily_practice")
 
 
@@ -887,14 +890,27 @@ class CompleteRequest(BaseModel):
     note: Optional[str] = None
 
 
-def build_router(db: AsyncIOMotorDatabase, get_user) -> APIRouter:
+def build_router(db: AsyncIOMotorDatabase, get_user, emergent_llm_key: str = "") -> APIRouter:
     """Factory so we can share the existing get_current_user dependency."""
     router = APIRouter(prefix="/daily-practice", tags=["daily-practice"])
+
+    async def localize(shaped: Dict[str, Any]) -> Dict[str, Any]:
+        """Translate the user-facing practice text into the request language."""
+        lang = get_lang()
+        if lang == "en":
+            return shaped
+        fields = ["title", "body", "why", "category", "virtue"]
+        originals = [str(shaped.get(f) or "") for f in fields]
+        translated = await translate_texts(db, emergent_llm_key, originals, lang)
+        for f, val in zip(fields, translated):
+            if val:
+                shaped[f] = val
+        return shaped
 
     @router.get("")
     async def get_today(date: str, user=Depends(get_user)):
         practice = await select_or_assign_practice(db, user.user_id, date)
-        return _shape(practice)
+        return await localize(_shape(practice))
 
     @router.post("/complete")
     async def complete(payload: CompleteRequest, user=Depends(get_user)):
@@ -910,7 +926,7 @@ def build_router(db: AsyncIOMotorDatabase, get_user) -> APIRouter:
         refreshed = await db.daily_practices.find_one(
             {"user_id": user.user_id, "date": payload.date}
         )
-        return _shape({**practice, "_assignment": _strip(refreshed or {})})
+        return await localize(_shape({**practice, "_assignment": _strip(refreshed or {})}))
 
     @router.delete("/complete")
     async def uncomplete(date: str, user=Depends(get_user)):
@@ -919,7 +935,7 @@ def build_router(db: AsyncIOMotorDatabase, get_user) -> APIRouter:
             {"$set": {"completed_at": None, "note": None}},
         )
         practice = await select_or_assign_practice(db, user.user_id, date)
-        return _shape(practice)
+        return await localize(_shape(practice))
 
     @router.get("/history")
     async def history(limit: int = 30, user=Depends(get_user)):
@@ -936,9 +952,7 @@ def build_router(db: AsyncIOMotorDatabase, get_user) -> APIRouter:
             p = next((p for p in PRACTICES if p["id"] == r.get("practice_id")), None)
             if not p:
                 continue
-            items.append({
-                **_shape({**p, "_assignment": _strip(r)})
-            })
+            items.append(await localize(_shape({**p, "_assignment": _strip(r)})))
         return {"items": items, "total_pool": len(PRACTICES)}
 
     return router

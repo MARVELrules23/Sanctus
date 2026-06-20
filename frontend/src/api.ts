@@ -1822,6 +1822,24 @@ export async function translateTexts(texts: string[], target: string): Promise<s
   const res = await api<{ items: string[] }>("/translate", { method: "POST", body: { texts, target } });
   return res.items;
 }
+
+export type WorldIssue = { slug: string; title: string; icon: string; accent: string; blurb: string };
+export type WorldContent = WorldIssue & {
+  summary: string;
+  church_teaching: string;
+  principles: string[];
+  where_the_church_is_clear: string;
+  prudential_judgment: string;
+  how_to_engage: string;
+  prayer: string;
+  lang?: string;
+};
+export async function getWorldIssues(): Promise<{ items: WorldIssue[] }> {
+  return await api("/in-the-world");
+}
+export async function getWorldIssue(slug: string): Promise<WorldContent> {
+  return await api(`/in-the-world/${encodeURIComponent(slug)}`);
+}
 export async function deleteVirtuePlan(id: string): Promise<{ ok: boolean }> {
   return await api(`/virtues/plans/${encodeURIComponent(id)}`, { method: "DELETE" });
 }

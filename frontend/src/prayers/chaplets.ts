@@ -27,7 +27,10 @@ export type ChapletKey =
   | "sacred_heart"
   | "st_lucy"
   | "st_padre_pio"
-  | "peter_and_paul";
+  | "peter_and_paul"
+  | "st_joseph_renewal"
+  | "marian_renewal"
+  | "sacred_heart_renewal";
 
 export type Chaplet = {
   key: ChapletKey;
@@ -46,6 +49,8 @@ export type Chaplet = {
   good_work_for_today: string;
   /** Short verse / motto to anchor the day */
   daily_motto: string;
+  /** Optional highlighted note shown before the prayer (e.g. consecration guidance) */
+  note?: string;
 };
 
 /* -------------------------------------------------------------------------- */
@@ -405,6 +410,16 @@ function buildPeterAndPaul(): BeadStep[] {
 /*                                 REGISTRY                                    */
 /* -------------------------------------------------------------------------- */
 
+function renewalSteps(prayer: string): BeadStep[] {
+  return [
+    {
+      label: "Sign of the Cross",
+      prayer: "In the name of the Father, and of the Son, and of the Holy Spirit. Amen.",
+    },
+    { label: "Act of Renewal", prayer },
+  ];
+}
+
 export const CHAPLETS: Record<ChapletKey, Chaplet> = {
   st_michael: {
     key: "st_michael",
@@ -478,6 +493,54 @@ export const CHAPLETS: Record<ChapletKey, Chaplet> = {
       "Speak of Christ to someone today, however briefly — a kind word, a question, a small witness. As Peter and Paul did, hand the faith forward.",
     daily_motto: "I have kept the faith.",
   },
+  st_joseph_renewal: {
+    key: "st_joseph_renewal",
+    title: "Daily Consecration to St. Joseph — Renewal",
+    subtitle: "Renew your entrustment to the Guardian of the Redeemer",
+    color: "#6B4E8E",
+    icon: "shield-half-outline",
+    duration: "~3 min",
+    steps: renewalSteps(
+      "O glorious St. Joseph, faithful guardian of Jesus and chaste spouse of the Blessed Virgin Mary, I renew today my consecration to you. To you I entrust my body and my soul, my labors and my rest, my life and my death. Be my father, my protector, and my guide in the way of salvation. Teach me to love Jesus as you loved Him, to serve in silence, to work with integrity, and to trust completely in the Father's providence. Obtain for me a great purity of heart, a fervent love of the interior life, and the grace of a holy death in the arms of Jesus and Mary. St. Joseph, to you I belong; never let me be separated from you. Amen.",
+    ),
+    good_work_for_today:
+      "Do one hidden task today with care and without complaint — an act of quiet, Josephine labor offered for your family or community.",
+    daily_motto: "Ite ad Ioseph — Go to Joseph.",
+    note:
+      "This renewal is usually prayed by those who have already consecrated themselves to St. Joseph. If you haven't yet, consider doing so — you can begin the 33-day St. Joseph Consecration Challenge in the Challenges section.",
+  },
+  marian_renewal: {
+    key: "marian_renewal",
+    title: "Daily Marian Consecration — Renewal",
+    subtitle: "Renew your total entrustment to Jesus through Mary",
+    color: "#3F62A8",
+    icon: "heart-half-outline",
+    duration: "~3 min",
+    steps: renewalSteps(
+      "O Mary, Immaculate Mother of God and my Mother, I renew today my consecration to your Immaculate Heart. I am all yours, and all that I have is yours. Take me wholly to yourself: my body and my soul, my thoughts, my words, and my deeds, that through your hands every gift may be offered to Jesus. Form me into the image of your Son, keep me ever close to His Sacred Heart, and lead me safely home to Heaven. My Queen and my Mother, I am all yours; do with me whatever you will. Totus tuus — I am all yours. Amen.",
+    ),
+    good_work_for_today:
+      "Offer one small hidden sacrifice today through Our Lady's hands — kept secret between you and the Lord, in union with her Immaculate Heart.",
+    daily_motto: "Totus tuus — Through her, to Him.",
+    note:
+      "This renewal is usually prayed by those who have already made a Marian consecration. If you haven't yet, consider doing so — you can begin the 33-day Marian Consecration Challenge in the Challenges section.",
+  },
+  sacred_heart_renewal: {
+    key: "sacred_heart_renewal",
+    title: "Daily Consecration to the Sacred Heart — Renewal",
+    subtitle: "Renew your self-offering to the Heart of Jesus",
+    color: "#9E1B1B",
+    icon: "flame",
+    duration: "~3 min",
+    steps: renewalSteps(
+      "O most Sacred Heart of Jesus, fountain of every blessing, I renew today my consecration to You. I give You my heart in return for the love with which You have loved me. Reign in my mind by Your truth, in my will by Your law, and in my heart by Your love. Make my heart meek and humble like unto Your own. Console me in trial, defend me in temptation, sanctify my work, and at the hour of my death receive me into the refuge of Your wounded Heart. Most Sacred Heart of Jesus, I place all my trust in You; in You alone do I find my rest. Amen.",
+    ),
+    good_work_for_today:
+      "Make one act of reparation today — a small kindness offered to console the Heart of Jesus where He is forgotten or rejected.",
+    daily_motto: "Most Sacred Heart of Jesus, I trust in Thee.",
+    note:
+      "This renewal is usually prayed by those who have already consecrated themselves to the Sacred Heart of Jesus. If you haven't yet, consider doing so — you can begin the 33-day Sacred Heart Consecration Challenge in the Challenges section.",
+  },
 };
 
 export const CHAPLET_ORDER: ChapletKey[] = [
@@ -487,4 +550,7 @@ export const CHAPLET_ORDER: ChapletKey[] = [
   "st_lucy",
   "st_padre_pio",
   "peter_and_paul",
+  "st_joseph_renewal",
+  "marian_renewal",
+  "sacred_heart_renewal",
 ];

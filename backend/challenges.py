@@ -86,6 +86,20 @@ def _first_sunday_of_advent(year: int) -> date:
     return sunday_before_christmas - timedelta(weeks=3)
 
 
+def _feast_of_sacred_heart(year: int) -> date:
+    """Solemnity of the Most Sacred Heart of Jesus — the Friday after the
+    Second Sunday after Pentecost = 19 days after Pentecost = Easter + 68 days."""
+    return easter(year) + timedelta(days=68)
+
+
+# 33-day consecration tracks ending on a fixed/anchored feast.
+CONSECRATION_SLUGS = (
+    "st-joseph-consecration",
+    "marian-consecration",
+    "sacred-heart-consecration",
+)
+
+
 def compute_default_window(slug: str, year: int) -> tuple[date, date]:
     """Return (start, end) for the given track in the given liturgical year.
     For Advent the `year` is the calendar year of Christmas. For Lent the
@@ -98,6 +112,16 @@ def compute_default_window(slug: str, year: int) -> tuple[date, date]:
         return _first_sunday_of_advent(year), date(year, 12, 24)
     if slug == "lent":
         return _ash_wednesday(year), _holy_saturday(year)
+    if slug == "st-joseph-consecration":
+        # 33 days ending on the Solemnity of St. Joseph (Mar 19).
+        return date(year, 2, 15), date(year, 3, 19)
+    if slug == "marian-consecration":
+        # 33 days ending on the Feast of the Visitation (May 31).
+        return date(year, 4, 29), date(year, 5, 31)
+    if slug == "sacred-heart-consecration":
+        # 33 days ending on the (movable) Solemnity of the Sacred Heart.
+        end = _feast_of_sacred_heart(year)
+        return end - timedelta(days=32), end
     raise ValueError(f"unknown challenge slug: {slug}")
 
 
@@ -271,6 +295,164 @@ SEED_CHALLENGES: list[Dict[str, Any]] = [
             "St. Joseph (Mar 19), the Annunciation (Mar 25), and the saints "
             "of the Passion (St. Veronica, St. Dismas the Good Thief, etc.). "
             "Holy Week (last 7 days) intensifies daily practices."
+        ),
+    },
+    {
+        "slug": "st-joseph-consecration",
+        "name": "St. Joseph Consecration",
+        "subtitle": "33 days of entrustment to the Guardian of the Redeemer",
+        "season": "consecration",
+        "color": "#6B4E8E",  # josephine violet
+        "icon": "shield-half-outline",
+        "patron_saint": "St. Joseph, Spouse of the Blessed Virgin Mary",
+        "blurb": (
+            "A 33-day preparation to consecrate yourself to St. Joseph, ending "
+            "on his Solemnity (March 19). Each day we sit at the feet of the "
+            "silent, just man whom God entrusted with His Son — learning his "
+            "fatherhood, his work, his chastity, and his total trust in "
+            "Providence — until we entrust ourselves wholly to his care."
+        ),
+        "opening_prayer": (
+            "St. Joseph, faithful guardian of Jesus and chaste spouse of Mary, "
+            "as I begin these 33 days I place myself under your fatherly care. "
+            "Teach me to live hidden with Jesus and Mary, to work with love, to "
+            "guard purity of heart, and to trust the Father's providence in all "
+            "things. Prepare me, day by day, to give myself wholly to you, that "
+            "through you I may belong entirely to Jesus. Amen."
+        ),
+        "closing_prayer": (
+            # Traditional Act of Consecration to St. Joseph (public domain).
+            "O dearest St. Joseph, I consecrate myself to your honor and give "
+            "myself to you, that you may always be my father, my protector, and "
+            "my guide in the way of salvation. Obtain for me a great purity of "
+            "heart and a fervent love of the interior life. After your example, "
+            "may I do all my actions for the greater glory of God, in union with "
+            "the Divine Heart of Jesus and the Immaculate Heart of Mary. O "
+            "blessed St. Joseph, pray for me that I may share in the peace and "
+            "joy of your holy death. Amen."
+        ),
+        "preparation_content": None,
+        "expected_day_count_hint": 33,
+        "ai_generation_notes": (
+            "A 33-day consecration to St. Joseph ending on his Solemnity "
+            "(Mar 19). Do NOT copy any copyrighted book (e.g. Fr. Calloway's "
+            "'Consecration to St. Joseph'); write original reflections in the "
+            "Church's living voice. Move through the Litany of St. Joseph titles "
+            "and his virtues week by week: his silence and obedience; his "
+            "fatherhood and protection of the Church; his chastity and purity; "
+            "his work and providence; his patronage of a happy death. Suggest "
+            "2–4 organic daily practices (a Joseph litany, an act of hidden "
+            "service, a decade of the rosary, an examen on trust). The final "
+            "days build toward the Act of Consecration prayed on Mar 19."
+        ),
+    },
+    {
+        "slug": "marian-consecration",
+        "name": "Marian Consecration",
+        "subtitle": "33 days of total entrustment to Jesus through Mary",
+        "season": "consecration",
+        "color": "#3F62A8",  # marian blue
+        "icon": "heart-half-outline",
+        "patron_saint": "The Blessed Virgin Mary, Mother of God",
+        "blurb": (
+            "A 33-day preparation for total consecration to Jesus through Mary, "
+            "ending on the Feast of the Visitation (May 31). In the spirit of "
+            "St. Louis de Montfort, we empty our hands, take Our Lady as Mother "
+            "and Queen, and learn to give everything to Jesus through her "
+            "Immaculate Heart."
+        ),
+        "opening_prayer": (
+            "Immaculate Mary, as I begin these 33 days I ask you to take me by "
+            "the hand. Teach me your humility, your faith, your fiat. Empty my "
+            "heart of all that is not your Son, and fill it with His grace, that "
+            "when these days are complete I may give myself wholly to Jesus "
+            "through your Immaculate Heart. Totus tuus — I wish to be all yours. "
+            "Amen."
+        ),
+        "closing_prayer": (
+            # Traditional Act of Consecration to Jesus through Mary (public domain).
+            "O Immaculate Mary, Mother of God and my Mother, I choose you this "
+            "day for my Mother and Queen. I deliver and consecrate to you my "
+            "body and soul, my goods both interior and exterior, and the very "
+            "value of all my good actions, past, present, and to come; leaving "
+            "to you the entire and full right of disposing of me, and all that "
+            "belongs to me, without exception, according to your good pleasure, "
+            "for the greater glory of God, in time and in eternity. Totus tuus "
+            "ego sum — I am all yours, and all that I have is yours, O most "
+            "loving Jesus, through Mary, your most holy Mother. Amen."
+        ),
+        "preparation_content": None,
+        "expected_day_count_hint": 33,
+        "ai_generation_notes": (
+            "A 33-day Marian consecration ending on the Visitation (May 31). Do "
+            "NOT copy any copyrighted book (e.g. Fr. Gaitley's '33 Days to "
+            "Morning Glory'); write original reflections in the Church's living "
+            "voice, drawing on St. Louis de Montfort's 'True Devotion' (public "
+            "domain) and the Catechism. Move through: knowledge of self and "
+            "emptying; knowledge of Mary (her titles, the Magnificat, the "
+            "Immaculate Conception, the seven sorrows); knowledge of Jesus "
+            "through Mary. Suggest 2–4 organic daily practices (a decade of the "
+            "rosary, the Litany of Loreto, a Marian antiphon, a hidden "
+            "sacrifice). The final days build toward the Act of Consecration "
+            "prayed on May 31."
+        ),
+    },
+    {
+        "slug": "sacred-heart-consecration",
+        "name": "Sacred Heart Consecration",
+        "subtitle": "33 days of self-offering to the Heart of Jesus",
+        "season": "consecration",
+        "color": "#9E1B1B",  # sacred-heart crimson
+        "icon": "flame",
+        "patron_saint": "The Most Sacred Heart of Jesus",
+        "blurb": (
+            "A 33-day preparation to consecrate yourself to the Most Sacred "
+            "Heart of Jesus, ending on the Solemnity of the Sacred Heart. "
+            "Drawing near to the Heart pierced for love of us — meek and humble, "
+            "burning with charity — we learn reparation, trust, and self-gift, "
+            "until we place our whole life within His wounded side."
+        ),
+        "opening_prayer": (
+            "Most Sacred Heart of Jesus, as I begin these 33 days, draw me into "
+            "the furnace of your charity. Teach me to be meek and humble of "
+            "heart, to make reparation for love grown cold, and to trust you in "
+            "all things. Prepare me, day by day, to give you my whole heart in "
+            "return for the love with which you have loved me. Amen."
+        ),
+        "closing_prayer": (
+            # Traditional Act of Consecration to the Sacred Heart (public domain).
+            "Most sweet Jesus, Redeemer of the human race, look down upon us "
+            "humbly prostrate before you. We are yours, and yours we wish to be; "
+            "but to be more surely united with you, behold, each one of us "
+            "freely consecrates himself today to your Most Sacred Heart. Be "
+            "King, O Lord, not only of the faithful who have never forsaken you, "
+            "but also of the prodigal children who have abandoned you; grant "
+            "that they may quickly return to their Father's house, lest they "
+            "die of wretchedness and hunger. Be King of all who are still "
+            "involved in error, and gather them into the harbor of truth and "
+            "unity of faith, so that soon there may be but one flock and one "
+            "Shepherd. Grant, O Lord, to your Church assurance of freedom and "
+            "immunity from harm; give tranquility of order to all nations; make "
+            "the earth resound from pole to pole with one cry: Praise to the "
+            "Divine Heart that wrought our salvation; to it be glory and honor "
+            "for ever. Amen."
+        ),
+        "preparation_content": None,
+        "expected_day_count_hint": 33,
+        "ai_generation_notes": (
+            "A 33-day consecration to the Sacred Heart of Jesus ending on the "
+            "(movable) Solemnity of the Most Sacred Heart. Write original "
+            "reflections in the Church's living voice — do not copy any "
+            "copyrighted devotional book. Draw on the revelations to St. "
+            "Margaret Mary Alacoque, the encyclicals on the Sacred Heart "
+            "(Haurietis Aquas), and the Catechism. Move through the themes of "
+            "the Heart of Jesus: its love and mercy; the pierced side and the "
+            "wound of love; reparation and the First Fridays; the Twelve "
+            "Promises; meekness and humility of heart; the Eucharist as the "
+            "Heart's gift. Suggest 2–4 organic daily practices (an act of "
+            "reparation, a visit to the Blessed Sacrament, the Litany of the "
+            "Sacred Heart, an examen on charity). The final days build toward "
+            "the Act of Consecration prayed on the feast."
         ),
     },
 ]
@@ -470,6 +652,8 @@ async def _seed_challenges_if_missing(db: AsyncIOMotorDatabase) -> int:
         else:  # hallowtide
             target_year = today.year if today <= date(today.year, 11, 8) else today.year + 1
             start, end = compute_default_window(slug, target_year)
+        if slug in CONSECRATION_SLUGS:
+            start, end, _ = _next_window_for_today(slug, today)
         now = datetime.now(timezone.utc)
         await col.insert_one({
             "challenge_id": f"chl_{uuid.uuid4().hex[:10]}",

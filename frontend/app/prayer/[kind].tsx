@@ -17,6 +17,7 @@ type PrayerMeta = {
   steps: BeadStep[];
   good_work: string;
   motto: string;
+  note?: string;
   mysterySwitcher?: {
     current: MysterySet["key"];
     setCurrent: (k: MysterySet["key"]) => void;
@@ -61,12 +62,14 @@ export default function PrayerRunnerScreen() {
       steps: ch.steps,
       good_work: ch.good_work_for_today,
       motto: ch.daily_motto,
+      note: ch.note,
     };
   }, [kind, rosarySetKey]);
 
   // Collect every user-visible prayer string for batch translation (es only).
   const allStrings = useMemo(() => {
     const arr = [meta.title, meta.good_work, meta.motto];
+    if (meta.note) arr.push(meta.note);
     meta.steps.forEach((s) => { arr.push(s.label, s.prayer); });
     Object.values(MYSTERY_SETS).forEach((s) => arr.push(s.title));
     return arr;
@@ -118,6 +121,13 @@ export default function PrayerRunnerScreen() {
           <Text style={styles.headerTitle} numberOfLines={1}>{tr(meta.title)}</Text>
           <View style={{ width: 26 }} />
         </View>
+
+        {meta.note && idx === 0 && !onClosing ? (
+          <View style={[styles.noteCallout, { borderLeftColor: meta.color, backgroundColor: meta.color + "12" }]} testID="prayer-note">
+            <Ionicons name="information-circle" size={16} color={meta.color} style={{ marginTop: 1 }} />
+            <Text style={styles.noteText}>{tr(meta.note)}</Text>
+          </View>
+        ) : null}
 
         {meta.mysterySwitcher ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.mysteryRow}>
@@ -260,6 +270,8 @@ const styles = StyleSheet.create({
   goodWorkText: { fontFamily: fonts.bodyRegular, color: colors.textPrimary, fontSize: 18, lineHeight: 30, textAlign: "center" },
   mottoBox: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: spacing.lg, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: "#EAE5D6" },
   mottoText: { fontFamily: fonts.bodyItalic, fontStyle: "italic", fontSize: 14, color: colors.textSecondary, textAlign: "center" },
+  noteCallout: { flexDirection: "row", alignItems: "flex-start", gap: 8, marginHorizontal: spacing.lg, marginBottom: spacing.sm, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, borderRadius: 12, borderLeftWidth: 3 },
+  noteText: { flex: 1, fontFamily: fonts.bodyRegular, fontSize: 13, lineHeight: 19, color: colors.textSecondary },
   beadCounter: { flexDirection: "row", gap: 6, marginTop: spacing.md },
   bead: { width: 16, height: 16, borderRadius: 8, borderWidth: 1.5, borderColor: "#D4D0C4", backgroundColor: "transparent" },
   controls: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.md, paddingBottom: spacing.sm },

@@ -1,0 +1,33 @@
+{
+  "summary": "Iteration 48 — Backend + Frontend testing of the three NEW 33-day Consecration Challenges (St. Joseph, Marian, Sacred Heart) and their matching daily renewal prayers in the Prayer hub. All 20 backend pytest cases PASS: GET /api/challenges/admin/all returns the 3 new slugs each with total_days=33, status=draft, non-empty opening/closing prayers, and end_dates of 03-19, 05-31, and Easter+68 (June 4, 2027). GET /api/challenges/admin/{slug}/days returns exactly 33 day docs for each consecration with required fields (title, theme, patron_saint, reflection) and 2–4 prayer_items. Frontend Prayer hub (/prayer) lists the 3 new renewal cards at the bottom (testIDs prayer-card-st_joseph_renewal / marian_renewal / sacred_heart_renewal). Opening each renewal shows the HIGHLIGHTED note callout (testID prayer-note) on the first step only, followed by Sign of the Cross + Act of Renewal steps. Language switching works: Italian translation is fast (<5s) and correct; Spanish translation needs ~10–15s (live LLM call) and then renders correctly — both the note callout and the prayer text translate. Admin Challenges screen (/admin/challenges) lists all 3 new consecrations in DRAFT (0/33 published) with Generate-missing/Regen/Publish controls. NOTE: The visible dates on admin are 2027 (Feb 15→Mar 19, Apr 29→May 31, May 3→Jun 4) because today (2026-06-20) is past the 2026 windows — _next_window_for_today correctly advances to the next future occurrence. No mocked APIs. Deprecated package check: code uses Ionicons from @expo/vector-icons (OK); no expo-av/expo-barcode-scanner/expo-background-fetch usage seen in the touched files.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_consecration_iter48.py",
+    "/app/test_reports/pytest/iteration_48_consecration.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "backend/challenges.py is 1248 lines — exceeds the 700-line guideline. Consider splitting helpers (seed, AI gen, models) into separate modules for maintainability. Not blocking.",
+    "Renewal `steps` end with the Act of Renewal but do NOT include a closing Sign of the Cross. Minor — acceptable for a 3-min renewal, but main agent may want to mirror the other chaplets that bookend with two Signs of the Cross.",
+    "The Spanish translation of the note can take 10–15s on first open (live LLM call), which feels slow without a spinner specifically over the note callout. The translator does cache after the first call. Consider an inline shimmer on the note while translating."
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "100% (20/20)",
+    "frontend": "100% (all 7 review-request checks verified: hub listing, note callout EN/IT/ES, prayer body translation, admin Challenges listing)"
+  },
+  "seed_data_creation": "None. Used pre-existing admin token test_home_layout_24h and pre-seeded challenges + 99 day-docs.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Frontend secure-storage stores values as JSON.stringify'd strings — to inject the session token via localStorage on web preview use: localStorage.setItem('sanctus_session_token', JSON.stringify('test_home_layout_24h')). The i18n lang key 'sanctus_lang' is stored as a raw string (no JSON wrap). LLM-based translator (used in prayer/[kind].tsx via useTranslator) needs 10–20s on uncached language switches — always sleep ≥15s before asserting translated note text.",
+  "rca_of_issue": "N/A — no bugs found."
+}

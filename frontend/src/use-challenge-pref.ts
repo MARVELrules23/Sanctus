@@ -13,15 +13,18 @@ import { storage } from "@/src/utils/storage";
 const STORAGE_KEY = "sanctus:challenges:showOnCalendar";
 
 export function useChallengeMasterPref() {
-  const [enabled, setEnabledState] = useState(false);
+  // Default ON so every liturgical challenge is visible on the calendar out of
+  // the box; the user can still turn the overlay off. We only treat an
+  // explicitly-stored `false` as off.
+  const [enabled, setEnabledState] = useState(true);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     let cancel = false;
     (async () => {
-      const v = await storage.getItem<boolean>(STORAGE_KEY, false);
+      const v = await storage.getItem<boolean>(STORAGE_KEY, true);
       if (cancel) return;
-      setEnabledState(v === true);
+      setEnabledState(v !== false);
       setReady(true);
     })();
     return () => {

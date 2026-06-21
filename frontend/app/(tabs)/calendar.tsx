@@ -4,7 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 
-import { api, ChallengeSummary, JournalEntry, LiturgicalDay, listChallenges, listSchedule, ScheduleItem } from "@/src/api";
+import { api, ChallengeWindow, JournalEntry, LiturgicalDay, listChallengeWindows, listSchedule, ScheduleItem } from "@/src/api";
 import { useChallengeMasterPref } from "@/src/use-challenge-pref";
 import LiturgicalBadge from "@/src/components/LiturgicalBadge";
 import { colorForLiturgical, colors, fonts, radius, shadow, spacing } from "@/src/theme";
@@ -24,21 +24,21 @@ export default function CalendarScreen() {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [entriesLoading, setEntriesLoading] = useState(false);
   const [entryDates, setEntryDates] = useState<Set<string>>(new Set());
-  const [challenges, setChallenges] = useState<ChallengeSummary[]>([]);
+  const [challenges, setChallenges] = useState<ChallengeWindow[]>([]);
   const [scheduleItems, setScheduleItems] = useState<ScheduleItem[]>([]);
   const { enabled: challengeMasterOn, setEnabled: setChallengeMasterOn } = useChallengeMasterPref();
 
-  // Pull every published challenge — we'll decorate calendar cells whose
-  // date falls inside an active window. The master toggle below gates
-  // whether overlays render at all.
+  // Pull every liturgical challenge's window computed for the year currently
+  // being viewed — so all tracks (Hallowtide, Advent, Lent, and the
+  // Consecrations) overlay the calendar in whatever year the user browses.
   const loadChallenges = useCallback(async () => {
     try {
-      const r = await listChallenges();
+      const r = await listChallengeWindows(year);
       setChallenges(r.items || []);
     } catch {
       setChallenges([]);
     }
-  }, []);
+  }, [year]);
 
   const load = useCallback(async () => {
     const res = await api<{ days: LiturgicalDay[] }>(`/liturgical/month?year=${year}&month=${month}`);
@@ -142,7 +142,7 @@ export default function CalendarScreen() {
   // Returns null whenever the master "Liturgical Challenges" toggle is off —
   // that single flag drives both the per-cell stripe and the day-detail tile.
   const challengeFor = useCallback(
-    (dStr: string): ChallengeSummary | null => {
+    (dStr: string): ChallengeWindow | null => {
       if (!challengeMasterOn) return null;
       for (const c of challenges) {
         const s = (c.start_date || "").slice(0, 10);
@@ -272,7 +272,7 @@ export default function CalendarScreen() {
                   <Text style={styles.challengeToggleSub}>
                     {challengeMasterOn
                       ? "Showing on the calendar on each track's dates."
-                      : "Turn on to see Hallowtide, Advent, and Lent on the calendar."}
+                      : "Turn on to see all liturgical challenges on the calendar."}
                   </Text>
                 </View>
                 <Switch

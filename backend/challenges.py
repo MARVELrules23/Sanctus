@@ -816,6 +816,44 @@ def build_router(
             out.append(base)
         return {"items": out}
 
+    @router.get("/windows")
+    async def challenge_windows(year: int, user=Depends(get_current_user)):
+        """Return EVERY liturgical challenge's date window for the given
+        calendar year — computed from each track's recurring liturgical rule
+        (so the calendar can overlay them in any year the user browses, not
+        just the single seeded occurrence). Includes drafts so all tracks show."""
+        await _seed_challenges_if_missing(db)
+        out: list[Dict[str, Any]] = []
+        async for doc in challenges.find({}).sort([("slug", 1)]):
+            slug = doc["slug"]
+            try:
+                start, end = compute_default_window(slug, year)
+            except ValueError:
+                # Non-standard challenge with no recurring rule — fall back to
+                # its stored window, but only if it lands in the requested year.
+                s = doc.get("start_date")
+                e = doc.get("end_date")
+                if isinstance(s, datetime) and isinstance(e, datetime) and s.year == year:
+                    start, end = s.date(), e.date()
+                else:
+                    continue
+            out.append({
+                "challenge_id": doc.get("challenge_id"),
+                "slug": slug,
+                "name": doc.get("name"),
+                "subtitle": doc.get("subtitle"),
+                "season": doc.get("season"),
+                "color": doc.get("color"),
+                "icon": doc.get("icon"),
+                "patron_saint": doc.get("patron_saint"),
+                "start_date": start.isoformat(),
+                "end_date": end.isoformat(),
+                "total_days": (end - start).days + 1,
+                "status": doc.get("status", "draft"),
+                "is_premium": True,
+            })
+        return {"items": out, "year": year}
+
     @router.get("/{slug}")
     async def get_challenge(slug: str, user=Depends(get_current_user)):
         is_admin = bool(getattr(user, "is_admin", False))

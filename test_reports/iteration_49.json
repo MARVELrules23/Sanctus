@@ -1,0 +1,46 @@
+{
+  "summary": "Iteration 49 — Liturgical Challenges on the Calendar. Backend GET /api/challenges/windows?year= verified end-to-end via pytest (7/7 passing) for both 2026 and 2027 — all 6 slugs returned with correct windows, movable feasts recomputed (Lent 2027-02-10→2027-03-27, Sacred-Heart 2027-05-03→2027-06-04), fixed feasts unchanged, and required fields present. Frontend Calendar verified via Playwright on mobile viewport (375 viewport equivalent): master toggle defaults ON, toggle OFF hides stripes + day-detail tile, toggle ON restores them; Hallowtide (Nov), Advent (Dec), Marian (Apr 29–May 31), and Sacred Heart (Jun) all display their tile correctly on dates that fall inside ONLY one window. CRITICAL BUG: on dates where two challenges OVERLAP, only one is shown — and the wrong one wins. Selecting 2026-03-10 (inside both Lent and St. Joseph Consecration) shows the Lent tile, not St. Joseph. Same applies to May 11–May 31 where Sacred Heart Consecration overlaps Marian Consecration — only Marian shows, so users cannot reach the Sacred Heart tile until June 1 (i.e. Day 22 of 33). Root cause: src/components/calendar.tsx::challengeFor returns the first match in the `challenges` array, and the backend `windows` endpoint sorts by slug alphabetically (advent, hallowtide, lent, marian-consecration, sacred-heart-consecration, st-joseph-consecration), so the alphabetically-earlier track wins regardless of which is more specific.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "(tabs)/calendar.tsx challengeFor()",
+        "issue": "When two challenge windows overlap on the same date (e.g. Lent ∩ St. Joseph Consecration, or Marian ∩ Sacred Heart Consecration), only the FIRST match in the challenges[] array is rendered. Backend returns them sorted by slug, so Lent wins over St. Joseph on Feb 15–Mar 19 and Marian wins over Sacred Heart on May 11–May 31. Per the review request, selecting 2026-03-10 should show cal-challenge-tile-st-joseph-consecration but instead shows cal-challenge-tile-lent ('Lent · Day 21 of 46 · Our Lady of Sorrows'). Sacred Heart Consecration is unreachable from the calendar for its first 21 days.",
+        "testID": "cal-challenge-tile-st-joseph-consecration / cal-challenge-tile-sacred-heart-consecration",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "(tabs)/calendar.tsx",
+        "issues": [
+          "Each calendar cell only renders ONE colored stripe (cellChallengeBar) even when two challenges overlap that day — consider stacking or splitting the bar so the user can see, e.g., both Lent and St. Joseph violet on Feb 15–Mar 19."
+        ]
+      }
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_challenge_windows.py",
+    "/app/test_reports/pytest/iteration_49_challenge_windows.xml"
+  ],
+  "action_items": [
+    "Fix calendar overlap precedence in /app/frontend/app/(tabs)/calendar.tsx::challengeFor — when more than one window contains a date, prefer the shorter / more specific window (e.g. the 33-day consecrations over the 46-day Lent), OR render every overlapping challenge as separate stripes + multiple day-detail tiles. The current 'first slug wins' behavior makes St. Joseph Consecration and the first 21 days of Sacred Heart Consecration unreachable from the Calendar.",
+    "Consider returning the windows from /api/challenges/windows sorted by total_days ASC (shortest first) or by start_date, so the default 'first match' implicitly favors the more specific challenge. Either backend or frontend can fix this; frontend is the more deterministic option.",
+    "Optional: render multiple stripes per cell + multiple tiles in the day detail when N>1 challenges overlap, so all coexisting challenges are discoverable on the Calendar."
+  ],
+  "critical_code_review_comments": [
+    "calendar.tsx is approaching 700 lines and tightly couples liturgical days, journal, schedule, AND challenges in one screen — a future split (e.g. extract <ChallengeOverlay/>) would help.",
+    "challengeFor() is O(challenges*cells) on every render; with 6 challenges and ~42 cells it's fine today but the early-return-on-first-match is the root of the overlap bug."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_challenge_windows.py (new)"
+  ],
+  "success_rate": { "backend": "100%", "frontend": "85%" },
+  "seed_data_creation": "None. Used the pre-minted admin session token 'test_home_layout_24h' from the review request.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Use Bearer token 'test_home_layout_24h' for admin/premium calls. Backend windows endpoint returns items sorted by slug ASC — that ordering is what causes the Lent-wins-over-St.Joseph and Marian-wins-over-Sacred-Heart overlap bug. After main agent fixes overlap precedence, re-run Playwright clicks on 2026-03-10 (must show St Joseph tile) and 2026-05-15 (Sacred Heart should also be reachable somehow).",
+  "rca_of_issue": "Reproduction: 1) Open the Calendar tab; 2) navigate to March 2026; 3) tap day 10. Expected: tile 'St. Joseph Consecration · Day 24 of 33'. Actual: tile 'Lent · Day 21 of 46 · Our Lady of Sorrows'. Cause: in /app/frontend/app/(tabs)/calendar.tsx, challengeFor() loops the challenges array and returns the first window that contains the date; the backend returns them sorted alphabetically by slug, so the alphabetically-earlier track (lent < st-joseph-consecration; marian-consecration < sacred-heart-consecration) wins. Mitigation: either sort the array on the frontend by ascending total_days before the lookup so the more specific window matches first, or change /api/challenges/windows to return items sorted by total_days ASC, or render all overlapping challenges (multiple stripes + multiple tiles)."
+}

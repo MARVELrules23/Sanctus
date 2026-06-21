@@ -1147,6 +1147,27 @@ export async function listChallenges(): Promise<{ items: ChallengeSummary[] }> {
   return await api(`/challenges`);
 }
 
+export type ChallengeWindow = {
+  challenge_id: string;
+  slug: ChallengeSlug;
+  name: string;
+  subtitle?: string | null;
+  season?: string | null;
+  color?: string | null;
+  icon?: string | null;
+  patron_saint?: string | null;
+  start_date: string; // ISO date (YYYY-MM-DD)
+  end_date: string;
+  total_days: number;
+  status: ChallengeStatus;
+};
+
+// Every liturgical challenge's window computed for a given calendar year, so
+// the calendar can overlay all tracks in whatever year is being browsed.
+export async function listChallengeWindows(year: number): Promise<{ items: ChallengeWindow[] }> {
+  return await api(`/challenges/windows?year=${year}`);
+}
+
 export async function getChallenge(slug: string): Promise<ChallengeDetail> {
   return await api(`/challenges/${encodeURIComponent(slug)}`);
 }

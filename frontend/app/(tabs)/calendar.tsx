@@ -138,35 +138,38 @@ export default function CalendarScreen() {
       .sort((a, b) => (a.time || "99:99").localeCompare(b.time || "99:99"));
   }, [scheduleItems, selected]);
 
-  // Lookup: which published challenge does this date belong to (if any)?
-  // Returns null whenever the master "Liturgical Challenges" toggle is off —
-  // that single flag drives both the per-cell stripe and the day-detail tile.
-  const challengeFor = useCallback(
-    (dStr: string): ChallengeWindow | null => {
-      if (!challengeMasterOn) return null;
-      for (const c of challenges) {
-        const s = (c.start_date || "").slice(0, 10);
-        const e = (c.end_date || "").slice(0, 10);
-        if (!s || !e) continue;
-        if (s <= dStr && dStr <= e) return c;
-      }
-      return null;
+  // Lookup: which published challenges cover this date (there can be more than
+  // one — e.g. St. Joseph overlaps Lent, Sacred Heart overlaps Marian). Sorted
+  // shortest-window-first so the most specific track is listed first. Returns
+  // an empty array whenever the master "Liturgical Challenges" toggle is off.
+  const challengesForDate = useCallback(
+    (dStr: string): ChallengeWindow[] => {
+      if (!challengeMasterOn) return [];
+      return challenges
+        .filter((c) => {
+          const s = (c.start_date || "").slice(0, 10);
+          const e = (c.end_date || "").slice(0, 10);
+          return !!s && !!e && s <= dStr && dStr <= e;
+        })
+        .sort((a, b) => (a.total_days || 0) - (b.total_days || 0));
     },
     [challenges, challengeMasterOn],
   );
 
-  const selChallenge = sel ? challengeFor(sel.date) : null;
-  const selDayIndex = useMemo(() => {
-    if (!sel || !selChallenge) return null;
-    const start = (selChallenge.start_date || "").slice(0, 10);
-    if (!start) return null;
+  const dayIndexFor = useCallback((c: ChallengeWindow, dStr: string): number => {
+    const start = (c.start_date || "").slice(0, 10);
+    if (!start) return 1;
     const sD = new Date(`${start}T00:00:00`);
-    const dD = new Date(`${sel.date}T00:00:00`);
+    const dD = new Date(`${dStr}T00:00:00`);
     const raw = Math.floor((dD.getTime() - sD.getTime()) / 86_400_000) + 1;
-    const total = selChallenge.total_days || 0;
-    if (!total) return Math.max(1, raw);
-    return Math.max(1, Math.min(raw, total));
-  }, [sel, selChallenge]);
+    const total = c.total_days || 0;
+    return total ? Math.max(1, Math.min(raw, total)) : Math.max(1, raw);
+  }, []);
+
+  const selChallenges = useMemo(
+    () => (sel ? challengesForDate(sel.date) : []),
+    [sel, challengesForDate],
+  );
 
   const prev = () => {
     if (month === 1) {
@@ -221,7 +224,7 @@ export default function CalendarScreen() {
                 const isSel = cell.date === selected;
                 const isToday = cell.date === todayISO();
                 const c = colorForLiturgical(cell.color);
-                const cellChallenge = challengeFor(cell.date);
+                const cellChallenges = challengesForDate(cell.date);
                 return (
                   <Pressable
                     key={cell.date}
@@ -243,14 +246,19 @@ export default function CalendarScreen() {
                     {hasSchedule(cell.date) && (
                       <View style={styles.scheduleDot} testID={`schedule-dot-${cell.date}`} />
                     )}
-                    {cellChallenge ? (
-                      <View
-                        style={[
-                          styles.cellChallengeBar,
-                          { backgroundColor: cellChallenge.color || colors.gold },
-                        ]}
-                        testID={`cal-challenge-${cell.date}`}
-                      />
+                    {cellChallenges.length > 0 ? (
+                      <View style={styles.cellChallengeBarRow} testID={`cal-challenge-${cell.date}`}>
+                        {cellChallenges.slice(0, 3).map((cc) => (
+                          <View
+                            key={cc.slug}
+                            style={[
+                              styles.cellChallengeBar,
+                              { backgroundColor: cc.color || colors.gold },
+                            ]}
+                            testID={`cal-challenge-${cell.date}-${cc.slug}`}
+                          />
+                        ))}
+                      </View>
                     ) : null}
                   </Pressable>
                 );
@@ -325,38 +333,39 @@ export default function CalendarScreen() {
                   </Text>
                 )}
 
-                {selChallenge ? (
+                {selChallenges.map((ch) => (
                   <Pressable
-                    testID={`cal-challenge-tile-${selChallenge.slug}`}
+                    key={ch.slug}
+                    testID={`cal-challenge-tile-${ch.slug}`}
                     onPress={() =>
                       router.push({
                         pathname: "/challenges/[slug]",
-                        params: { slug: selChallenge.slug },
+                        params: { slug: ch.slug },
                       })
                     }
                     style={({ pressed }) => [
                       styles.challengeTile,
-                      { borderColor: selChallenge.color || colors.gold },
+                      { borderColor: ch.color || colors.gold },
                       pressed && styles.pressed,
                     ]}
                   >
                     <Ionicons
-                      name={(selChallenge.icon as keyof typeof Ionicons.glyphMap) || "flame-outline"}
+                      name={(ch.icon as keyof typeof Ionicons.glyphMap) || "flame-outline"}
                       size={18}
-                      color={selChallenge.color || colors.gold}
+                      color={ch.color || colors.gold}
                     />
                     <View style={{ flex: 1 }}>
                       <Text style={styles.challengeTileTitle}>
-                        {selChallenge.name}
+                        {ch.name}
                       </Text>
                       <Text style={styles.challengeTileMeta}>
-                        Day {selDayIndex} of {selChallenge.total_days}
-                        {selChallenge.patron_saint ? ` · ${selChallenge.patron_saint}` : ""}
+                        Day {dayIndexFor(ch, sel.date)} of {ch.total_days}
+                        {ch.patron_saint ? ` · ${ch.patron_saint}` : ""}
                       </Text>
                     </View>
                     <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
                   </Pressable>
-                ) : null}
+                ))}
               </View>
             ) : null}
 
@@ -545,11 +554,17 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     backgroundColor: colors.gold,
   },
-  cellChallengeBar: {
+  cellChallengeBarRow: {
     position: "absolute",
     bottom: 0,
     left: 6,
     right: 6,
+    height: 3,
+    flexDirection: "row",
+    gap: 2,
+  },
+  cellChallengeBar: {
+    flex: 1,
     height: 3,
     borderRadius: 2,
   },

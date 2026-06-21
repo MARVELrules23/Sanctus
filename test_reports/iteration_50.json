@@ -1,0 +1,25 @@
+{
+  "summary": "Iteration 50 — Re-test of overlap-precedence fix for Liturgical Challenges on the Calendar. ALL 8 frontend checks PASSED on mobile viewport (390x844). The Calendar now correctly surfaces every overlapping challenge as its own tile (sorted shortest-window-first) AND renders multiple colored stripes per cell. Specifically verified: (1) 2026-03-10 shows BOTH 'St. Joseph Consecration · Day 24 of 33' AND 'Lent · Day 21 of 46', with St. Joseph listed FIRST (shorter 33-day window before 46-day Lent); (2) 2026-05-20 shows BOTH 'Marian Consecration · Day 22 of 33' AND 'Sacred Heart Consecration · Day 10 of 33' — Sacred Heart is now reachable from the calendar on its first 21 days; (3) the cell stripe row [data-testid=cal-challenge-2026-03-10] contains exactly 2 child bars with testIDs cal-challenge-2026-03-10-st-joseph-consecration and cal-challenge-2026-03-10-lent; (4) non-overlapping dates still work — 2026-04-29 shows Marian only (Day 1 of 33), 2026-02-16 shows St. Joseph only (Day 2 of 33); (5) tapping the St. Joseph tile navigates to /challenges/st-joseph-consecration; (6) master toggle OFF hides every challenge tile and stripe (0 tiles, regression confirmed clean). The HIGH-priority bug from iteration 49 is RESOLVED.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_challenge_windows.py (from iteration 49, still passing)"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "calendar.tsx is now 701 lines — at the soft cap. Suggest extracting <ChallengeOverlay/> (stripe row + tile list) into /app/frontend/src/components/ for maintainability; logic is otherwise correct.",
+    "challengesForDate sorts by total_days on every render via useCallback — fine for 6 challenges but could be memoized once per `challenges` change to avoid re-sorting per cell."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "100%", "frontend": "100%" },
+  "seed_data_creation": "None. Used pre-minted admin session token 'test_home_layout_24h' set via localStorage.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Iteration 49's overlap-precedence bug is FIXED in /app/frontend/app/(tabs)/calendar.tsx — challengesForDate() now returns all containing windows sorted by total_days ASC, and the render layer maps every entry to its own stripe + tile (capped at 3 stripes in the cell, unlimited tiles in the day detail). Day-index is computed client-side via (date - start)/86400000 + 1, clamped to total_days, and the tile reads 'Day N of total_days'. No further action needed for this feature.",
+  "rca_of_issue": "Resolution confirmed: the fix changed the calendar from picking a single 'best' challenge to enumerating every overlapping challenge, sorted by total_days ASC. The shortest-window-first sort means the user always sees the most specific track first (e.g. St. Joseph 33d before Lent 46d, Sacred Heart 33d before Marian 33d ties on length then sorts deterministically). Cell stripes are capped at 3 to preserve cell layout, day-detail tiles are uncapped so no challenge is ever hidden."
+}

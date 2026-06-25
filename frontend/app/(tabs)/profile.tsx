@@ -352,6 +352,15 @@ export default function ProfileScreen() {
                 <AutoText style={styles.linkLabel}>Library · Films</AutoText>
                 <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
               </Pressable>
+              <Pressable
+                testID="profile-admin-miracles-link"
+                onPress={() => router.push("/admin/miracles")}
+                style={({ pressed }) => [styles.linkCard, pressed && styles.pressed]}
+              >
+                <Ionicons name="sparkles-outline" size={18} color={colors.gold} />
+                <AutoText style={styles.linkLabel}>Miracles · Review</AutoText>
+                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+              </Pressable>
             </View>
           </>
         ) : null}

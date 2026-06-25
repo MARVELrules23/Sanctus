@@ -3123,10 +3123,12 @@ from virtues import build_router as build_virtues_router
 from schedule import build_router as build_schedule_router
 from i18n_translate import build_router as build_translate_router
 from in_the_world import build_router as build_world_router
+from miracles import build_router as build_miracles_router
 
 api.include_router(build_daily_practice_router(db, get_current_user, EMERGENT_LLM_KEY))
 api.include_router(build_translate_router(db, get_current_user, EMERGENT_LLM_KEY))
 api.include_router(build_world_router(db, get_current_user, EMERGENT_LLM_KEY))
+api.include_router(build_miracles_router(db, get_current_user, EMERGENT_LLM_KEY))
 api.include_router(build_catechism_router(db, get_current_user, EMERGENT_LLM_KEY))
 api.include_router(build_parish_events_router(db, get_current_user))
 api.include_router(build_saints_router(db, get_current_user, EMERGENT_LLM_KEY))

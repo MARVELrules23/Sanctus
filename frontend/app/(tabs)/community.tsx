@@ -308,10 +308,33 @@ export default function CommunityScreen() {
             <Ionicons name="chatbubbles-outline" size={20} color={colors.primary} />
             <NotificationBadge count={unreadDMTotal} testID="community-dm-badge" />
           </Pressable>
+          <Pressable
+            testID="community-miracles-btn"
+            onPress={() => router.push("/community/miracles")}
+            hitSlop={8}
+            style={({ pressed }) => [styles.iconBtn, pressed && styles.pressed]}
+          >
+            <Ionicons name="sparkles-outline" size={20} color={colors.primary} />
+          </Pressable>
         </ScrollView>
       </View>
 
-      {/* Topic chips */}
+      {/* Live Feed banner */}
+      <Pressable
+        testID="community-miracles-banner"
+        onPress={() => router.push("/community/miracles")}
+        style={({ pressed }) => [styles.miracleBanner, pressed && styles.pressed]}
+      >
+        <View style={styles.miracleIcon}>
+          <Ionicons name="sparkles" size={18} color={colors.gold} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.miracleTitle}>Live Feed · Catholic Miracles</Text>
+          <Text style={styles.miracleSub} numberOfLines={1}>Reported claims & their Church status</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+      </Pressable>
+
       <View style={styles.chipsWrap}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
           {topics.map((t) => {
@@ -768,6 +791,30 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   chipsWrap: { borderBottomWidth: 1, borderBottomColor: colors.borderSoft, paddingBottom: spacing.sm },
+  miracleBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
+    paddingVertical: 10,
+    paddingHorizontal: spacing.sm,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.gold + "66",
+  },
+  miracleIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: radius.md,
+    backgroundColor: colors.gold + "1A",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  miracleTitle: { fontFamily: fonts.uiSemi, fontSize: 14, color: colors.primary },
+  miracleSub: { fontFamily: fonts.bodyRegular, fontSize: 12, color: colors.textMuted, marginTop: 1 },
   chipsRow: { paddingHorizontal: spacing.lg, gap: 8 },
   chip: {
     flexDirection: "row",

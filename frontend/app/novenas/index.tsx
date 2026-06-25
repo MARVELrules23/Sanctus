@@ -69,7 +69,7 @@ export default function NovenasListScreen() {
             <View style={{ flex: 1 }}>
               <Text style={styles.activeLabel}>IN PROGRESS</Text>
               <Text style={styles.activeName}>{activeNovena.name}</Text>
-              <Text style={styles.activeProg}>{active.completed_days.length} of {active.total_days} days complete</Text>
+              <Text style={styles.activeProg}>{`${active.completed_days.length} of ${active.total_days} days complete`}</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
           </Pressable>

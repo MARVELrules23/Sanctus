@@ -1,0 +1,28 @@
+{
+  "summary": "Iter59 retest of iter58 gaps — ALL PASS. Backend: GET /api/library/books|radio|films with Accept-Language: it/es now return localized title/blurb/author (and station name) via the new _localize_docs() + cached translate_texts. 9/9 list-endpoint i18n tests pass (1 detail-endpoint test is intentionally skipped — detail page localization is frontend-only via AutoText, which iter58 already verified). Frontend (mobile 390x844, web, lang=it): (1) Profile dietary chips fully Italian — equilibrato/vegetariano/pescetariano/basso contenuto di carboidrati/mediterraneo. (2) Both previously-failing admin links Italian: 'Sfide · Revisione' (Challenges · Review) and 'Biblioteca · Radio' (Library · Radio); all other admin links also Italian. (3) Library: segment tabs Libri/Radio/Film translated; header 'Biblioteca Sanctus'; section header 'Lettore Integrato'; book titles Italian on the LIST page on first visit (Confessioni, L'Imitazione di Cristo, Trattato del Purgatorio, Il Castello Interiore, Il Combattimento Spirituale, Filotea, La Pratica della Presenza di Dio, Trattato della Vera Devozione a Maria); Radio station names + blurbs Italian (EWTN Radio Cattolica, Guadalupe Radio Network, Iowa Catholic Radio, Radio Maria Italia, etc.); Films category chips Tutti/Santi/Dottrina/Per Bambini/Documentario and per-card category badge ANIMATO/DOTTRINA/DOCUMENTARIO + film titles/blurbs Italian (Nostra Signora di Guadalupe, San Francesco d'Assisi — Film Completo Animato). Spanish (lang=es): Library segment Libros/Radio/Películas, 'Lector en la Aplicación', book titles (Confesiones, La Imitación de Cristo, Tratado del Purgatorio, Las Moradas del Castillo Interior, El Combate Espiritual); Profile dietary chips Spanish (equilibrada/vegetariana/pescetariana/baja en carbohidratos/mediterránea); admin links 'Desafíos · Revisar' + 'Biblioteca · Radio'. English regression: book titles restored (Confessions / The Imitation of Christ / Treatise on Purgatory / The Interior Castle / The Spiritual Combat). Community regression (IT): header 'Comunità', subtitle 'La parrocchia si riunisce — parlate con carità.', per-post Translate button labeled 'Traduci' → tap → body translates and button becomes 'Mostra originale' → tap again → body restored, button back to 'Traduci'. Deprecated packages detected: none. SafeAreaView issues detected: none.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_library_i18n_iter59.py",
+    "/app/test_reports/pytest/iteration_59_library_i18n.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "library.py: _localize_book_detail() is defined but never wired into the GET /api/library/books/{slug} handler. Detail-page i18n today relies solely on the frontend AutoText flush (which already works per iter58 + iter59 regression). If you want the same fast-cached server-side path for detail (eliminating the AutoText burst on chapter list), call `await _localize_book_detail(db, out)` right before returning from get_book.",
+    "The first request per language is slow (~5-10s of LLM batches per endpoint). For best UX on cold-start, consider warming books/radio/films for it+es at app boot or via a background task; cache then serves instantly."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_library_i18n_iter59.py (new)"
+  ],
+  "success_rate": {"backend": "100% (9/9 list i18n tests pass; 1 detail test skipped by design)", "frontend": "100% — all iter58 FAILs resolved"},
+  "seed_data_creation": "None. Reused existing seed catalog + token test_feat_aug25 (philipwils13@gmail.com admin+premium). Language toggled via localStorage.sanctus_lang.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iter59 closed iter58 gaps. Server-side localization wired into list endpoints library/{books,radio,films}; profile.tsx now uses AutoText for the dietary chips and for the two previously-missed admin links. If main agent extends server-side i18n to detail endpoint, call _localize_book_detail in get_book. Otherwise the frontend AutoText flow handles the detail screen fine.",
+  "rca_of_issue": "iter58 had two root causes — both fixed in iter59: (A) Three <Text> nodes (dietary chip + 2 admin links) bypassed AutoText. Fixed by replacing them with <AutoText>. (B) The bulk Library catalog (~50+ strings) was slow because AutoText flushed lazily per-screen. Fixed by adding _localize_docs() in library.py which runs the title/blurb (and station name) through the permanently-cached translate_texts based on the Accept-Language ContextVar, so list responses are pre-translated server-side. First request per language is still LLM-bound (~5-10s) but every subsequent request is instant from cache."
+}

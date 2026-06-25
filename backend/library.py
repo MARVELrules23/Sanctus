@@ -295,6 +295,60 @@ def _public_film(d: Dict[str, Any]) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
+import os as _os
+from lang_ctx import get_lang as _get_lang
+
+
+async def _localize_docs(db, items, fields):
+    """Translate the given string fields of each dict in `items` into the
+    request language (from the Accept-Language ContextVar), in place. Uses the
+    shared, permanently-cached translator so repeat calls are instant."""
+    lang = _get_lang()
+    if lang == "en" or not items:
+        return items
+    texts: List[str] = []
+    idx: List[tuple] = []
+    for i, it in enumerate(items):
+        for f in fields:
+            v = it.get(f)
+            if isinstance(v, str) and v.strip():
+                idx.append((i, f))
+                texts.append(v)
+    if not texts:
+        return items
+    try:
+        from i18n_translate import translate_texts
+        key = _os.environ.get("EMERGENT_LLM_KEY", "")
+        tr = await translate_texts(db, key, texts, lang)
+        for (i, f), t in zip(idx, tr):
+            if isinstance(t, str) and t.strip():
+                items[i][f] = t
+    except Exception:  # noqa: BLE001
+        pass
+    return items
+
+
+async def _localize_book_detail(db, book):
+    """Localize a single book's title/blurb/author and all chapter titles."""
+    lang = _get_lang()
+    if lang == "en":
+        return book
+    await _localize_docs(db, [book], ["title", "blurb", "author"])
+    chaps = book.get("chapters") or []
+    titles = [c.get("title", "") for c in chaps]
+    if any(t.strip() for t in titles):
+        try:
+            from i18n_translate import translate_texts
+            key = _os.environ.get("EMERGENT_LLM_KEY", "")
+            tr = await translate_texts(db, key, titles, lang)
+            for c, t in zip(chaps, tr):
+                if isinstance(t, str) and t.strip():
+                    c["title"] = t
+        except Exception:  # noqa: BLE001
+            pass
+    return book
+
+
 def build_router(db: AsyncIOMotorDatabase, get_current_user) -> APIRouter:
     router = APIRouter(prefix="/library", tags=["library"])
 
@@ -323,6 +377,7 @@ def build_router(db: AsyncIOMotorDatabase, get_current_user) -> APIRouter:
         q: Dict[str, Any] = {} if is_admin else {"status": "published"}
         cur = books.find(q, {"_id": 0}).sort([("year", 1), ("title", 1)])
         items = [_public_book(d) async for d in cur]
+        await _localize_docs(db, items, ["title", "blurb", "author"])
         return {"items": items, "total": len(items)}
 
     @router.get("/books/{slug}")
@@ -530,6 +585,7 @@ def build_router(db: AsyncIOMotorDatabase, get_current_user) -> APIRouter:
         q: Dict[str, Any] = {} if is_admin else {"status": "published"}
         cur = stations.find(q, {"_id": 0}).sort([("name", 1)])
         items = [_public_station(d) async for d in cur]
+        await _localize_docs(db, items, ["name", "blurb"])
         return {"items": items, "total": len(items)}
 
     @router.get("/radio/{slug}")
@@ -608,6 +664,7 @@ def build_router(db: AsyncIOMotorDatabase, get_current_user) -> APIRouter:
             q["category"] = category
         cur = films.find(q, {"_id": 0}).sort([("category", 1), ("title", 1)])
         items = [_public_film(d) async for d in cur]
+        await _localize_docs(db, items, ["title", "blurb"])
         return {"items": items, "total": len(items)}
 
     @router.get("/films/{slug}")

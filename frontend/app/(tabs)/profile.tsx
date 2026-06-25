@@ -145,7 +145,7 @@ export default function ProfileScreen() {
                   onPress={() => update({ dietary: opt })}
                   style={[styles.optionChip, prefs.dietary === opt && styles.optionChipSel]}
                 >
-                  <Text style={[styles.optionText, prefs.dietary === opt && styles.optionTextSel]}>{opt}</Text>
+                  <AutoText style={[styles.optionText, prefs.dietary === opt && styles.optionTextSel]}>{opt}</AutoText>
                 </Pressable>
               ))}
             </View>
@@ -322,7 +322,7 @@ export default function ProfileScreen() {
                 style={({ pressed }) => [styles.linkCard, pressed && styles.pressed]}
               >
                 <Ionicons name="flame-outline" size={18} color={colors.gold} />
-                <Text style={styles.linkLabel}>Challenges · Review</Text>
+                <AutoText style={styles.linkLabel}>Challenges · Review</AutoText>
                 <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
               </Pressable>
               <Pressable
@@ -340,7 +340,7 @@ export default function ProfileScreen() {
                 style={({ pressed }) => [styles.linkCard, pressed && styles.pressed]}
               >
                 <Ionicons name="radio-outline" size={18} color={colors.gold} />
-                <Text style={styles.linkLabel}>Library · Radio</Text>
+                <AutoText style={styles.linkLabel}>Library · Radio</AutoText>
                 <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
               </Pressable>
               <Pressable

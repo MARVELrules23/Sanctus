@@ -42,6 +42,16 @@ export default function PrayerHubScreen() {
         router.push({ pathname: "/prayer/[kind]", params: { kind: "rosary", date: today } }),
       featured: true,
     });
+    // Novenas hub
+    arr.push({
+      testID: "prayer-card-novenas",
+      title: "Novenas",
+      subtitle: "Nine days of prayer — choose your start date",
+      meta: "9 DAYS",
+      color: "#5B3475",
+      icon: "calendar-outline",
+      onPress: () => router.push("/novenas"),
+    });
     // Chaplets
     for (const key of CHAPLET_ORDER) {
       const c = CHAPLETS[key];

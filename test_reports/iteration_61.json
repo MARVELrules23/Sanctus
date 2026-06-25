@@ -1,0 +1,32 @@
+{
+  "summary": "Novenas feature (iter 61) tested end-to-end. Backend: 15/15 pytest cases pass (100%) — list returns all 11 novenas, detail localized + carries day_intentions for Divine Mercy & St Michael, start/complete-day/active/stop work, 409 conflict returns detail.active_slug, restart-same-slug replaces enrollment, 400 on invalid start_date and day, AI reflection generates and is cached per (slug,day) and localized. Frontend (mobile viewport 390x844): Prayer hub → 'Novenas' card navigates to /novenas (11 cards render). Detail shows patron, feast, intro, prayer. Start flow with quick chips + YYYY-MM-DD input + Start Novena button enrolls. After start, screen shows 'Day 1 of 9', 9 day-dots (8 locked with lock icon), day intention for Divine Mercy, PRAYER, AI CONTEMPLATION (loads in ~5s). Mark Day Complete → dot becomes checkmark, '1 completed' shown. Restart/Stop visible. Active banner appears on list with 'IN PROGRESS' badge and routes to detail. Spanish localization (lang=es) translates novena names, intros, themes, day intentions, feast labels and the 'IN PROGRESS' banner (→ 'EN CURSO'). One minor i18n gap: dynamic template strings 'X of Y days complete' and 'Day X of 9' / 'X completed' remain in English in ES (AutoText does not translate template-with-interpolation phrases).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/novenas (list) + /novenas/[slug]", "issues": [
+        "Dynamic progress labels are not localized in ES/IT: 'X of Y days complete' (active banner) and 'Day X of 9', 'X completed' (detail) remain English when lang=es. Likely because AutoText can't extract literal portions from template-interpolated children. Consider passing the localized phrase via i18n with placeholders (e.g., t('day_of_total', {n, total}))."
+      ]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_novenas_iter61.py",
+    "/app/test_reports/pytest/iteration_61_novenas.xml"
+  ],
+  "action_items": [
+    "(Polish, low priority) Localize the dynamic progress strings 'Day X of 9', 'X completed', and 'X of Y days complete' in /app/frontend/app/novenas/[slug].tsx and /app/frontend/app/novenas/index.tsx by routing through the i18n keys (t('novena.day_of_total'), t('novena.completed_count')) instead of wrapping interpolated template literals in AutoText."
+  ],
+  "critical_code_review_comments": [
+    "novenas.py:208 broad except swallows translation failures silently — fine for graceful EN fallback but consider logging the exception for ops visibility.",
+    "novenas.py:347 — if reflection LLM fails, response returns reflection:'' (200). Frontend handles this with a spinner that never resolves until day reselect. Consider returning a non-empty placeholder or surfacing a retry signal."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (15/15)", "frontend": "~95% (all critical flows pass; minor i18n template-string gap)"},
+  "seed_data_creation": "No new seed data. Test cleans up the user's active enrollment via POST /api/novenas/stop in fixture setup/teardown.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Use Bearer test_feat_aug25 for philipwils13@gmail.com. Run POST /api/novenas/stop before tests that need a clean state — only one active novena per user. AI reflection first call ~5–10s, cached after. test_novenas_iter61.py is idempotent and self-cleans.",
+  "rca_of_issue": "n/a — no functional regressions detected."
+}

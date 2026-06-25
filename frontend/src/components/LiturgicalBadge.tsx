@@ -2,8 +2,9 @@
  * LiturgicalBadge — pill showing season/feast color and label.
  */
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
+import { AutoText } from "@/src/auto-text";
 import { colorForLiturgical, colors, fonts, radius, spacing } from "@/src/theme";
 
 export function LiturgicalBadge({
@@ -25,7 +26,7 @@ export function LiturgicalBadge({
       ]}
     >
       <View style={[styles.dot, { backgroundColor: c }]} />
-      <Text style={[styles.label, { color: c }]}>{label.toUpperCase()}</Text>
+      <AutoText style={[styles.label, { color: c }]}>{label.toUpperCase()}</AutoText>
     </View>
   );
 }

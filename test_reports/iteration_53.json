@@ -1,0 +1,42 @@
+{
+  "summary": "Iteration 53 — RE-TEST of the two previously-failing frontend items after Metro cache clear + 60ms-deferred-confirm fix. BOTH BUGS NOW RESOLVED. (1) COMMUNITY POST DELETE on web — VERIFIED FIXED. Seeded a TEST_iter53 post via API as the admin user (user_ade7a898e281), navigated to /community, tapped 'community-post-menu-{id}', then tapped 'community-menu-delete-{id}'. The deferred setTimeout(60ms) fires window.confirm (captured message: 'Delete this post? This cannot be undone.'), auto-accept resolved, DELETE /api/community/posts/{id} returned 200, the post was removed from the in-memory feed (DOM count 1→0) and from the backend feed API. (2) AUTOTEXT LANG TRANSLATION — VERIFIED FIXED on the listed screens. With lang='it', POST /api/translate fires on first navigation to each AutoText screen and the screen re-renders with Italian copy after the response. Confirmed on /meals (Pasti, Una tavola settimanale guidata dai tempi della Chiesa, Piano personalizzato, Lista della spesa, Suggerisci all'IA, Nessun pasto ancora per questo giorno, Sanctus preparerà colazione, pranzo e cena…, Genera i Pasti del Giorno, Lun/Mar/Mer/Gio/Ven/Sab/Dom, Giovedì 25 giugno), /wellness (Benessere, Il corpo è tempio dello Spirito Santo, GUIDA COACHING IA, IL TUO PROFILO, Obiettivo, Perdere/Mantenere/Aumentare, Livello di attività, Peso/Altezza/Peso obiettivo, Salva profilo), and /churches (Chiese cattoliche, Nelle vicinanze, Salvate, Trova chiese vicino a te, Usa la mia posizione). Switching back to EN restores all English copy instantly (testID lang-en works). NOTE: a small race-condition exists where on the VERY FIRST visit to /meals after a fresh language switch, the page renders in English for ~1-2s while the /api/translate POST is in flight; the response then arrives and the screen flips to Italian without a refresh. On every subsequent visit (cache primed), the page renders in Italian immediately. This is acceptable given the lazy/batched design. Spanish on /charities: header chips translate ('Cercanas', 'Salvate'… etc.) but the visible top label 'Catholic Charities' / 'Volunteer your time · corporal works of mercy' (page subtitle) plus the directory items remain English. The directory rows ARE dynamic backend content (charity names/addresses/descriptions) and are out of scope; the top header text MAY still be inside a non-aliased Text — see action items.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "app/charities.tsx (header label)",
+        "issue": "Top 'Catholic Charities' title and 'Volunteer your time · corporal works of mercy' subtitle remain English even after the AutoText /api/translate response arrives in Spanish. Other charity body cards are dynamic backend content (out of scope) but the page header should localize. Likely the screen file does not alias `AutoText as Text` (or the header is in a child component still importing react-native's Text).",
+        "testID": "n/a",
+        "priority": "LOW"
+      },
+      {
+        "component": "app/(tabs)/meals.tsx (GoalModeToggle labels)",
+        "issue": "Inline static labels 'Liturgical season' and 'My goals' on the meals header toggle remain English in Italian mode. They appear to be rendered inside src/components/GoalModeToggle.tsx which probably imports Text from react-native rather than AutoText.",
+        "testID": "meals-goal-toggle",
+        "priority": "LOW"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter52_translate.py (existing backend regression — still relevant)"
+  ],
+  "action_items": [
+    "(Optional polish) Switch GoalModeToggle's Text import to '@/src/auto-text' so 'Liturgical season' / 'My goals' also translate.",
+    "(Optional polish) Verify app/charities.tsx (and any sub-component rendering its top 'Catholic Charities' / volunteer subtitle) imports `{ AutoText as Text }` so the header localizes in ES/IT.",
+    "Initial-render race: on the first navigation after a language switch, AutoText screens flash English for ~1s while /api/translate is in flight. If desired, the AutoText cache could be warmed at app boot for a known set of screen literals, or AutoText could opportunistically render a Suspense-style placeholder. Not blocking — degrades to plain English while the cache populates, which is acceptable."
+  ],
+  "critical_code_review_comments": [
+    "Both previous root causes confirmed: (a) stale Metro cache was indeed serving pre-AutoText bundles; clearing METRO_CACHE_ROOT and restarting expo unblocked translation. (b) The Modal-wrapped Pressable for Delete was racing the menu's close animation on RN-Web — the setTimeout(60ms) deferral lets the modal teardown complete before window.confirm is invoked, which now reliably fires and yields a 200 from DELETE /api/community/posts/{id}.",
+    "AutoText subscribers/cache pattern works as designed: a single batched POST per screen, then a synchronous re-render of every mounted AutoText. Spanish/Italian both verified."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "n/a (frontend-only retest)", "frontend": "~95% (both previously-failing bugs fixed; only minor polish items remain on /charities header and meals goal-toggle labels)" },
+  "seed_data_creation": "Created one TEST_iter53 community post via API (Bearer test_feat_aug25); it was successfully deleted by the UI flow during the test (post_82dbc39097134b → 200 DELETE).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Both iter-52 critical bugs (community delete on web, AutoText translation across screen bodies) are now passing. If the main agent ships the optional polish (GoalModeToggle + charities header AutoText alias), do a quick re-visit to /charities (es) and /meals (it) to confirm the last two non-translating labels flip. Otherwise no further verification needed for these features. The token 'test_feat_aug25' is still valid for the admin account.",
+  "rca_of_issue": "Both bugs from iter 52 were resolved by (1) clearing the stale Metro bundler cache at METRO_CACHE_ROOT and restarting Expo — the AutoText alias in screens was now actually shipped to the web bundle, so cache lookups + enqueue/flush ran on every mount; (2) deferring deletePost() via setTimeout(60ms) after closing the menu Modal — this avoids the RN-Web overlay-teardown race that was swallowing the synchronous window.confirm() call. Verified end-to-end: a TEST post was deleted via the UI (200 from /api/community/posts/{id}) and visible Italian text replaced English on /meals, /wellness, /churches with at least one /api/translate POST per screen."
+}

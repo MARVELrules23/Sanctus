@@ -662,7 +662,7 @@ export function PostCard({
             {isMine ? (
               <Pressable
                 testID={`community-menu-delete-${post.post_id}`}
-                onPress={() => { setMenuOpen(false); onDelete?.(); }}
+                onPress={() => { setMenuOpen(false); setTimeout(() => onDelete?.(), 60); }}
                 style={({ pressed }) => [styles.menuItem, pressed && styles.pressed]}
               >
                 <Ionicons name="trash-outline" size={18} color={colors.liturgical.red} />

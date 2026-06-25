@@ -385,6 +385,7 @@ def build_router(db: AsyncIOMotorDatabase, get_current_user) -> APIRouter:
         is_admin = bool(getattr(user, "is_admin", False))
         doc = await _get_book_or_404(slug, allow_drafts=is_admin)
         out = _public_book(doc)
+        await _localize_book_detail(db, out)
         # Embed reading progress for the current user if any
         prog = await progress.find_one(
             {"user_id": user.user_id, "book_id": doc["book_id"]}, {"_id": 0}

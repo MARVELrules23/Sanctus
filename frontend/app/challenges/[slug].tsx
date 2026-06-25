@@ -16,10 +16,10 @@ import {
   ScrollView,
   StyleSheet,
   Switch,
-  Text,
   TextInput,
   View,
 } from "react-native";
+import { AutoText as Text } from "@/src/auto-text";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";

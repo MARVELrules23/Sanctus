@@ -18,6 +18,7 @@ import DailyPracticeCard from "@/src/components/DailyPracticeCard";
 import CatechismCard from "@/src/components/CatechismCard";
 import VirtusHomeCard from "@/src/components/VirtusHomeCard";
 import { useI18n } from "@/src/i18n";
+import { AutoText } from "@/src/auto-text";
 import SaintOfTheDayCard from "@/src/components/SaintOfTheDayCard";
 import ChallengeHomeCard from "@/src/components/ChallengeHomeCard";
 import LiturgicalBadge from "@/src/components/LiturgicalBadge";
@@ -152,8 +153,8 @@ export default function TodayScreen() {
             <Ionicons name="book-outline" size={18} color={colors.gold} />
             <Text style={styles.cardHeaderText}>DAILY DEVOTION</Text>
           </View>
-          <Text style={styles.devotionTitle}>{devotion.title}</Text>
-          <Text style={styles.devotionText}>{devotion.text}</Text>
+          <AutoText style={styles.devotionTitle}>{devotion.title}</AutoText>
+          <AutoText style={styles.devotionText}>{devotion.text}</AutoText>
         </View>
 
         {/* Quick actions */}

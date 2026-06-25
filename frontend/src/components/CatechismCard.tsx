@@ -24,10 +24,10 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   TextInput,
   View,
 } from "react-native";
+import { AutoText as Text } from "@/src/auto-text";
 import { Ionicons } from "@expo/vector-icons";
 
 import { api, CatechismReflectResponse, CatechismTeaching } from "@/src/api";

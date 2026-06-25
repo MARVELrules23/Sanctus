@@ -6,7 +6,13 @@
  * approved entry for the day, so users never see an empty card.
  */
 import React, { useCallback, useEffect, useState } from "react";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Image,
+  Pressable,
+  StyleSheet,
+  View,
+} from "react-native";
+import { AutoText as Text } from "@/src/auto-text";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 

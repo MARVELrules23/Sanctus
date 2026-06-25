@@ -124,3 +124,8 @@ Reverent & traditional aesthetic: cream/parchment background, deep stained-gl- C
 - Profile: added a Language (Idioma) setting with EN/Español toggle; profile screen fully translated.
 - Schedule editor: fixed delete button (web Alert -> confirm helper) and translated title/save/delete.
 - Remaining ES backlog: calendar tab, virtus/[slug] detail, schedule editor field labels/KIND chips.
+
+## Session update 3 (June 2026)
+- Mass Readings home card now localized (MASS READINGS/Gospel/1st/Psalm/title via AutoText) — verified ES ("LECTURAS DE LA MISA").
+- Calendar month header now translates (split month name into its own AutoText so it isn't skipped by the numeric year) — verified ES ("Junio 2026").
+- Italian radio stations seeded on startup: Vatican News — Italiano, Radio Maria Italia, Radio Maria Canada (Italiano, serves Italian-American communities).

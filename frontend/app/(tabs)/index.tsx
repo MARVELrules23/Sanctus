@@ -227,36 +227,36 @@ export default function TodayScreen() {
         >
           <View style={styles.cardHeader}>
             <Ionicons name="bookmark-outline" size={18} color={colors.gold} />
-            <Text style={styles.cardHeaderText}>MASS READINGS</Text>
+            <AutoText style={styles.cardHeaderText}>MASS READINGS</AutoText>
             <View style={{ flex: 1 }} />
             <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
           </View>
           {readings ? (
             <>
-              <Text style={styles.mealName}>
+              <AutoText style={styles.mealName}>
                 {readings.liturgical_title || lit?.feast || lit?.season}
-              </Text>
+              </AutoText>
               {readings.gospel ? (
                 <View style={styles.readingRow}>
-                  <Text style={styles.readingLabel}>Gospel</Text>
+                  <AutoText style={styles.readingLabel}>Gospel</AutoText>
                   <Text style={styles.readingCite}>{readings.gospel}</Text>
                 </View>
               ) : null}
               {readings.first_reading ? (
                 <View style={styles.readingRow}>
-                  <Text style={styles.readingLabel}>1st</Text>
+                  <AutoText style={styles.readingLabel}>1st</AutoText>
                   <Text style={styles.readingCite}>{readings.first_reading}</Text>
                 </View>
               ) : null}
               {readings.psalm ? (
                 <View style={styles.readingRow}>
-                  <Text style={styles.readingLabel}>Psalm</Text>
+                  <AutoText style={styles.readingLabel}>Psalm</AutoText>
                   <Text style={styles.readingCite}>{readings.psalm}</Text>
                 </View>
               ) : null}
             </>
           ) : (
-            <Text style={styles.empty}>Loading today&apos;s Mass readings…</Text>
+            <AutoText style={styles.empty}>Loading today&apos;s Mass readings…</AutoText>
           )}
         </Pressable>
 

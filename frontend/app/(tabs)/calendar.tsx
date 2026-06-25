@@ -209,7 +209,7 @@ export default function CalendarScreen() {
             <Ionicons name="chevron-back" size={22} color={colors.primary} />
           </Pressable>
           <Text style={styles.monthLabel}>
-            {monthName(month)} {year}
+            <Text>{monthName(month)}</Text> {year}
           </Text>
           <Pressable testID="cal-next" onPress={next} hitSlop={12}>
             <Ionicons name="chevron-forward" size={22} color={colors.primary} />

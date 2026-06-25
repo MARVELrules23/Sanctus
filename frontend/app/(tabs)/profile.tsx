@@ -16,6 +16,7 @@ import { useRouter } from "expo-router";
 import { api, User } from "@/src/api";
 import { useAuth } from "@/src/auth-context";
 import { useI18n } from "@/src/i18n";
+import { AutoText } from "@/src/auto-text";
 import Ornament from "@/src/components/Ornament";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 
@@ -171,9 +172,9 @@ export default function ProfileScreen() {
                   onPress={() => update({ fitness_level: opt })}
                   style={[styles.optionChip, prefs.fitness_level === opt && styles.optionChipSel]}
                 >
-                  <Text style={[styles.optionText, prefs.fitness_level === opt && styles.optionTextSel]}>
+                  <AutoText style={[styles.optionText, prefs.fitness_level === opt && styles.optionTextSel]}>
                     {opt}
-                  </Text>
+                  </AutoText>
                 </Pressable>
               ))}
             </View>
@@ -286,7 +287,7 @@ export default function ProfileScreen() {
 
         {user?.is_admin ? (
           <>
-            <Text style={styles.section}>Admin</Text>
+            <AutoText style={styles.section}>Admin</AutoText>
             <View style={styles.linkRow} testID="profile-admin-links">
               <Pressable
                 testID="profile-admin-saints-link"
@@ -294,7 +295,7 @@ export default function ProfileScreen() {
                 style={({ pressed }) => [styles.linkCard, pressed && styles.pressed]}
               >
                 <Ionicons name="sparkles-outline" size={18} color={colors.gold} />
-                <Text style={styles.linkLabel}>Saints · Review</Text>
+                <AutoText style={styles.linkLabel}>Saints · Review</AutoText>
                 <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
               </Pressable>
               <Pressable
@@ -303,7 +304,7 @@ export default function ProfileScreen() {
                 style={({ pressed }) => [styles.linkCard, pressed && styles.pressed]}
               >
                 <Ionicons name="storefront-outline" size={18} color={colors.gold} />
-                <Text style={styles.linkLabel}>Shop · Admin</Text>
+                <AutoText style={styles.linkLabel}>Shop · Admin</AutoText>
                 <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
               </Pressable>
               <Pressable
@@ -312,7 +313,7 @@ export default function ProfileScreen() {
                 style={({ pressed }) => [styles.linkCard, pressed && styles.pressed]}
               >
                 <Ionicons name="heart-circle-outline" size={18} color={colors.gold} />
-                <Text style={styles.linkLabel}>Charities · Review</Text>
+                <AutoText style={styles.linkLabel}>Charities · Review</AutoText>
                 <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
               </Pressable>
               <Pressable
@@ -330,7 +331,7 @@ export default function ProfileScreen() {
                 style={({ pressed }) => [styles.linkCard, pressed && styles.pressed]}
               >
                 <Ionicons name="library-outline" size={18} color={colors.gold} />
-                <Text style={styles.linkLabel}>Library · Books</Text>
+                <AutoText style={styles.linkLabel}>Library · Books</AutoText>
                 <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
               </Pressable>
               <Pressable
@@ -348,7 +349,7 @@ export default function ProfileScreen() {
                 style={({ pressed }) => [styles.linkCard, pressed && styles.pressed]}
               >
                 <Ionicons name="film-outline" size={18} color={colors.gold} />
-                <Text style={styles.linkLabel}>Library · Films</Text>
+                <AutoText style={styles.linkLabel}>Library · Films</AutoText>
                 <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
               </Pressable>
             </View>

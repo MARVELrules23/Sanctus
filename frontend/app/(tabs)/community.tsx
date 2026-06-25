@@ -11,7 +11,7 @@ import {
   RefreshControl,
   ScrollView,
   StyleSheet,
-  Text,
+  Text as RNText,
   TextInput,
   View,
 } from "react-native";
@@ -26,8 +26,11 @@ import {
   CommunityPost,
   CommunityTopic,
   REPORT_REASONS_FALLBACK,
+  translateTexts,
   User,
 } from "@/src/api";
+import { AutoText as Text } from "@/src/auto-text";
+import { useI18n } from "@/src/i18n";
 import Avatar from "@/src/components/Avatar";
 import LiturgicalBadge from "@/src/components/LiturgicalBadge";
 import { NotificationBadge } from "@/src/components/NotificationBadge";
@@ -560,6 +563,23 @@ export function PostCard({
   compact?: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { lang } = useI18n();
+  const [translated, setTranslated] = useState<string | null>(null);
+  const [translating, setTranslating] = useState(false);
+  const onTranslate = async (e?: any) => {
+    e?.stopPropagation?.();
+    if (translated) { setTranslated(null); return; }
+    setTranslating(true);
+    try {
+      const target = lang === "en" ? "es" : lang;
+      const [tr] = await translateTexts([post.body], target);
+      if (tr) setTranslated(tr);
+    } catch {
+      // ignore — leave original
+    } finally {
+      setTranslating(false);
+    }
+  };
   const isMine = !!currentUser && post.author.user_id === currentUser.user_id;
   const litColor = post.liturgical_color ? colorForLiturgical(post.liturgical_color) : null;
   return (
@@ -575,8 +595,8 @@ export function PostCard({
             <Avatar name={post.author.name} picture={post.author.picture ?? null} size={36} />
           </Pressable>
           <Pressable onPress={onAuthor} style={{ flex: 1, marginLeft: spacing.sm }} hitSlop={4}>
-            <Text style={styles.authorName} numberOfLines={1}>{post.author.name}</Text>
-            <Text style={styles.postMeta}>{timeAgo(post.created_at)}{post.topic ? ` · ${prettyTopic(post.topic)}` : ""}</Text>
+            <RNText style={styles.authorName} numberOfLines={1}>{post.author.name}</RNText>
+            <RNText style={styles.postMeta}>{timeAgo(post.created_at)}{post.topic ? ` · ${prettyTopic(post.topic)}` : ""}</RNText>
           </Pressable>
           <Pressable
             onPress={(e) => { e.stopPropagation?.(); setMenuOpen(true); }}
@@ -587,9 +607,23 @@ export function PostCard({
           </Pressable>
         </View>
 
-        <Text style={styles.postBody} numberOfLines={compact ? 4 : undefined}>
-          {post.body}
-        </Text>
+        <RNText style={styles.postBody} numberOfLines={compact ? 4 : undefined}>
+          {translated || post.body}
+        </RNText>
+
+        {!compact ? (
+          <Pressable
+            onPress={onTranslate}
+            hitSlop={6}
+            testID={`community-translate-${post.post_id}`}
+            style={({ pressed }) => [{ flexDirection: "row", alignItems: "center", gap: 5, marginTop: 6, alignSelf: "flex-start" }, pressed && styles.pressed]}
+          >
+            <Ionicons name="language-outline" size={14} color={colors.gold} />
+            <Text style={{ fontFamily: fonts.uiSemi, fontSize: 12, color: colors.gold }}>
+              {translating ? "Translating…" : translated ? "Show original" : "Translate"}
+            </Text>
+          </Pressable>
+        ) : null}
 
         {post.image ? (
           <Image

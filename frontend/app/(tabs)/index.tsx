@@ -133,7 +133,7 @@ export default function TodayScreen() {
 
         {/* Header */}
         <Text style={styles.greeting}>Pax tecum, {firstName}.</Text>
-        <Text style={styles.date}>{longDate}</Text>
+        <AutoText style={styles.date}>{longDate}</AutoText>
         {lit ? (
           <View style={styles.badgeRow}>
             <LiturgicalBadge color={lit.color} label={lit.season} testID="today-season-badge" />

@@ -1,0 +1,34 @@
+{
+  "summary": "Iteration 55 — Frontend-only verification of (a) HOME date localization via the EN/Español/Italiano language buttons and (b) the three Italian radio stations in Library > Radio. Both fixes work end-to-end. (1) HOME date: tapping lang-es flips 'Thursday, June 25' → 'Jueves, 25 de junio'; tapping lang-it flips to 'Giovedì 25 giugno'; tapping lang-en restores 'Thursday, June 25'. AutoText batched POST /api/translate observed (200 OK) carrying the date string along with other Home literals. (2) Italian radio: GET /api/library/radio returns all three target stations (vatican-news-italian → https://radio.vaticannews.va/stream-it, radio-maria-italia → https://dreamsiteradiocp4.com/proxy/rmitaliamontecarlo?mp=/stream, radio-maria-canada → https://dreamsiteradiocp4.com/proxy/rmcanadaita?mp=/stream); a HEAD-equivalent GET against each URL returned HTTP 200 with audio content-types (audio/mpeg, audio/aacp, audio/aacp). In the Library > Radio UI, all three station cards render and tapping each plays — the card status switches to 'ON AIR' within a few seconds, no '\u201ccouldn\u2019t start\u201d' error banner appears, and no console errors are produced. (Whether the browser preview actually emits sound was not asserted because of browser autoplay policies; the contract from the request to confirm 'no load/stream error and station shown as current' is met.) (3) Regression: HOME 'MASS READINGS' card → 'LECTURAS DE LA MISA' (ES) / 'LETTURE DELLA MESSA' (IT) with sublabels 'Evangelio/1ª/Salmo' (ES) and 'Vangelo/1ª/Salmo' (IT). Calendar tab month header renders 'Junio 2026' (ES) and 'Giugno 2026' (IT). Quick-action labels, Daily Devotion, Catechism card, Saint of the Day, Today's Practice, Virtus card etc. all translate. The flash-of-English on first toggle (1–3s) remains, as documented in iter 53/54, and is acceptable.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "app/(tabs)/index.tsx — LiturgicalBadge label",
+        "issue": "On the Home screen, the season badge under the date renders the raw English 'ORDINARY TIME' even after switching to Spanish (it does become 'Tempo Ordinario' in Italian, presumably because that exact string happens to already be in the AutoText cache). On the Calendar screen the same season text correctly renders as 'Tiempo Ordinario'. Root cause: <LiturgicalBadge label={lit.season} /> on home likely uses a plain <Text> for the label whereas the calendar's analogous component is wrapped via AutoText (or the calendar uses the localized backend payload). Wrap the badge label in AutoText (or pass it through useTranslate) so all three languages render correctly on Home. Low priority — does not block the user choices being delivered.",
+        "testID": "today-season-badge",
+        "priority": "LOW"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "(Polish) Wrap the LiturgicalBadge label on Home in AutoText (or translate lit.season at the source) so 'Ordinary Time' becomes 'Tiempo Ordinario' in ES on the Home screen (it already does in IT and on the Calendar tab).",
+    "(Optional, already documented) Pre-warm the AutoText cache on app boot for the most common literal strings so the first language toggle doesn't flash English for 1–3s."
+  ],
+  "critical_code_review_comments": [
+    "index.tsx now correctly wraps the date with <AutoText> (line 136). Switching languages triggers a single batched POST /api/translate that returns the localized day-of-week + month string and the AutoText subscriber model re-renders the Home view cleanly — verified for ES and IT, and EN restoration is instantaneous.",
+    "library_seed_data.SEED_STATIONS includes the three corrected Italian stations with HTTPS streams; the DB matches the seed. All three stream URLs are externally reachable (HTTP 200, audio/mpeg or audio/aacp). RadioPlayerContext flips to 'ON AIR' on tap with no error banner.",
+    "Minor: the LiturgicalBadge on Home does not pass its label through AutoText, so the season text on Home doesn't translate to ES. Calendar handles this correctly."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "n/a (frontend-only run; backend GET /api/library/radio and the three stream URLs spot-checked OK)", "frontend": "100% on the two requested fixes (date localization + Italian radio); one low-priority polish item on the Home liturgical badge label" },
+  "seed_data_creation": "None.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Both targeted fixes from the user request are verified working: HOME date translates EN/ES/IT via lang-en/lang-es/lang-it buttons, and all three Italian radio stations (Vatican News Italian, Radio Maria Italia, Radio Maria Canada) load and play with no UI errors. Token test_feat_aug25 still valid. Only follow-up worth touching is wrapping the Home liturgical season badge label in AutoText so 'Ordinary Time' → 'Tiempo Ordinario' in Spanish on Home (it already works in IT and on Calendar).",
+  "rca_of_issue": "(No bugs to RCA — both requested fixes pass. Single minor observation: Home <LiturgicalBadge label={lit.season} /> renders the season string via a plain Text, bypassing AutoText. The Spanish 'Ordinary Time' string apparently is not yet in the AutoText cache for ES on this device, so it remains in English on Home. Wrapping the label in AutoText would route it through the /api/translate cache like the rest of the screen.)"
+}

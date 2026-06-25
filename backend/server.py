@@ -701,7 +701,7 @@ async def suggest_meal_slot(payload: SuggestMealSlotRequest, user: User = Depend
         "Return JSON exactly:\n"
         "{\"name\": str, \"description\": str, \"ingredients\": [str], \"prep_minutes\": int}"
     )
-    item = await _chat_json(system, user_prompt, session_id=f"suggest-meal-{user.user_id}-{payload.date}-{payload.slot}")
+    item = await _chat_json(system + lang_instruction(), user_prompt, session_id=f"suggest-meal-{user.user_id}-{payload.date}-{payload.slot}")
     return item
 
 
@@ -727,7 +727,7 @@ async def suggest_workout(payload: SuggestExerciseRequest, user: User = Depends(
         "  \"opening_prayer\": str, \"closing_prayer\": str\n"
         "}"
     )
-    item = await _chat_json(system, user_prompt, session_id=f"suggest-workout-{user.user_id}-{payload.date}")
+    item = await _chat_json(system + lang_instruction(), user_prompt, session_id=f"suggest-workout-{user.user_id}-{payload.date}")
     return item
 
 
@@ -1235,7 +1235,7 @@ async def wellness_ai_brief(user: User = Depends(get_current_user)):
     )
     prompt = f"User stats: {brief}. Suggest meal and workout focus for next 4 weeks."
     try:
-        data = await _chat_json(system, prompt, session_id=f"wellness-{user.user_id}")
+        data = await _chat_json(system + lang_instruction(), prompt, session_id=f"wellness-{user.user_id}")
     except Exception as e:  # noqa: BLE001
         logger.warning("wellness AI failed: %s", e)
         raise HTTPException(status_code=502, detail="ai unavailable") from e
@@ -2818,7 +2818,7 @@ async def sd_generate(payload: SDGenerateRequest, user: User = Depends(get_curre
     )
 
     sess_id_key = f"sd-{user.user_id}-{payload.discipline_id}-{uuid.uuid4().hex[:8]}"
-    plan = await _chat_json(system, user_prompt, session_id=sess_id_key)
+    plan = await _chat_json(system + lang_instruction(), user_prompt, session_id=sess_id_key)
 
     session_id = f"sd_{uuid.uuid4().hex[:14]}"
     now = datetime.now(timezone.utc)

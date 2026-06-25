@@ -212,20 +212,23 @@ export default function CommunityScreen() {
   };
 
   const deletePost = (post: CommunityPost) => {
+    const doDelete = async () => {
+      try {
+        await api(`/community/posts/${post.post_id}`, { method: "DELETE" });
+        setFeed((f) => f ? { ...f, items: f.items.filter((p) => p.post_id !== post.post_id) } : f);
+      } catch (e: any) {
+        if (Platform.OS === "web") window.alert(e?.message || "Couldn't delete. Please try again.");
+        else Alert.alert("Couldn't delete", e?.message || "Please try again.");
+      }
+    };
+    // Alert.alert action buttons don't fire on React Native Web — use confirm there.
+    if (Platform.OS === "web") {
+      if (window.confirm("Delete this post? This cannot be undone.")) doDelete();
+      return;
+    }
     Alert.alert("Delete post?", "This cannot be undone.", [
       { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await api(`/community/posts/${post.post_id}`, { method: "DELETE" });
-            setFeed((f) => f ? { ...f, items: f.items.filter((p) => p.post_id !== post.post_id) } : f);
-          } catch (e: any) {
-            Alert.alert("Couldn't delete", e?.message || "Please try again.");
-          }
-        },
-      },
+      { text: "Delete", style: "destructive", onPress: doDelete },
     ]);
   };
 

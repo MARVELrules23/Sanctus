@@ -1,0 +1,56 @@
+{
+  "summary": "Iteration 52 — Tested (1) POST DELETE web fix, (2) language switching across the 12 listed screens, and (3) AI in-language. BACKEND ALL GREEN: 8/8 pytest passed — /api/translate (es+it+cache+passthrough+413), community POST→DELETE round-trip (200), and AI meals/workouts respect Accept-Language (meal plan came back in Spanish, workout plan in Italian). FRONTEND FAILED on BOTH user-visible features. (A) POST DELETE — STILL BROKEN ON WEB. Tapping the post '…' menu opens the modal, but tapping the Delete item does NOT invoke window.confirm (no DIALOG event fires, no confirm() call observed even after we monkey-patched window.confirm to return true). The post remains in DOM and in the API feed; only a direct fetch DELETE removes it. So the supposed 'window.confirm on web' fix is not actually being reached when the user taps Delete. (B) LANGUAGE/AUTOTEXT — STILL BROKEN for screen bodies. After selecting 'Italiano' on Home and navigating to /meals, /workouts, /wellness (and /churches with 'Español'), and waiting 18 SECONDS for AutoText to flush, ZERO POST /api/translate requests were observed and every body string remained English ('Meals', \"A weekly table set by the Church's seasons.\", 'Custom plan', 'Grocery list', 'Suggest to AI', 'Generate Day's Meals', 'No meals yet', 'Liturgical season', 'My goals', 'Discipline', 'Body and soul, ordered to the seasons.', 'Wellness', 'AI COACHING BRIEF', 'YOUR PROFILE', 'Goal', 'Lose/Maintain/Gain', 'Catholic Churches', 'Find churches near you', 'Use my location'). Only the bottom-tab labels translated (Oggi, Pasti, Allenamenti, Benessere, Santuario, Parrocchia, Profilo) — those come from the STATIC i18n.tsx dictionary via t('tab.meals') and confirm that lang IS 'it' globally and that AsyncStorage persistence works. So the AutoText component itself is failing to enqueue/flush even though the screens import it as 'Text'. Net result: end-users see the entire bilingual UX as still-English screens, with only the bottom nav bar localized. Switching back to EN works (instant). The AI in-language generation IS correct at the API layer (pytest verified), but the user never gets to see it because the screen labels around it remain English.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "app/(tabs)/community.tsx::deletePost / PostCard menu",
+        "issue": "Tapping testID 'community-menu-delete-{pid}' on web does NOT invoke window.confirm. The Pressable's onPress (`() => { setMenuOpen(false); onDelete?.(); }`) seems not to fire — Playwright sees no `dialog` event and our monkey-patched window.confirm is never called either. Post stays in DOM and in the feed. The intended fix on lines 224-228 (Platform.OS === 'web' ⇒ window.confirm) is never reached. Direct API DELETE works (200). Reference: /app/frontend/app/(tabs)/community.tsx:214-233 and the menu Pressable at :663-670.",
+        "testID": "community-menu-delete-{post_id}",
+        "priority": "CRITICAL"
+      },
+      {
+        "component": "src/auto-text.tsx (AutoText component)",
+        "issue": "AutoText never enqueues / never POSTs /api/translate when a screen loads with lang='it' or lang='es'. After 18s on /meals (IT), 0 calls to /api/translate were observed and every body string stayed English. Tested screens (all still English in IT/ES): Meals, Workouts, Wellness, Churches. Yet bottom-tab labels (which use the static i18n dict, not AutoText) DO translate, so the context lang is correct ('it'). Hypotheses to investigate: (a) Metro cache is stale and the `AutoText as Text` import alias didn't actually replace RN Text in the bundled screens — try `rm -rf /app/frontend/.metro-cache && sudo supervisorctl restart expo`; (b) AutoText reads useI18n() at mount when lang is still 'en' (before AsyncStorage useEffect resolves) and the subscribers/force re-render path isn't actually triggering a re-evaluation when context value changes; (c) childToString is returning null for these strings because JSX is splitting the children into [string, escapedChar, string] arrays (e.g. for the apostrophe in \"Church's\"). Reference: /app/frontend/src/auto-text.tsx:73-97 and the screen imports e.g. /app/frontend/app/(tabs)/meals.tsx:9.",
+        "testID": "n/a",
+        "priority": "CRITICAL"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "Community post delete (web)",
+        "issue": "UI delete flow never reaches the DELETE /api/community/posts/{id} call. Backend endpoint itself is fine (verified via direct fetch).",
+        "affected_testIDs": ["community-post-menu-{id}", "community-menu-delete-{id}"]
+      },
+      {
+        "flow": "AutoText → /api/translate",
+        "issue": "Frontend never invokes /api/translate when language is non-English. Backend endpoint is fully functional (5/5 backend tests pass).",
+        "affected_testIDs": ["lang-it", "lang-es"]
+      }
+    ],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter52_translate.py",
+    "/app/test_reports/pytest/iteration_52.xml"
+  ],
+  "action_items": [
+    "Debug community-menu-delete press handler: it never fires the onDelete callback on React Native Web. Suggest replacing the Modal-wrapped menu with an inline absolute-positioned View, or add a console.log inside the Pressable's onPress to confirm whether it ever fires; then investigate why window.confirm isn't reached even when it does.",
+    "Debug AutoText: (1) clear Metro cache and restart expo (the screens may still have the OLD `Text from react-native` bundled — `rm -rf /app/frontend/.metro-cache && sudo supervisorctl restart expo`); (2) add a `console.log('AutoText lang=', lang, 'text=', s)` inside AutoText to verify it actually runs with lang='it' on /meals; (3) inspect childToString for strings containing JSX-escaped apostrophes (\"Church's\", \"Today's\") — JSX may pass these as multi-element arrays that the current childToString rejects.",
+    "After both fixes, re-run iteration_52 backend test file plus a Playwright pass on /meals (IT) confirming at least one POST /api/translate is observed AND the body labels flip to Italian within 5s; and on community confirming tapping menu Delete removes the post."
+  ],
+  "critical_code_review_comments": [
+    "AutoText subscribers/force-update pattern is fragile: it uses a module-global queue and a setTimeout(150) debounce. If a screen mounts during the time lang is still 'en' (default state before AsyncStorage useEffect resolves), it renders verbatim with no enqueue; when lang flips to 'it' via context, the component re-renders but useI18n() returning a different lang doesn't on its own enqueue if cache miss handling depends on first-pass — current code DOES re-check on every render so this should work; investigate why it doesn't in practice (likely Metro cache or childToString edge case).",
+    "Community PostCard menu uses a nested Modal whose inner Pressable is `(e) => e.stopPropagation?.()` — on RN Web, Pressable taps inside a Modal can be swallowed by overlay z-index ordering or by the outer scrim's onPress. Recommend a smoke log inside onPress for each menu item to confirm event delivery."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter52_translate.py (new — 8 tests, all passing)"
+  ],
+  "success_rate": { "backend": "100% (8/8)", "frontend": "~15% (only static-dict translations & EN restoration work; delete and AutoText broken)" },
+  "seed_data_creation": "None. Used pre-minted admin session token 'test_feat_aug25' (Bearer + localStorage). Created and successfully API-deleted two TEST_iter52_* community posts during testing.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Backend is solid — re-running /app/backend/tests/test_iter52_translate.py should still be 8/8. The TWO frontend bugs to verify after main agent's fix: (1) On /community as the admin user, tap '…' on any of your posts → Delete → window.confirm dialog → accept → post disappears AND /api/community/posts/{id} returns 200/204. (2) On Home tap lang-it, then navigate to /meals; within 5 seconds at least one POST /api/translate request must hit the network, and visible labels like 'Meals', 'Custom plan', 'Generate Day's Meals', 'No meals yet for this day' must render in Italian. Repeat for /workouts, /wellness, /churches (Spanish). Bottom-tab labels were already translating before this fix — they are not a proof of AutoText working.",
+  "rca_of_issue": "Bug 1 (delete): The Pressable.onPress for the in-Modal Delete menu item never executes the window.confirm path on RN-Web. Net effect: the 'Alert.alert → window.confirm' substitution in deletePost() is dead code because the upstream Pressable handler isn't reaching it. Reproduction: open /community as admin, tap the … menu on any own post, tap Delete, observe nothing happens; the post remains in the API feed. Bug 2 (AutoText): Frontend imports `AutoText as Text` in 17 screens but the runtime AutoText never POSTs /api/translate when lang is 'it'/'es', despite useI18n() reporting 'it' (proven by bottom-tab translation). Most likely cause: Metro is serving cached bundles built BEFORE the alias was added (Metro cache at /app/frontend/.metro-cache is large and stale-looking — see giant cache blob for src/i18n.tsx alone). Secondary cause: childToString rejects multi-fragment children (apostrophes/em-dashes in literals like \"A weekly table set by the Church's seasons.\"). Reproduction: pick lang-it on Home, go to /meals, watch DevTools Network → no /api/translate POSTs in 18s. Mitigation: clear metro cache + restart expo, then re-test; if /api/translate calls now appear but some specific strings remain English, broaden childToString to JSON.stringify-and-join non-string nodes that resolve to text-only fragments."
+}

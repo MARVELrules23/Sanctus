@@ -33,6 +33,7 @@ export default function CalendarScreen() {
   const [entriesLoading, setEntriesLoading] = useState(false);
   const [entryDates, setEntryDates] = useState<Set<string>>(new Set());
   const [challenges, setChallenges] = useState<ChallengeWindow[]>([]);
+  const [novenaWin, setNovenaWin] = useState<ChallengeWindow | null>(null);
   const [scheduleItems, setScheduleItems] = useState<ScheduleItem[]>([]);
   const { enabled: challengeMasterOn, setEnabled: setChallengeMasterOn } = useChallengeMasterPref();
 
@@ -45,6 +46,30 @@ export default function CalendarScreen() {
       setChallenges(r.items || []);
     } catch {
       setChallenges([]);
+    }
+    // The user's active novena (if any) overlays the calendar like a challenge,
+    // but independent of the challenge master toggle.
+    try {
+      const nr = await api<{ active: any }>("/novenas/active");
+      const a = nr?.active;
+      if (a && a.novena) {
+        setNovenaWin({
+          challenge_id: `novena-${a.slug}`,
+          slug: a.slug,
+          name: a.novena.name,
+          subtitle: a.novena.patron,
+          color: a.novena.color,
+          icon: a.novena.icon,
+          start_date: a.start_date,
+          end_date: a.end_date,
+          total_days: a.total_days || 9,
+          status: "active",
+        } as ChallengeWindow);
+      } else {
+        setNovenaWin(null);
+      }
+    } catch {
+      setNovenaWin(null);
     }
   }, [year]);
 
@@ -152,16 +177,22 @@ export default function CalendarScreen() {
   // an empty array whenever the master "Liturgical Challenges" toggle is off.
   const challengesForDate = useCallback(
     (dStr: string): ChallengeWindow[] => {
-      if (!challengeMasterOn) return [];
-      return challenges
-        .filter((c) => {
-          const s = (c.start_date || "").slice(0, 10);
-          const e = (c.end_date || "").slice(0, 10);
-          return !!s && !!e && s <= dStr && dStr <= e;
-        })
-        .sort((a, b) => (a.total_days || 0) - (b.total_days || 0));
+      const list = challengeMasterOn
+        ? challenges.filter((c) => {
+            const s = (c.start_date || "").slice(0, 10);
+            const e = (c.end_date || "").slice(0, 10);
+            return !!s && !!e && s <= dStr && dStr <= e;
+          })
+        : [];
+      // Active novena always overlays (not gated by the challenge toggle).
+      if (novenaWin) {
+        const s = (novenaWin.start_date || "").slice(0, 10);
+        const e = (novenaWin.end_date || "").slice(0, 10);
+        if (s && e && s <= dStr && dStr <= e) list.push(novenaWin);
+      }
+      return list.sort((a, b) => (a.total_days || 0) - (b.total_days || 0));
     },
-    [challenges, challengeMasterOn],
+    [challenges, challengeMasterOn, novenaWin],
   );
 
   const dayIndexFor = useCallback((c: ChallengeWindow, dStr: string): number => {
@@ -349,10 +380,11 @@ export default function CalendarScreen() {
                     key={ch.slug}
                     testID={`cal-challenge-tile-${ch.slug}`}
                     onPress={() =>
-                      router.push({
-                        pathname: "/challenges/[slug]",
-                        params: { slug: ch.slug },
-                      })
+                      router.push(
+                        ch.challenge_id?.startsWith("novena-")
+                          ? { pathname: "/novenas/[slug]", params: { slug: ch.slug } }
+                          : { pathname: "/challenges/[slug]", params: { slug: ch.slug } }
+                      )
                     }
                     style={({ pressed }) => [
                       styles.challengeTile,

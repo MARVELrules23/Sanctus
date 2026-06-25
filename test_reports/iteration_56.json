@@ -1,0 +1,26 @@
+{
+  "summary": "Bug fix VERIFIED: /readings (full-screen Mass Readings page) now fully localizes for Italian and Spanish on both backend and frontend. Backend /api/readings?date=2026-06-25 with Accept-Language: it returns lang='it' with Italian gospel excerpt ('Gesù disse ai suoi discepoli...'), Italian reflection, and Italian liturgical_title. Same for 'es' (Jesús dijo a sus discípulos...). English unchanged. Frontend readings.tsx: header 'Letture della Messa' / 'Lecturas de la Misa', section labels (PRIMA LETTURA / SALMO RESPONSORIALE / ACCLAMAZIONE AL VANGELO / VANGELO / RIFLESSIONE) and full excerpts + reflection are rendered in IT and ES; switching back to EN keeps the page English. Cached second call is fast (<5s). Regression: Home tab date line + Mass Readings card still localize correctly. Scripture citation book names are shown in English (e.g. 'Matthew 7:21-29', '2 Kings 24:8-17', 'Psalm 78(79):1-5,8-9') which is consistent with the 'citations remain as-is' fix design.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_readings_i18n_iter56.py",
+    "/app/test_reports/pytest/iteration_56_readings_i18n.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "readings.tsx: scripture citations render book name in English ('Matthew', '2 Kings', 'Psalm') rather than Italian/Spanish form (Matteo, 2 Re, Salmo). Per fix spec citations are intentionally not translated, but if the desired UX is to localize JUST the book name while preserving chapter:verse, this would be a follow-up.",
+    "translations_cache writes use update_one inside translate_texts and again inside _translate_plain — both share the same _key, so behavior is consistent. No issue, just noting duplicate persistence path."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "None. Used existing test_feat_aug25 session token and existing readings doc for 2026-06-25 (already cached by previous self-test).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Italian/Spanish readings localization fix is fully working end-to-end. /api/readings now honors Accept-Language reliably, doc is cached only when translation succeeds, and readings.tsx refetches on language change + uses AutoText for static labels. Pytest suite at backend/tests/test_readings_i18n_iter56.py covers EN baseline, IT translated, ES translated, IT cached-fast, and /api/translate label sanity (all 5 pass in ~3s due to translation cache).",
+  "rca_of_issue": "Original bug had two layers: (1) backend used a single bespoke JSON prompt to translate the whole readings doc; when the model emitted unescaped quotes inside translated Scripture, json.loads failed and the function silently returned the English doc — AND cached that English doc under lang='it', poisoning the cache forever. (2) Frontend readings.tsx used plain <Text> for static labels ('First Reading', 'Reflection', etc.) and did not refetch on language change. Fix: backend _translate_readings now delegates to the robust translate_texts helper (retry + bisection + permanent translations_cache) with a _translate_plain text-only fallback per field; the endpoint only persists into readings_i18n when at least one field actually differs from English (translated_ok). Frontend: 'lang' added to fetch deps and labels switched to AutoText (auto-translates against /api/translate cache). Verified: IT and ES return fully translated content; EN unaffected; cached doc returns in <5s."
+}

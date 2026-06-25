@@ -786,14 +786,54 @@ async def _ai_reflection(lit: dict, date_str: str) -> str:
         return ""
 
 
-async def _translate_readings(base: dict, date: str, lang: str) -> dict:
+async def _translate_plain(text: str, lang: str) -> str:
+    """Translate a single string and return PLAIN TEXT (no JSON wrapper).
+
+    Used as a fallback for fields the JSON-based batch translator leaves in
+    English — typically Scripture excerpts whose curly/straight quotation marks
+    make the model emit JSON that fails to parse. Plain-text output sidesteps the
+    escaping problem entirely. Successful results are cached in
+    `translations_cache` so the cost is paid only once per (text, language)."""
+    from i18n_translate import _key as _tkey
+    lang_name = {"es": "Latin American Spanish (español)", "it": "Italian (italiano)"}.get(lang, lang)
+    cache_key = _tkey(text, lang)
+    hit = await db.translations_cache.find_one({"_id": cache_key}, {"_id": 0, "text": 1})
+    if hit and (hit.get("text") or "").strip() and hit["text"].strip() != text.strip():
+        return hit["text"].strip()
+    system = (
+        "You are a faithful Catholic translator. Translate the user's text into "
+        f"{lang_name} with a reverent register, preserving Scripture faithfully and "
+        "keeping any line breaks. Return ONLY the translated text — no quotation "
+        "marks around it, no commentary, no markdown, no JSON."
+    )
+    try:
+        chat = LlmChat(
+            api_key=EMERGENT_LLM_KEY,
+            session_id=f"readings-plain-{lang}-{uuid.uuid4().hex[:8]}",
+            system_message=system,
+        ).with_model("anthropic", "claude-sonnet-4-5-20250929")
+        resp = await chat.send_message(UserMessage(text=text))
+        tr = (resp if isinstance(resp, str) else str(resp)).strip()
+        if tr and tr != text.strip():
+            await db.translations_cache.update_one(
+                {"_id": cache_key},
+                {"$set": {"_id": cache_key, "text": tr, "target": lang}},
+                upsert=True,
+            )
+            return tr
+    except Exception as e:  # noqa: BLE001
+        logger.warning("readings plain translate (%s) failed: %s", lang, e)
+    return text
+
+
+async def _translate_readings(base: dict, date: str, lang: str) -> tuple[dict, bool]:
     """Produce a localized rendering of an English readings doc. Scripture citations
     (e.g. 'Mt 5:1-12') are preserved; titles, excerpts and the reflection are
-    faithfully translated into the target language (Spanish or Italian)."""
-    lang_name = {
-        "es": "reverent, accurate Latin American Spanish",
-        "it": "reverent, accurate Italian (italiano)",
-    }.get(lang, "the target language")
+    faithfully translated into the target language (Spanish or Italian).
+
+    Returns (localized_doc, translated_ok). translated_ok is False when the LLM
+    call failed or returned nothing usable, so callers can avoid caching an
+    untranslated (English) doc that would otherwise poison the cache forever."""
     fields = [
         "liturgical_title", "first_reading_excerpt", "psalm_excerpt",
         "second_reading_excerpt", "gospel_acclamation_excerpt",
@@ -804,22 +844,31 @@ async def _translate_readings(base: dict, date: str, lang: str) -> dict:
     out["date"] = date
     out["lang"] = lang
     out["cached_at"] = datetime.now(timezone.utc).isoformat()
-    payload = {k: base.get(k, "") for k in fields if (base.get(k) or "").strip()}
-    if payload:
-        system = (
-            "You are a faithful Catholic translator. Translate the given liturgical "
-            f"texts from English into {lang_name}. "
-            "Return STRICT JSON with the SAME keys, each value translated. Do not add, "
-            "remove or rename keys. Preserve the sense of Scripture faithfully; no markdown."
-        )
+    translated_any = False
+    keys = [k for k in fields if (base.get(k) or "").strip()]
+    if keys:
+        # Reuse the robust, permanently-cached translator that powers the rest of
+        # the app (retries + per-item bisection). It is far more reliable than a
+        # single bespoke JSON prompt, which broke whenever the model emitted
+        # unescaped quotes inside the translated text (leaving the page English).
+        from i18n_translate import translate_texts
+        texts = [base[k] for k in keys]
         try:
-            data = await _chat_json(system, json.dumps(payload, ensure_ascii=False), session_id=f"readings-{lang}-{date}")
-            for k, v in (data or {}).items():
-                if k in fields and isinstance(v, str) and v.strip():
-                    out[k] = v.strip()
+            translated = await translate_texts(db, EMERGENT_LLM_KEY, texts, lang)
         except Exception as e:  # noqa: BLE001
             logger.warning("readings %s translation failed: %s", lang, e)
-    return out
+            translated = texts
+        for k, src, tr in zip(keys, texts, translated):
+            val = tr.strip() if isinstance(tr, str) and tr.strip() else src
+            # Any field the batch translator could not translate (still equal to
+            # the English source) gets a plain-text retry that avoids JSON escaping.
+            if val.strip() == (src or "").strip():
+                val = await _translate_plain(src, lang)
+            if isinstance(val, str) and val.strip():
+                out[k] = val.strip()
+                if val.strip() != (src or "").strip():
+                    translated_any = True
+    return out, translated_any
 
 
 @api.get("/readings")
@@ -835,10 +884,13 @@ async def daily_readings(date: str, user: User = Depends(get_current_user)):
     if cached:
         return cached
     base = await _readings_en(date)
-    loc = await _translate_readings(base, date, lang)
-    await db.readings_i18n.update_one(
-        {"date": date, "lang": lang}, {"$set": loc}, upsert=True
-    )
+    loc, translated_ok = await _translate_readings(base, date, lang)
+    # Only persist a successful translation — caching an untranslated (English)
+    # doc would otherwise leave that date stuck in English permanently.
+    if translated_ok:
+        await db.readings_i18n.update_one(
+            {"date": date, "lang": lang}, {"$set": loc}, upsert=True
+        )
     return loc
 
 

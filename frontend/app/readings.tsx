@@ -14,6 +14,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 
 import { api, Readings } from "@/src/api";
+import { useI18n } from "@/src/i18n";
+import { AutoText } from "@/src/auto-text";
 import LiturgicalBadge from "@/src/components/LiturgicalBadge";
 import Ornament from "@/src/components/Ornament";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
@@ -31,6 +33,7 @@ export default function ReadingsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ date?: string }>();
   const date = typeof params.date === "string" ? params.date : todayISO();
+  const { lang } = useI18n();
   const [data, setData] = useState<Readings | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -38,7 +41,7 @@ export default function ReadingsScreen() {
   const load = useCallback(async () => {
     const res = await api<Readings>(`/readings?date=${date}`);
     setData(res);
-  }, [date]);
+  }, [date, lang]);
 
   useEffect(() => {
     let cancelled = false;
@@ -92,7 +95,7 @@ export default function ReadingsScreen() {
         <Pressable testID="readings-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={colors.primary} />
         </Pressable>
-        <Text style={styles.headerTitle}>Mass Readings</Text>
+        <AutoText style={styles.headerTitle}>Mass Readings</AutoText>
         <Pressable
           testID="readings-usccb-link"
           onPress={openUSCCB}
@@ -110,11 +113,11 @@ export default function ReadingsScreen() {
         {loading ? (
           <ActivityIndicator color={colors.gold} style={{ marginTop: spacing.xxl }} />
         ) : !data ? (
-          <Text style={styles.empty}>Unable to load readings. Pull to refresh.</Text>
+          <AutoText style={styles.empty}>Unable to load readings. Pull to refresh.</AutoText>
         ) : (
           <>
-            <Text style={styles.dateLine}>{formatLong(parseISO(date))}</Text>
-            <Text style={styles.litTitle}>{data.liturgical_title || data.liturgical?.feast || data.liturgical?.season}</Text>
+            <AutoText style={styles.dateLine}>{formatLong(parseISO(date))}</AutoText>
+            <AutoText style={styles.litTitle}>{data.liturgical_title || data.liturgical?.feast || data.liturgical?.season}</AutoText>
 
             <View style={styles.badgeRow}>
               {data.liturgical?.color && (
@@ -131,7 +134,7 @@ export default function ReadingsScreen() {
               <View key={s.label} style={styles.card} testID={`reading-${s.label.toLowerCase().replace(/[^a-z]+/g, "-")}`}>
                 <View style={styles.cardHeader}>
                   <Ionicons name={s.icon} size={16} color={s.accent ?? colors.gold} />
-                  <Text style={[styles.cardHeaderText, { color: s.accent ?? colors.gold }]}>{s.label.toUpperCase()}</Text>
+                  <AutoText style={[styles.cardHeaderText, { color: s.accent ?? colors.gold }]}>{s.label.toUpperCase()}</AutoText>
                 </View>
                 {s.citation ? <Text style={styles.citation}>{s.citation}</Text> : null}
                 {s.excerpt ? <Text style={styles.excerpt}>{s.excerpt}</Text> : null}
@@ -142,7 +145,7 @@ export default function ReadingsScreen() {
               <View style={styles.reflectionCard}>
                 <View style={styles.cardHeader}>
                   <Ionicons name="leaf-outline" size={16} color={colors.liturgical.purple} />
-                  <Text style={[styles.cardHeaderText, { color: colors.liturgical.purple }]}>REFLECTION</Text>
+                  <AutoText style={[styles.cardHeaderText, { color: colors.liturgical.purple }]}>REFLECTION</AutoText>
                 </View>
                 <Text style={styles.reflectionText}>{data.reflection}</Text>
               </View>
@@ -155,10 +158,10 @@ export default function ReadingsScreen() {
               disabled={!data.usccb_url}
             >
               <Ionicons name="open-outline" size={16} color={colors.gold} />
-              <Text style={styles.ctaText}>Read full text on USCCB</Text>
+              <AutoText style={styles.ctaText}>Read full text on USCCB</AutoText>
             </Pressable>
 
-            <Text style={styles.sourceLine}>{sourceLabel[data.source] ?? data.source}</Text>
+            <AutoText style={styles.sourceLine}>{sourceLabel[data.source] ?? data.source}</AutoText>
           </>
         )}
         <View style={{ height: spacing.xxl }} />

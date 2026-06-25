@@ -5,7 +5,7 @@ import React from "react";
 import { StyleSheet, View } from "react-native";
 
 import { AutoText } from "@/src/auto-text";
-import { colorForLiturgical, colors, fonts, radius, spacing } from "@/src/theme";
+import { colorForLiturgical, fonts, radius, spacing } from "@/src/theme";
 
 export function LiturgicalBadge({
   color,

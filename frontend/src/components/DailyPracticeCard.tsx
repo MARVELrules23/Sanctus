@@ -11,6 +11,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
 import { api, DailyPractice } from "@/src/api";
+import { useI18n } from "@/src/i18n";
 import { colors, fonts, radius, spacing } from "@/src/theme";
 
 type Props = {
@@ -33,6 +34,7 @@ const INTENSITY_LABEL: Record<string, string> = {
  */
 export default function DailyPracticeCard({ date }: Props) {
   const router = useRouter();
+  const { lang } = useI18n();
   const [practice, setPractice] = useState<DailyPractice | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +57,7 @@ export default function DailyPracticeCard({ date }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [date]);
+  }, [date, lang]);
 
   useEffect(() => {
     void load();

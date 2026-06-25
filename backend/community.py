@@ -48,11 +48,16 @@ def thread_key(a: str, b: str) -> str:
 
 
 def public_user(u: Dict[str, Any]) -> Dict[str, Any]:
-    """Trim user document for community surfaces."""
+    """Trim user document for community surfaces. Faith bio fields
+    (denomination, tradition path, age) are public so members can see one
+    another's background across the parish community."""
     return {
         "user_id": u.get("user_id"),
         "name": u.get("name") or (u.get("email") or "").split("@")[0],
         "picture": u.get("picture"),
+        "denomination": u.get("denomination"),      # catholic | protestant | orthodox
+        "tradition_path": u.get("tradition_path"),  # convert | revert | cradle
+        "age": u.get("age"),
     }
 
 

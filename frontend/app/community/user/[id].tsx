@@ -118,6 +118,15 @@ export default function CommunityUserProfileScreen() {
           <View style={styles.identity}>
             <Avatar name={data.user.name} picture={data.user.picture ?? null} size={88} />
             <Text style={styles.name}>{data.user.name}</Text>
+            {(() => {
+              const cap = (s?: string | null) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : "");
+              const parts = [
+                cap(data.user.denomination),
+                cap(data.user.tradition_path),
+                data.user.age ? `${data.user.age}` : "",
+              ].filter(Boolean);
+              return parts.length ? <Text style={styles.bio}>{parts.join("  ·  ")}</Text> : null;
+            })()}
             {!data.is_self ? (
               <View style={styles.actionRow}>
                 <Pressable
@@ -201,6 +210,7 @@ const styles = StyleSheet.create({
   scroll: { padding: spacing.lg },
   identity: { alignItems: "center", paddingVertical: spacing.lg, gap: spacing.sm },
   name: { fontFamily: fonts.headingBold, fontSize: 22, color: colors.textPrimary, marginTop: spacing.sm },
+  bio: { fontFamily: fonts.uiSemi, fontSize: 13, color: colors.gold, marginTop: 4, letterSpacing: 0.3 },
   cta: {
     flexDirection: "row",
     alignItems: "center",

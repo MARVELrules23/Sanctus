@@ -1,0 +1,45 @@
+{
+  "summary": "Iteration 51 — Verified the 4 changes for Sanctus. (1) CALENDAR DST FIX: PASSED. On 2026-03-07/08/09/10 the St. Joseph Consecration tile reads Day 21/22/23/24 (consecutive, no duplicate) and 2026-03-19 reads 'Day 33 of 33'. The UTC-midnight day-index in calendar.tsx::dayIndexFor works correctly across the March DST boundary. Backend /api/challenges/windows returns Feb 15→Mar 19 (33 days) for both 2026 and 2027. (2) COMMUNITY PHOTO: PASSED. Composer FAB opens, the multi-line message TextInput renders ABOVE the gold 'Add a photo' button (testID community-compose-photo, taY=614 < btnY=792). In the feed, post_79c1582cf83e40 'Photo from our parish pilgrimage' renders the image (testID community-post-image-post_79c1582cf83e40) BELOW the body text (txtY=183 < imgY=213). Backend round-trip POST /api/community/posts with image returns full data URI back. (3) PUBLIC BIO: PASSED. /community/user/user_ade7a898e281 shows 'Catholic  ·  Convert  ·  26' under the name. (Note: review request said age=34 but backend now returns 26; the user updated their own profile between the playbook verification and this run — the rendering itself is correct.) (4) FULL PRAYERS: PARTIAL FAIL. Apostles' Creed, Our Father (opening + every decade), Glory Be (opening + every decade), Hail Holy Queen — all FULL canonical text. BUT: Hail Mary in opening 'for Faith' bead AND every decade Hail Mary (10×5=50 beads per rosary) is STILL TRUNCATED to 'Hail Mary, full of grace, the Lord is with thee…'. This means in a single Holy Rosary 51 of the 53 Hail Marys are ellipsis-truncated. Chaplets (st_michael, sacred_heart, immaculate_heart, st_lucy, padre_pio, peter_and_paul) all use the full Hail Mary text and are fine. Backend pytest 5/5 passed.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "src/rosary.ts openingBeads()",
+        "issue": "The 'Hail Mary (for Faith)' opening bead still shows truncated 'Hail Mary, full of grace, the Lord is with thee…' (with the … ellipsis). The 'for Hope' and 'for Charity' opening Hail Marys correctly use the full canonical text — only the Faith bead was missed. Reference: /app/frontend/src/rosary.ts:129",
+        "testID": "rosary-bead-card (Bead 4 of 79 in Luminous mysteries)",
+        "priority": "HIGH"
+      },
+      {
+        "component": "src/rosary.ts decadeBeads()",
+        "issue": "Every decade Hail Mary (10 per decade × 5 decades = 50 beads in every rosary) is still truncated to 'Hail Mary, full of grace, the Lord is with thee…'. Reference: /app/frontend/src/rosary.ts:144 — replace the prayer string with the same full text used in openingBeads (Hope/Charity) and in src/prayers/chaplets.ts. Spanish/Italian translations will inherit the truncated source until this is fixed.",
+        "testID": "rosary-bead-card (Beads 10–19, 24–33, 38–47, 52–61, 66–75 across all four mystery sets)",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter51_features.py",
+    "/app/test_reports/pytest/iteration_51.xml"
+  ],
+  "action_items": [
+    "Fix /app/frontend/src/rosary.ts:129 — replace the truncated 'Hail Mary (for Faith)' prayer string with the full canonical text (use the same string as the Hope/Charity beads on lines 130/131).",
+    "Fix /app/frontend/src/rosary.ts:144 — inside decadeBeads(), replace the truncated decade Hail Mary with the full canonical Hail Mary. Currently every Hail Mary in every decade is truncated.",
+    "After the rosary fix, switch language to Español/Italiano on the rosary screen to confirm translated text is also full-length (no '…' carry-over)."
+  ],
+  "critical_code_review_comments": [
+    "calendar.tsx is at 703 lines — at the maintainability cap. Continued growth without splitting into <ChallengeOverlay/> / <DayDetail/> components will get painful.",
+    "rosary.ts mixes data and helpers in one file; consider extracting the prayer strings to a shared module (e.g. src/prayers/canonical.ts) so the Our Father / Hail Mary / Glory Be / Apostles' Creed / Hail Holy Queen are defined ONCE and re-imported. That would have prevented the truncation regression seen here, where chaplets.ts has the full Hail Mary but rosary.ts retained the truncated copy on lines 129 and 144."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter51_features.py (new — 5 tests, all passing)"
+  ],
+  "success_rate": { "backend": "100%", "frontend": "75%" },
+  "seed_data_creation": "None. Used pre-minted admin session token 'test_feat_aug25' (Bearer + localStorage).",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "After main agent fixes rosary.ts lines 129 and 144, the rosary should have ZERO ellipsis characters. Re-run: open the Holy Rosary (any mystery), step through beads 1–22 and confirm none contain '…'; then toggle language to ES then IT and confirm translated decade Hail Marys are full-length. Backend windows API is correct. Calendar DST fix is solid — Day 21→22→23→24 confirmed across Mar 7–10 2026, Day 33/33 confirmed on Mar 19 2026.",
+  "rca_of_issue": "Rosary Hail Mary truncation: In a recent change the canonical Hail Mary was expanded in src/prayers/chaplets.ts and partially in src/rosary.ts (lines 130, 131 for Hope/Charity), but the original 'for Faith' opening bead (line 129) and the decade Hail Mary template inside decadeBeads() (line 144) were left with the old '…' truncation. Because decadeBeads is called 5 times per rosary and pushes 10 Hail Marys each, every full rosary contains 50 truncated Hail Marys plus the one 'for Faith' = 51/53 truncated. Backend doesn't store these strings — they are shipped from the frontend bundle and run through the on-device translator. Mitigation: change both string literals to the full canonical text already used in src/prayers/chaplets.ts (e.g. line 166) — single-line copy/paste in two places."
+}

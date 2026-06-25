@@ -159,9 +159,12 @@ export default function CalendarScreen() {
   const dayIndexFor = useCallback((c: ChallengeWindow, dStr: string): number => {
     const start = (c.start_date || "").slice(0, 10);
     if (!start) return 1;
-    const sD = new Date(`${start}T00:00:00`);
-    const dD = new Date(`${dStr}T00:00:00`);
-    const raw = Math.floor((dD.getTime() - sD.getTime()) / 86_400_000) + 1;
+    // Parse as UTC midnight so the day count is never thrown off by a DST
+    // transition inside the window (e.g. the St. Joseph track crosses the
+    // March spring-forward, which previously duplicated a day and dropped 33).
+    const sD = new Date(`${start}T00:00:00Z`);
+    const dD = new Date(`${dStr}T00:00:00Z`);
+    const raw = Math.round((dD.getTime() - sD.getTime()) / 86_400_000) + 1;
     const total = c.total_days || 0;
     return total ? Math.max(1, Math.min(raw, total)) : Math.max(1, raw);
   }, []);

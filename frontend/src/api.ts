@@ -344,7 +344,7 @@ export type ParishEvent = {
 
 // ---- Community types ----
 export type CommunityTopic = { slug: string | null; label: string; icon: string };
-export type CommunityUserPublic = { user_id: string; name: string; picture: string | null | undefined };
+export type CommunityUserPublic = { user_id: string; name: string; picture: string | null | undefined; denomination?: string | null; tradition_path?: string | null; age?: number | null };
 
 export type CommunityChallengeRef = {
   slug: string;

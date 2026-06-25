@@ -2,7 +2,9 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -14,6 +16,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 
@@ -52,6 +55,7 @@ export default function CommunityScreen() {
   // Composer
   const [showCompose, setShowCompose] = useState(false);
   const [composerBody, setComposerBody] = useState("");
+  const [composerImage, setComposerImage] = useState<string | null>(null);
   const [composerTopic, setComposerTopic] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -127,8 +131,34 @@ export default function CommunityScreen() {
 
   const openCompose = () => {
     setComposerBody("");
+    setComposerImage(null);
     setComposerTopic(activeTopic);
     setShowCompose(true);
+  };
+
+  // Attach a photo from the library (base64 data URI, stored on the post).
+  const pickImage = async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      if (!perm.canAskAgain) {
+        Alert.alert("Photos access needed", "Enable photo access in Settings to attach a picture.", [
+          { text: "Not now", style: "cancel" },
+          { text: "Open Settings", onPress: () => Linking.openSettings() },
+        ]);
+      } else {
+        Alert.alert("Photos access needed", "We need access to your photos to attach a picture.");
+      }
+      return;
+    }
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      quality: 0.6,
+      base64: true,
+      allowsEditing: true,
+    });
+    if (res.canceled || !res.assets?.length) return;
+    const a = res.assets[0];
+    if (a.base64) setComposerImage(`data:${a.mimeType || "image/jpeg"};base64,${a.base64}`);
   };
 
   const submitPost = async () => {
@@ -138,7 +168,7 @@ export default function CommunityScreen() {
     try {
       const created = await api<CommunityPost>("/community/posts", {
         method: "POST",
-        body: { body, topic: composerTopic },
+        body: { body, topic: composerTopic, image: composerImage },
       });
       // Show in feed if it matches current filter
       if (activeTopic === null || activeTopic === created.topic) {
@@ -418,6 +448,27 @@ export default function CommunityScreen() {
               maxLength={1500}
             />
             <Text style={styles.composerHint}>{composerBody.length}/1500 — be charitable; this is a public parish.</Text>
+            {composerImage ? (
+              <View style={{ marginTop: spacing.md }}>
+                <Image source={{ uri: composerImage }} style={{ width: "100%", height: 200, borderRadius: radius.md }} resizeMode="cover" />
+                <Pressable
+                  onPress={() => setComposerImage(null)}
+                  testID="community-compose-remove-photo"
+                  style={{ position: "absolute", top: 8, right: 8, backgroundColor: "rgba(0,0,0,0.6)", borderRadius: 16, padding: 4 }}
+                >
+                  <Ionicons name="close" size={18} color="#fff" />
+                </Pressable>
+              </View>
+            ) : (
+              <Pressable
+                onPress={pickImage}
+                testID="community-compose-photo"
+                style={({ pressed }) => [{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: spacing.md, alignSelf: "flex-start" }, pressed && styles.pressed]}
+              >
+                <Ionicons name="image-outline" size={18} color={colors.gold} />
+                <Text style={{ fontFamily: fonts.uiSemi, fontSize: 14, color: colors.gold }}>Add a photo</Text>
+              </Pressable>
+            )}
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -536,6 +587,15 @@ export function PostCard({
         <Text style={styles.postBody} numberOfLines={compact ? 4 : undefined}>
           {post.body}
         </Text>
+
+        {post.image ? (
+          <Image
+            source={{ uri: post.image }}
+            style={{ width: "100%", height: 220, borderRadius: radius.md, marginTop: spacing.sm, backgroundColor: "rgba(0,0,0,0.04)" }}
+            resizeMode="cover"
+            testID={`community-post-image-${post.post_id}`}
+          />
+        ) : null}
 
         {post.challenge && post.challenge.slug ? (
           <View

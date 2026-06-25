@@ -86,9 +86,9 @@ function buildStMichael(): BeadStep[] {
       label: `${i + 1}. Salutation — ${c.name}`,
       prayer: c.petition,
     });
-    steps.push({ label: "Our Father", prayer: "Our Father, Who art in heaven, hallowed be Thy name…" });
+    steps.push({ label: "Our Father", prayer: "Our Father, Who art in heaven, hallowed be Thy name; Thy kingdom come; Thy will be done on earth as it is in heaven. Give us this day our daily bread; and forgive us our trespasses, as we forgive those who trespass against us; and lead us not into temptation, but deliver us from evil. Amen." });
     for (let j = 1; j <= 3; j++) {
-      steps.push({ label: `Hail Mary (${j}/3)`, prayer: "Hail Mary, full of grace, the Lord is with thee…" });
+      steps.push({ label: `Hail Mary (${j}/3)`, prayer: "Hail Mary, full of grace, the Lord is with thee. Blessed art thou amongst women, and blessed is the fruit of thy womb, Jesus. Holy Mary, Mother of God, pray for us sinners, now and at the hour of our death. Amen." });
     }
   });
 
@@ -155,7 +155,7 @@ function buildImmaculateHeart(): BeadStep[] {
   });
   steps.push({
     label: "Our Father",
-    prayer: "Our Father, Who art in heaven, hallowed be Thy name…",
+    prayer: "Our Father, Who art in heaven, hallowed be Thy name; Thy kingdom come; Thy will be done on earth as it is in heaven. Give us this day our daily bread; and forgive us our trespasses, as we forgive those who trespass against us; and lead us not into temptation, but deliver us from evil. Amen.",
   });
 
   IH_MARY_MEDITATIONS.forEach((m, i) => {
@@ -201,11 +201,11 @@ function buildSacredHeart(): BeadStep[] {
   });
   steps.push({
     label: "Our Father",
-    prayer: "Our Father, Who art in heaven, hallowed be Thy name…",
+    prayer: "Our Father, Who art in heaven, hallowed be Thy name; Thy kingdom come; Thy will be done on earth as it is in heaven. Give us this day our daily bread; and forgive us our trespasses, as we forgive those who trespass against us; and lead us not into temptation, but deliver us from evil. Amen.",
   });
   steps.push({
     label: "Hail Mary",
-    prayer: "Hail Mary, full of grace, the Lord is with thee…",
+    prayer: "Hail Mary, full of grace, the Lord is with thee. Blessed art thou amongst women, and blessed is the fruit of thy womb, Jesus. Holy Mary, Mother of God, pray for us sinners, now and at the hour of our death. Amen.",
   });
 
   // 33 invocations — 11 sets of 3, each set = (1 Sacred Heart invocation + 2 short petitions)
@@ -220,7 +220,7 @@ function buildSacredHeart(): BeadStep[] {
 
   steps.push({
     label: "Glory Be",
-    prayer: "Glory be to the Father, and to the Son, and to the Holy Spirit…",
+    prayer: "Glory be to the Father, and to the Son, and to the Holy Spirit, as it was in the beginning, is now, and ever shall be, world without end. Amen.",
   });
   steps.push({
     label: "Closing Prayer",
@@ -249,13 +249,13 @@ function buildStLucy(): BeadStep[] {
     prayer:
       "O glorious St. Lucy — virgin and martyr, whose name signifies light — obtain for us the grace to walk as children of the light. Pray for us, that the eyes of our soul may be cleansed of all that dims them.",
   });
-  steps.push({ label: "Our Father", prayer: "Our Father, Who art in heaven…" });
+  steps.push({ label: "Our Father", prayer: "Our Father, Who art in heaven, hallowed be Thy name; Thy kingdom come; Thy will be done on earth as it is in heaven. Give us this day our daily bread; and forgive us our trespasses, as we forgive those who trespass against us; and lead us not into temptation, but deliver us from evil. Amen." });
 
   // 13 Hail Marys (her feast is Dec 13)
   for (let i = 1; i <= 13; i++) {
     steps.push({
       label: `Hail Mary (${i}/13)`,
-      prayer: "Hail Mary, full of grace, the Lord is with thee…",
+      prayer: "Hail Mary, full of grace, the Lord is with thee. Blessed art thou amongst women, and blessed is the fruit of thy womb, Jesus. Holy Mary, Mother of God, pray for us sinners, now and at the hour of our death. Amen.",
     });
   }
 
@@ -266,7 +266,7 @@ function buildStLucy(): BeadStep[] {
   });
   steps.push({
     label: "Glory Be",
-    prayer: "Glory be to the Father, and to the Son, and to the Holy Spirit…",
+    prayer: "Glory be to the Father, and to the Son, and to the Holy Spirit, as it was in the beginning, is now, and ever shall be, world without end. Amen.",
   });
   steps.push({
     label: "Closing Prayer",
@@ -312,11 +312,11 @@ function buildStPadrePio(): BeadStep[] {
     });
     steps.push({
       label: `Our Father (${i + 1}/6)`,
-      prayer: "Our Father, Who art in heaven, hallowed be Thy name…",
+      prayer: "Our Father, Who art in heaven, hallowed be Thy name; Thy kingdom come; Thy will be done on earth as it is in heaven. Give us this day our daily bread; and forgive us our trespasses, as we forgive those who trespass against us; and lead us not into temptation, but deliver us from evil. Amen.",
     });
     steps.push({
       label: `Hail Mary (${i + 1}/6)`,
-      prayer: "Hail Mary, full of grace, the Lord is with thee…",
+      prayer: "Hail Mary, full of grace, the Lord is with thee. Blessed art thou amongst women, and blessed is the fruit of thy womb, Jesus. Holy Mary, Mother of God, pray for us sinners, now and at the hour of our death. Amen.",
     });
     steps.push({
       label: `Glory Be (${i + 1}/6)`,
@@ -373,17 +373,17 @@ function buildPeterAndPaul(): BeadStep[] {
     });
     steps.push({
       label: "Our Father",
-      prayer: "Our Father, Who art in heaven, hallowed be Thy name…",
+      prayer: "Our Father, Who art in heaven, hallowed be Thy name; Thy kingdom come; Thy will be done on earth as it is in heaven. Give us this day our daily bread; and forgive us our trespasses, as we forgive those who trespass against us; and lead us not into temptation, but deliver us from evil. Amen.",
     });
     for (let j = 1; j <= 3; j++) {
       steps.push({
         label: `Hail Mary (${j}/3)`,
-        prayer: "Hail Mary, full of grace, the Lord is with thee…",
+        prayer: "Hail Mary, full of grace, the Lord is with thee. Blessed art thou amongst women, and blessed is the fruit of thy womb, Jesus. Holy Mary, Mother of God, pray for us sinners, now and at the hour of our death. Amen.",
       });
     }
     steps.push({
       label: "Glory Be",
-      prayer: "Glory be to the Father, and to the Son, and to the Holy Spirit…",
+      prayer: "Glory be to the Father, and to the Son, and to the Holy Spirit, as it was in the beginning, is now, and ever shall be, world without end. Amen.",
     });
     steps.push({
       label: `${d.saint}'s Petition`,

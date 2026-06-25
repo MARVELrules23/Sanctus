@@ -667,6 +667,28 @@ SEED_STATIONS: List[Dict[str, Any]] = [
         "accent_color": "#047857",
         "icon": "star-outline",
     },
+    {
+        "slug": "radio-maria-espana",
+        "name": "Radio María España",
+        "blurb": "La emisora católica española de Radio María — Santo Rosario, Santa Misa, adoración y catequesis las 24 horas, sin música secular.",
+        "country": "Spain",
+        "language": "Spanish",
+        "stream_url": "https://dreamsiteradiocp4.com/proxy/rmspain1?mp=/stream/1/",
+        "website_url": "https://www.radiomaria.es/",
+        "accent_color": "#B91C1C",
+        "icon": "rose-outline",
+    },
+    {
+        "slug": "catolica-radio-pr",
+        "name": "Católica Radio (Puerto Rico)",
+        "blurb": "Radio católica en español desde Puerto Rico — Santo Rosario, Santa Misa y programación que alimenta la fe para toda Hispanoamérica.",
+        "country": "Puerto Rico",
+        "language": "Spanish",
+        "stream_url": "https://live.turadio.stream:7017/catolicaradiopr",
+        "website_url": "https://catolicaradiopr.com/",
+        "accent_color": "#0D9488",
+        "icon": "radio-outline",
+    },
 ]
 
 

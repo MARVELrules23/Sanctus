@@ -1,0 +1,39 @@
+{
+  "summary": "Iteration 67 — verified the relic-prioritized 'Saint of the place near you' + live OpenStreetMap nearby_churches on /api/sites/nearby. Backend pytest 15/15 PASS (auth gating; full curated list = 270 sites; /api/sites/lourdes resolves; new response shape {items, featured, nearby_churches, total} verified; 'featured' is the NEAREST curated relic-bearing site for Madrid (avila-st-teresa, 88.3km, relics=1), NYC (st-patricks-nyc, 5.7km, relics=1), Rome (st-marys-major, 0.6km, relics=2); Madrid/NYC/Rome each return 30 OSM churches with osm:true, ascending distance_km, all ≤ ~30km — proves real OpenStreetMap fetch is live and per-city accurate (e.g. NYC nearest = 'Generoso Pope Catholic Center at NYU' 2.0km, Rome nearest = 'Basilica di Santa Prassede' 0.8km, Madrid nearest = 'Capilla del Ave María' 0.3km); osm_sites_cache returns identical rows on repeat with no slowdown; no-coords call returns relic-bearing daily-rotating featured (valencia-cathedral, relics=1) and empty nearby_churches as specified). Frontend (390x844, philipwils13@gmail.com, web preview): /community/map renders; testID 'saint-near-you' shows Valencia Cathedral with 'Relics to venerate here' hint and Plan button; map markers render globally; the previously-missing 'map-toggle-list' button is NOW present and switches to the list view which shows 'Explore 270 significant Catholic places across the world.' with rows carrying testID 'map-list-<slug>' (first row: map-list-aachen-cathedral). 'Catholic churches near you' section correctly absent in web preview (no GPS) — per spec this is expected. No red-screen errors; the iter66 'duplicate React key' warning did NOT reappear in this run. The original user complaint (Spain shown as 'near you' when user is elsewhere) is fully resolved: with real GPS coords the API returns geographically appropriate relic shrines AND a live OSM list of actual nearby Catholic churches.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/community/map (Madrid use-case observation)", "issues": ["With Madrid coords (40.4168,-3.7038) the nearest curated relic-bearing site is Convent of St. Teresa in Ávila at 88.3km. Functionally correct given the 270-site curated list, but city users may still see a relatively distant featured shrine — consider adding more Spanish relic sites (e.g., Toledo Cathedral, El Escorial, San Isidro Madrid) for better in-city coverage. Not a regression — informational only."]}
+    ],
+    "react_native_issues": [
+      {"component": "RNW shadow* style props", "issue": "(carry-over, web-only cosmetic) Console: '\"shadow*\" style props are deprecated. Use \"boxShadow\".'"},
+      {"component": "expo-notifications web shim", "issue": "(carry-over, web-only cosmetic) Console: '[expo-notifications] Listening to push token changes is not yet fully supported on web.'"}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter67_sites_nearby_relics.py",
+    "/app/test_reports/pytest/iteration_67.xml"
+  ],
+  "action_items": [
+    "(Optional) Densify the curated Spanish relic-site list so Madrid users see a featured shrine within ~30km (Toledo Cathedral, San Isidro/Madrid, El Escorial). Current behavior is correct, just sparse for that city.",
+    "(Optional) Add a 'osm:true' visual badge on map markers / list rows for the OSM-sourced 'nearby_churches' so users can distinguish curated shrines from live OSM data once GPS-enabled native build is exercised."
+  ],
+  "critical_code_review_comments": [
+    "catholic_sites.py: nearby_sites endpoint correctly returns the new 4-key shape {items, featured, nearby_churches, total}. featured is computed as relic_sites[0] AFTER haversine sort, so it is guaranteed to be the nearest curated relic-bearing site (verified for Madrid/NYC/Rome).",
+    "catholic_sites.py _osm_nearby_churches: tiles round to 0.1° (~11km) — good cache hit rate; 30-day mongo cache in osm_sites_cache; failure path returns [] and does NOT cache empty results (so retries work). Uses two Overpass mirrors with proper User-Agent. Output deduped by 5-decimal coordinates.",
+    "catholic_sites.py _osm_query: filters religion=christian AND denomination~catholic (case-insensitive), pulling nodes + ways with out center 80 — correct scope for Catholic places of worship.",
+    "Madrid/NYC/Rome each returned exactly 30 OSM churches (the cap at line 1562 `nearby_churches = osm[:30]`) — implementation matches spec ('within ~30km, sorted ascending'). All entries had osm:true and distance_km ≤ ~30km.",
+    "frontend/app/community/map.tsx: featured card binds to `featured` (line 205-228), correctly surfaces 'Relics to venerate here' (line 220) when featured.relics non-empty; nearbyChurches state wired to res.nearby_churches; list toggle (map-toggle-list) now visible and functional — iter66 gap fixed."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter67_sites_nearby_relics.py (new — 15 tests, all passing)"
+  ],
+  "success_rate": {"backend": "100% (15/15)", "frontend": "100% of testable web flows (GPS-only nearby_churches list intentionally not exercised in web preview)"},
+  "seed_data_creation": "None. Tests rely on existing 270-site curated seed and live Overpass API. OSM tiles for Madrid/NYC/Rome are now warm in osm_sites_cache for ~30 days.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All spec items pass. To verify the in-app 'Catholic churches near you' list rendering, run a native build (Expo Go) with location permission granted; the web preview has no GPS so that section is empty by design. Backend tests are stable; rerun /app/backend/tests/test_iter67_sites_nearby_relics.py for any regressions.",
+  "rca_of_issue": "Original user-reported bug: Catholic World Map featured 'Saint of the place near you' showed Spain when the user was elsewhere. Root cause was twofold: (a) the curated nearby endpoint sorted by distance but did NOT filter for relic-bearing sites — so the nearest could be a shrine without venerable relics; (b) there was no source of real local Catholic churches, so the user only ever saw distant curated shrines. Fix verified in code: (1) catholic_sites.py:1573-1574 now filters `relic_sites = [s for s in items if s.get('relics')]` and sets featured to relic_sites[0] AFTER distance sort, guaranteeing the nearest *relic-bearing* curated shrine; (2) _osm_nearby_churches fetches live Catholic places-of-worship from OpenStreetMap within 30km and caches per ~11km tile in mongo for 30 days, returning up to 30 sorted by distance. Verification on Rome (41.9,12.5) returned featured = Santa Maria Maggiore at 0.6km with relics of the Holy Crib + St. Jerome — geographically and theologically correct."
+}

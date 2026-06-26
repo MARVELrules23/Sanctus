@@ -83,6 +83,7 @@ export default function CatholicMapScreen() {
   const [toast, setToast] = useState<string | null>(null);
   const [usingLocation, setUsingLocation] = useState(false);
   const [nearCity, setNearCity] = useState<string>("");
+  const [nearbyChurches, setNearbyChurches] = useState<CatholicSite[]>([]);
 
   const load = useCallback(async () => {
     setError(null);
@@ -107,7 +108,8 @@ export default function CatholicMapScreen() {
         const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
         const { latitude, longitude } = pos.coords;
         const res = await nearbyCatholicSites(latitude, longitude);
-        setFeatured(res.items?.[0] || null);
+        setFeatured(res.featured || res.items?.[0] || null);
+        setNearbyChurches(res.nearby_churches || []);
         setUsingLocation(true);
         try {
           const geo = await Location.reverseGeocodeAsync({ latitude, longitude });
@@ -159,6 +161,12 @@ export default function CatholicMapScreen() {
     }
   }, []);
 
+  const openInMaps = useCallback((s: CatholicSite) => {
+    const label = encodeURIComponent(s.name);
+    const url = `https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lng}(${label})`;
+    Linking.openURL(url).catch(() => {});
+  }, []);
+
   useEffect(() => {
     load();
     locateAndLoad(true);
@@ -206,6 +214,12 @@ export default function CatholicMapScreen() {
               {featured.city}, {featured.country}
               {featured.distance_km != null ? ` · ${featured.distance_km} km away` : ""}
             </Text>
+            {featured.relics && featured.relics.length > 0 ? (
+              <View style={styles.featRelic}>
+                <Ionicons name="sparkles-outline" size={11} color={colors.gold} />
+                <Text style={styles.featRelicText} numberOfLines={1}>Relics to venerate here</Text>
+              </View>
+            ) : null}
           </Pressable>
           <View style={styles.featActions}>
             <Pressable testID="saint-near-locate" onPress={useMyLocation} hitSlop={8} style={styles.featIconBtn}>
@@ -236,6 +250,31 @@ export default function CatholicMapScreen() {
         </View>
       ) : showList ? (
         <ScrollView contentContainerStyle={styles.listScroll}>
+          {usingLocation && nearbyChurches.length > 0 ? (
+            <View style={styles.nearbyBlock}>
+              <Text style={styles.nearbyHead}>
+                Catholic churches near you{nearCity ? ` · ${nearCity}` : ""}
+              </Text>
+              {nearbyChurches.map((c) => (
+                <Pressable
+                  key={c.site_id}
+                  testID={`map-nearby-${c.site_id}`}
+                  onPress={() => openInMaps(c)}
+                  style={({ pressed }) => [styles.listRow, pressed && { opacity: 0.85 }]}
+                >
+                  <View style={[styles.dot, { backgroundColor: TYPE_COLORS.church }]} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.listTitle} numberOfLines={1}>{c.name}</Text>
+                    <Text style={styles.listSub} numberOfLines={1}>
+                      {[c.city, c.distance_km != null ? `${c.distance_km} km away` : ""].filter(Boolean).join(" · ")}
+                    </Text>
+                  </View>
+                  <Ionicons name="navigate-outline" size={16} color={colors.primary} />
+                </Pressable>
+              ))}
+              <Text style={styles.nearbyNote}>Live from OpenStreetMap · tap to open in Maps</Text>
+            </View>
+          ) : null}
           <Text style={styles.intro}>Explore {sites.length} significant Catholic places across the world.</Text>
           {sites.filter((s) => !s.osm).map((s) => (
             <Pressable
@@ -441,6 +480,8 @@ const styles = StyleSheet.create({
   featLabel: { fontFamily: fonts.uiSemi, fontSize: 10.5, letterSpacing: 0.4, textTransform: "uppercase", color: "#7A5CB0" },
   featName: { fontFamily: fonts.headingSemi, fontSize: 16, color: colors.primary },
   featSub: { fontFamily: fonts.bodyRegular, fontSize: 12.5, color: colors.textMuted, marginTop: 1 },
+  featRelic: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 3 },
+  featRelicText: { fontFamily: fonts.uiSemi, fontSize: 11, color: colors.gold },
   featActions: { flexDirection: "row", alignItems: "center", gap: 8 },
   featIconBtn: { padding: 4 },
   featPlan: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#7A5CB0", borderRadius: radius.round, paddingHorizontal: 12, paddingVertical: 8 },
@@ -461,6 +502,9 @@ const styles = StyleSheet.create({
   planCancelText: { fontFamily: fonts.uiSemi, fontSize: 14, color: colors.textMuted },
   listScroll: { padding: spacing.md, gap: spacing.sm },
   intro: { fontFamily: fonts.bodyItalic, fontSize: 13.5, color: colors.textSecondary, marginBottom: spacing.sm },
+  nearbyBlock: { marginBottom: spacing.md, gap: spacing.sm },
+  nearbyHead: { fontFamily: fonts.uiSemi, fontSize: 13, color: colors.primary },
+  nearbyNote: { fontFamily: fonts.bodyItalic, fontSize: 11.5, color: colors.textMuted, marginTop: 2 },
   listRow: {
     flexDirection: "row",
     alignItems: "center",

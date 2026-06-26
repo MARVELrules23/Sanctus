@@ -11,10 +11,12 @@ translation cache, exactly like the miracles feed.
 """
 from __future__ import annotations
 
+import math
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
@@ -1429,6 +1431,106 @@ async def _seed_if_missing(db) -> int:
     return inserted
 
 
+def _haversine(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    dlat = math.radians((lat2 or 0) - lat1)
+    dlng = math.radians((lng2 or 0) - lng1)
+    a = (math.sin(dlat / 2) ** 2 +
+         math.cos(math.radians(lat1)) * math.cos(math.radians(lat2 or 0)) * math.sin(dlng / 2) ** 2)
+    return 6371 * 2 * math.asin(min(1, math.sqrt(a)))
+
+
+# Public Overpass mirrors (tried in order; first that answers wins).
+_OVERPASS_ENDPOINTS = [
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+]
+_OSM_CACHE_DAYS = 30
+_OSM_RADIUS_M = 30000  # 30 km around the user
+
+
+def _osm_query(lat: float, lng: float, radius_m: int) -> str:
+    # Catholic places of worship within radius (nodes + ways with a center).
+    return (
+        f"[out:json][timeout:25];"
+        f"("
+        f'node["amenity"="place_of_worship"]["religion"="christian"]["denomination"~"catholic",i](around:{radius_m},{lat},{lng});'
+        f'way["amenity"="place_of_worship"]["religion"="christian"]["denomination"~"catholic",i](around:{radius_m},{lat},{lng});'
+        f");"
+        f"out center 80;"
+    )
+
+
+async def _osm_nearby_churches(db, lat: float, lng: float) -> List[Dict[str, Any]]:
+    """Fetch real Catholic churches near (lat,lng) from OpenStreetMap, cached by tile."""
+    # Round to ~0.1° tiles (~11 km) so nearby requests reuse the same cache row.
+    tile = f"{round(lat, 1)},{round(lng, 1)}"
+    cache = db["osm_sites_cache"]
+    now = datetime.now(timezone.utc)
+    cached = await cache.find_one({"tile": tile}, {"_id": 0})
+    if cached and cached.get("fetched_at"):
+        try:
+            fetched = datetime.fromisoformat(cached["fetched_at"])
+            if (now - fetched).days < _OSM_CACHE_DAYS:
+                return cached.get("items") or []
+        except Exception:  # noqa: BLE001
+            pass
+
+    items: List[Dict[str, Any]] = []
+    query = _osm_query(round(lat, 1), round(lng, 1), _OSM_RADIUS_M)
+    for url in _OVERPASS_ENDPOINTS:
+        try:
+            async with httpx.AsyncClient(timeout=28) as client:
+                resp = await client.post(url, data={"data": query},
+                                         headers={"User-Agent": "SanctusApp/1.0 (Catholic church finder)"})
+            if resp.status_code != 200:
+                continue
+            data = resp.json()
+            for el in data.get("elements", []):
+                tags = el.get("tags") or {}
+                name = (tags.get("name") or "").strip()
+                if not name:
+                    continue
+                if el.get("type") == "node":
+                    elat, elng = el.get("lat"), el.get("lon")
+                else:
+                    c = el.get("center") or {}
+                    elat, elng = c.get("lat"), c.get("lon")
+                if elat is None or elng is None:
+                    continue
+                items.append({
+                    "site_id": f"osm_{el.get('type','n')[0]}{el.get('id')}",
+                    "slug": f"osm-{el.get('id')}",
+                    "name": name,
+                    "type": "church",
+                    "city": tags.get("addr:city") or tags.get("addr:town") or tags.get("addr:village") or "",
+                    "country": tags.get("addr:country") or "",
+                    "lat": elat, "lng": elng,
+                    "osm": True,
+                })
+            break  # got a usable response
+        except Exception:  # noqa: BLE001
+            continue
+
+    # Dedupe by rounded coordinates (ways + nodes can overlap).
+    seen = set()
+    deduped: List[Dict[str, Any]] = []
+    for it in items:
+        key = (round(it["lat"], 5), round(it["lng"], 5))
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(it)
+
+    # Only cache successful, non-empty fetches so failures retry next time.
+    if deduped:
+        await cache.update_one(
+            {"tile": tile},
+            {"$set": {"tile": tile, "fetched_at": now.isoformat(), "items": deduped}},
+            upsert=True,
+        )
+    return deduped
+
+
 def build_router(db: AsyncIOMotorDatabase, get_current_user, emergent_llm_key: str = "") -> APIRouter:
     router = APIRouter(prefix="/sites", tags=["catholic-sites"])
     col = db["catholic_sites"]
@@ -1446,26 +1548,41 @@ def build_router(db: AsyncIOMotorDatabase, get_current_user, emergent_llm_key: s
     async def nearby_sites(lat: float | None = None, lng: float | None = None, user=Depends(get_current_user)):
         await _seed_if_missing(db)
         items = [_public(d) async for d in col.find({}, {"_id": 0})]
+        nearby_churches: List[Dict[str, Any]] = []
         if lat is not None and lng is not None:
-            import math
-            def dist(s):
-                dlat = math.radians((s.get("lat") or 0) - lat)
-                dlng = math.radians((s.get("lng") or 0) - lng)
-                a = (math.sin(dlat / 2) ** 2 +
-                     math.cos(math.radians(lat)) * math.cos(math.radians(s.get("lat") or 0)) * math.sin(dlng / 2) ** 2)
-                return 6371 * 2 * math.asin(min(1, math.sqrt(a)))
             for s in items:
-                s["distance_km"] = round(dist(s), 1)
+                s["distance_km"] = round(_haversine(lat, lng, s.get("lat") or 0, s.get("lng") or 0), 1)
             items.sort(key=lambda s: s.get("distance_km", 1e9))
+            # Real Catholic churches near the user, sourced live from OpenStreetMap.
+            try:
+                osm = await _osm_nearby_churches(db, lat, lng)
+                for o in osm:
+                    o["distance_km"] = round(_haversine(lat, lng, o["lat"], o["lng"]), 1)
+                osm.sort(key=lambda o: o.get("distance_km", 1e9))
+                nearby_churches = osm[:30]
+            except Exception:  # noqa: BLE001
+                nearby_churches = []
         else:
             # No location: offer a stable "saint of the place" pick that rotates daily.
             from datetime import date as _d
             items.sort(key=lambda s: s.get("name") or "")
             if items:
                 items = items[(_d.today().toordinal() % len(items)):] + items[:(_d.today().toordinal() % len(items))]
-        top = items[:8]
+
+        # "Saint of the place near you" should point to a place where relics can be venerated.
+        relic_sites = [s for s in items if s.get("relics")]
+        featured = relic_sites[0] if relic_sites else (items[0] if items else None)
+
+        top = relic_sites[:8] if relic_sites else items[:8]
         await _localize(db, top)
-        return {"items": top, "total": len(top)}
+        if featured and featured not in top:
+            await _localize(db, [featured])
+        return {
+            "items": top,
+            "featured": featured,
+            "nearby_churches": nearby_churches,
+            "total": len(top),
+        }
 
     @router.get("/{site_id}")
     async def get_site(site_id: str, user=Depends(get_current_user)):

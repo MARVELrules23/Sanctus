@@ -1879,7 +1879,13 @@ export type CatholicSite = {
 export async function listCatholicSites(): Promise<{ items: CatholicSite[]; total: number }> {
   return await api(`/sites`);
 }
-export async function nearbyCatholicSites(lat?: number, lng?: number): Promise<{ items: CatholicSite[]; total: number }> {
+export type NearbyResponse = {
+  items: CatholicSite[];
+  featured: CatholicSite | null;
+  nearby_churches: CatholicSite[];
+  total: number;
+};
+export async function nearbyCatholicSites(lat?: number, lng?: number): Promise<NearbyResponse> {
   const q = lat != null && lng != null ? `?lat=${lat}&lng=${lng}` : "";
   return await api(`/sites/nearby${q}`);
 }

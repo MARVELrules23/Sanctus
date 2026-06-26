@@ -406,6 +406,72 @@ async def _generate_goals(
     return goals
 
 
+def _gold_max_fallen(days: int) -> int:
+    """Maximum number of "fallen" (incomplete) days that still earns Gold.
+
+    User-specified anchors: 7d→2, 14d→4, 30d→6, 60d→7. We piecewise-interpolate
+    so any custom plan length gets a sensible threshold.
+    """
+    table = [(7, 2), (14, 4), (30, 6), (60, 7)]
+    if days <= table[0][0]:
+        return max(0, round(days * table[0][1] / table[0][0]))
+    if days >= table[-1][0]:
+        return table[-1][1]
+    for (d0, g0), (d1, g1) in zip(table, table[1:]):
+        if d0 <= days <= d1:
+            return round(g0 + (g1 - g0) * (days - d0) / (d1 - d0))
+    return table[-1][1]
+
+
+def _compute_badge(p: Dict[str, Any], goals: List[Dict[str, Any]], checkins: Dict[str, List[str]]) -> Dict[str, Any]:
+    """Perseverance badge — counts days *fully* completed vs days fallen across
+    the elapsed portion of the plan. Catholic mindset: perseverance over
+    perfection. Gold/Silver/Bronze tiers per the user's rules.
+    """
+    total_goals = len(goals)
+    days = int(p.get("days") or 0)
+    gold_max = _gold_max_fallen(days)
+    silver_max = max(gold_max, days // 2)
+    goal_ids = {g.get("id") for g in goals}
+
+    try:
+        start = _date.fromisoformat(p.get("start_date"))
+    except Exception:
+        start = _date.today()
+    today = _date.today()
+    # Evaluate days strictly before today (today is still in progress), capped at plan length.
+    elapsed = max(0, (today - start).days)
+    elapsed = min(elapsed, days)
+
+    completed_days = 0
+    for i in range(elapsed):
+        d = (start + timedelta(days=i)).isoformat()
+        done = set(checkins.get(d) or []) & goal_ids
+        if total_goals > 0 and len(done) >= total_goals:
+            completed_days += 1
+    fallen = elapsed - completed_days
+
+    final = today >= (start + timedelta(days=days))
+    if elapsed == 0:
+        tier = "none"
+    elif fallen <= gold_max:
+        tier = "gold"
+    elif fallen <= silver_max:
+        tier = "silver"
+    else:
+        tier = "bronze"
+
+    return {
+        "tier": tier,
+        "fallen": fallen,
+        "completed_days": completed_days,
+        "elapsed": elapsed,
+        "gold_max": gold_max,
+        "silver_max": silver_max,
+        "final": final,
+    }
+
+
 def _shape_plan(p: Dict[str, Any]) -> Dict[str, Any]:
     goals = p.get("goals") or []
     checkins: Dict[str, List[str]] = p.get("checkins") or {}
@@ -429,6 +495,7 @@ def _shape_plan(p: Dict[str, Any]) -> Dict[str, Any]:
         "journal": journal,
         "days_logged": len([d for d, ids in checkins.items() if ids]),
         "today": today,
+        "badge": _compute_badge(p, goals, checkins),
         "active": (p.get("end_date") or today) >= today,
         "created_at": p.get("created_at"),
     }

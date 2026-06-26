@@ -1792,6 +1792,15 @@ export type VirtuePlan = {
   journal: Record<string, string>;
   days_logged: number;
   today: string;
+  badge?: {
+    tier: "gold" | "silver" | "bronze" | "none";
+    fallen: number;
+    completed_days: number;
+    elapsed: number;
+    gold_max: number;
+    silver_max: number;
+    final: boolean;
+  };
   active: boolean;
   created_at: string;
 };
@@ -1845,6 +1854,28 @@ export async function translateTexts(texts: string[], target: string): Promise<s
   const res = await api<{ items: string[] }>("/translate", { method: "POST", body: { texts, target } });
   return res.items;
 }
+
+export type CatholicSite = {
+  site_id: string;
+  slug: string;
+  name: string;
+  type: "basilica" | "cathedral" | "shrine" | "apparition" | "monastery" | "church";
+  city: string;
+  country: string;
+  lat: number;
+  lng: number;
+  founded?: string;
+  blurb?: string;
+  history?: string;
+  relics: string[];
+  saints: string[];
+  miracles: string[];
+  source_url?: string;
+};
+export async function listCatholicSites(): Promise<{ items: CatholicSite[]; total: number }> {
+  return await api(`/sites`);
+}
+
 
 export type WorldIssue = { slug: string; title: string; icon: string; accent: string; blurb: string };
 export type WorldContent = WorldIssue & {

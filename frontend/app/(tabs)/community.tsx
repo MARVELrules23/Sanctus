@@ -316,8 +316,33 @@ export default function CommunityScreen() {
           >
             <Ionicons name="sparkles-outline" size={20} color={colors.primary} />
           </Pressable>
+          <Pressable
+            testID="community-map-btn"
+            onPress={() => router.push("/community/map")}
+            hitSlop={8}
+            style={({ pressed }) => [styles.iconBtn, pressed && styles.pressed]}
+          >
+            <Ionicons name="map-outline" size={20} color={colors.primary} />
+          </Pressable>
         </ScrollView>
       </View>
+
+      {/* World Map banner */}
+      <Pressable
+        testID="community-map-banner"
+        onPress={() => router.push("/community/map")}
+        style={({ pressed }) => [styles.miracleBanner, pressed && styles.pressed]}
+      >
+        <View style={styles.miracleIcon}>
+          <Ionicons name="earth" size={18} color={colors.gold} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.miracleTitle}>Catholic World Map</Text>
+          <Text style={styles.miracleSub} numberOfLines={1}>Churches, relics, saints & apparitions worldwide</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+      </Pressable>
+
 
       {/* Live Feed banner */}
       <Pressable

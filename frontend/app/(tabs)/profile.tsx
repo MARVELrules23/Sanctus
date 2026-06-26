@@ -200,7 +200,8 @@ export default function ProfileScreen() {
               ))}
             </View>
 
-            <Text style={styles.section}>{t("profile.discipline")}</Text>            <Text style={styles.label}>{t("profile.fitnessLevel")}</Text>
+            <Text style={styles.section}>{t("profile.discipline")}</Text>
+            <Text style={styles.label}>{t("profile.fitnessLevel")}</Text>
             <View style={styles.optionRow}>
               {LEVEL_OPTIONS.map((opt) => (
                 <Pressable

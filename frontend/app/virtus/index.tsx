@@ -29,6 +29,7 @@ import {
   VirtuePlan,
 } from "@/src/api";
 import Ornament from "@/src/components/Ornament";
+import { BadgePill } from "@/src/components/PerseveranceBadge";
 import { useI18n } from "@/src/i18n";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 
@@ -225,9 +226,12 @@ export default function VirtusIndexScreen() {
                     style={({ pressed }) => [styles.planRow, pressed && { opacity: 0.85 }]}
                   >
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.planRowTitle} numberOfLines={1}>
-                        {p.virtues.map((v) => v.name).join(" · ")}
-                      </Text>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                        <Text style={[styles.planRowTitle, { flexShrink: 1 }]} numberOfLines={1}>
+                          {p.virtues.map((v) => v.name).join(" · ")}
+                        </Text>
+                        <BadgePill badge={p.badge} />
+                      </View>
                       <Text style={styles.planRowSub}>
                         {t("virtus.goalsEnds", { done: p.completed, total: p.total, date: p.end_date })}
                       </Text>

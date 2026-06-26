@@ -31,6 +31,7 @@ import {
 } from "@/src/api";
 import { confirm } from "@/src/utils/confirm";
 import { todayISO } from "@/src/date-utils";
+import PerseveranceBadge from "@/src/components/PerseveranceBadge";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -218,6 +219,8 @@ export default function VirtuePlanScreen() {
               </View>
               {plan.note ? <Text style={styles.note}>“{plan.note}”</Text> : null}
             </View>
+
+            <PerseveranceBadge badge={plan.badge} days={plan.days} />
 
             {/* Calendar day strip */}
             <Text style={styles.sectionLabel}>CALENDAR</Text>

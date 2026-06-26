@@ -1,0 +1,33 @@
+{
+  "summary": "Iteration 62 — tested the 3 new Sanctus features. Backend: GET /api/sites returns 28 curated Catholic sites (seed idempotent; lat/lng/relics/saints/miracles/source_url all present), GET /api/sites/{id|slug} works, 404 on unknown, Accept-Language es/it localizes via translation cache (first call cold ~30s, subsequent cached). GET /api/virtues/plans now carries a badge object {tier, fallen, completed_days, elapsed, gold_max, silver_max, final} with sane math (fallen = elapsed - completed_days). PUT /api/preferences accepts marital_status + vocation and GET returns them. 10/10 backend tests passed. Frontend (mobile 390x844): /community/map renders with Leaflet map + colored markers + legend; list-toggle (map-toggle-list) opens list; tapping map-list-lourdes opens the bottom-sheet showing history + Relics + Saints + Miracles & Apparitions + Learn more + Close (Close dismisses correctly). Profile Walk-with-Christ section shows the lock-icon Private exclaimer + marital/vocation chips; pref-marital-single + pref-vocation-religious-life tapped and persisted (verified via GET /api/preferences). Virtus plan detail (/virtus/plan/{id}) shows the PerseveranceBadge card with medal, 'Gold · Current standing · 5 of 7 days kept · 2 missed' and badge-info-toggle expands the rule. No critical issues. Non-blocking console warnings: deprecated shadow* props and props.pointerEvents (RNW deprecations, app-wide cosmetic only).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "RNW shadow* style props", "issue": "Console warns: '\"shadow*\" style props are deprecated. Use \"boxShadow\".' across multiple screens. Cosmetic only on web; consider migrating to boxShadow / elevation."},
+      {"component": "props.pointerEvents", "issue": "Console warns: 'props.pointerEvents is deprecated. Use style.pointerEvents'. App-wide non-blocking."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter62_features.py",
+    "/app/test_reports/pytest/iteration_62.xml"
+  ],
+  "action_items": [
+    "(optional) Migrate shadow* style props to boxShadow and props.pointerEvents to style.pointerEvents to silence RNW deprecation warnings."
+  ],
+  "critical_code_review_comments": [
+    "catholic_sites.py uses get_lang() with translation cache (i18n_translate.translate_texts) — first Spanish/Italian /api/sites request is ~30s while cold (28 sites × many strings). Consider warming the cache or paginating to keep mobile perceived latency low; currently fine because results are cached in Mongo per-language.",
+    "virtues._compute_badge bounds elapsed to plan length and treats today as still in-progress — math validated (fallen = elapsed - completed_days)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter62_features.py (new)"
+  ],
+  "success_rate": {"backend": "100% (10/10)", "frontend": "100% (all critical flows)"},
+  "seed_data_creation": "Used existing test_feat_aug25 session for philipwils13@gmail.com (ADMIN+premium). Backend auto-seeds 28 catholic_sites on first /api/sites hit; verified idempotent.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Translation cache warming: first Accept-Language: es|it /api/sites hit takes ~30s while the LLM translates ~280+ strings. Tests pre-warm with timeout=180 then re-assert. After warming, subsequent calls return instantly from Mongo cache. Pre-existing virtue plan (vp_f86e7cb51488 — Chastity·Temperance·Humility, 60d) returned Gold badge tier in this run.",
+  "rca_of_issue": "N/A — no defects."
+}

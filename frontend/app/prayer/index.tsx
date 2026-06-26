@@ -52,6 +52,16 @@ export default function PrayerHubScreen() {
       icon: "calendar-outline",
       onPress: () => router.push("/novenas"),
     });
+    // 33-Day Consecration to St. Joseph
+    arr.push({
+      testID: "prayer-card-consecration",
+      title: "Consecration to St. Joseph",
+      subtitle: "33-day preparation — give yourself to Jesus through St. Joseph",
+      meta: "33 DAYS",
+      color: "#C29A3B",
+      icon: "shield-half-outline",
+      onPress: () => router.push("/consecration" as any),
+    });
     // Chaplets
     for (const key of CHAPLET_ORDER) {
       const c = CHAPLETS[key];

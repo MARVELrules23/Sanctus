@@ -116,6 +116,14 @@ export default function VocationScreen() {
                           ))}
                         </View>
                       ) : null}
+                      <Pressable
+                        testID={`vocation-open-companion-${c.slug}`}
+                        onPress={() => router.push(`/companion/${c.slug}` as any)}
+                        style={styles.visitRow}
+                      >
+                        <Text style={styles.visitText}>Open {c.name}'s space</Text>
+                        <Ionicons name="arrow-forward-circle" size={20} color={colors.gold} />
+                      </Pressable>
                     </View>
                   </Pressable>
                 );
@@ -197,6 +205,8 @@ const styles = StyleSheet.create({
   devItem: { flexDirection: "row", gap: 6, alignItems: "flex-start" },
   devTitle: { fontFamily: fonts.uiSemi, fontSize: 13.5, color: colors.primary },
   devBody: { fontFamily: fonts.bodyRegular, fontSize: 13, color: colors.textSecondary, lineHeight: 19, marginTop: 1 },
+  visitRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 10, paddingTop: 8, borderTopWidth: 1, borderTopColor: "#EBDDB4" },
+  visitText: { fontFamily: fonts.uiSemi, fontSize: 13.5, color: colors.gold },
   ideaBox: {
     marginTop: spacing.lg, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderSoft,
     borderRadius: radius.lg, padding: spacing.md,

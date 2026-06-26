@@ -1924,6 +1924,59 @@ export async function getVocationGuide(): Promise<VocationGuide> {
   return await api(`/vocation/guide`);
 }
 
+// ---- Companion saints ----
+export type CompanionVirtue = { name: string; how: string };
+export type CompanionDetail = {
+  slug: string;
+  name: string;
+  feast?: string;
+  importance: string;
+  virtues: CompanionVirtue[];
+  novena_slug?: string;
+  daily_act: { text: string; index: number; total: number };
+  has_consecration: boolean;
+  is_joseph: boolean;
+};
+export async function getCompanion(slug: string): Promise<CompanionDetail> {
+  return await api(`/companions/${slug}`);
+}
+export async function getCompanionImage(slug: string): Promise<{ image: string | null }> {
+  return await api(`/companions/${slug}/image`);
+}
+
+// ---- 33-Day Consecration to St. Joseph ----
+export type ConsecrationDay = { day: number; title: string; theme: string };
+export type ConsecrationActive = {
+  start_date: string; end_date: string; completed_days: number[];
+  status: string; current_day: number; total_days: number;
+} | null;
+export type ConsecrationOverview = {
+  title: string; intro: string; total_days: number;
+  set_times: { start: string; feast: string }[];
+  days: ConsecrationDay[];
+  daily_prayer: string; act_of_consecration: string;
+  active: ConsecrationActive;
+};
+export async function getConsecration(): Promise<ConsecrationOverview> {
+  return await api(`/consecration`);
+}
+export async function startConsecration(start_date: string): Promise<{ active: ConsecrationActive }> {
+  return await api(`/consecration/start`, { method: "POST", body: { start_date } });
+}
+export async function stopConsecration(): Promise<{ ok: boolean }> {
+  return await api(`/consecration/stop`, { method: "POST" });
+}
+export async function completeConsecrationDay(day: number): Promise<{ active: ConsecrationActive; status: string }> {
+  return await api(`/consecration/complete-day`, { method: "POST", body: { day } });
+}
+export type ConsecrationDayContent = {
+  day: number; total_days: number; title: string; theme: string;
+  meditation: string; daily_prayer: string; act_of_consecration: string | null;
+};
+export async function getConsecrationDay(day: number): Promise<ConsecrationDayContent> {
+  return await api(`/consecration/day/${day}`);
+}
+
 
 
 export type WorldIssue = { slug: string; title: string; icon: string; accent: string; blurb: string };

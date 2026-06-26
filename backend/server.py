@@ -3133,6 +3133,11 @@ from miracles import build_router as build_miracles_router
 from catholic_sites import build_router as build_sites_router
 from vocations import build_router as build_vocation_router
 from novenas import build_router as build_novenas_router
+from companions import build_router as build_companions_router
+from consecration import build_router as build_consecration_router
+
+api.include_router(build_companions_router(db, get_current_user, EMERGENT_LLM_KEY))
+api.include_router(build_consecration_router(db, get_current_user, EMERGENT_LLM_KEY))
 
 api.include_router(build_daily_practice_router(db, get_current_user, EMERGENT_LLM_KEY))
 api.include_router(build_translate_router(db, get_current_user, EMERGENT_LLM_KEY))

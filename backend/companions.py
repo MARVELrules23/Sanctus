@@ -417,32 +417,45 @@ def _today_act(acts: List[str]) -> Dict[str, Any]:
     return {"text": acts[idx], "index": idx, "total": len(acts)}
 
 
+_IMG_LOCKS: Dict[str, "asyncio.Lock"] = {}
+
+
 async def _get_or_make_image(db, slug: str, prompt: str, emergent_llm_key: str) -> Optional[str]:
-    """Return a cached data-URL for the saint, generating it once if absent."""
+    """Return a cached data-URL for the saint, generating it once if absent.
+
+    A per-slug lock prevents concurrent first-hit requests from generating the
+    image more than once (the detail endpoint warms it while the image endpoint
+    may also ask for it)."""
     col = db["companion_images"]
     cached = await col.find_one({"slug": slug}, {"_id": 0, "data_url": 1})
     if cached and cached.get("data_url"):
         return cached["data_url"]
     if not emergent_llm_key:
         return None
-    try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
-        chat = LlmChat(api_key=emergent_llm_key, session_id=f"companion-img-{slug}",
-                       system_message="You are an illustrator of reverent, peaceful Catholic devotional art.")
-        chat.with_model("gemini", IMAGE_MODEL).with_params(modalities=["image", "text"])
-        _text, images = await chat.send_message_multimodal_response(UserMessage(text=prompt))
-        if images:
-            img = images[0]
-            data_url = f"data:{img.get('mime_type', 'image/png')};base64,{img['data']}"
-            await col.update_one(
-                {"slug": slug},
-                {"$set": {"slug": slug, "data_url": data_url, "created_at": datetime.now(timezone.utc).isoformat()}},
-                upsert=True,
-            )
-            logger.info("companions: generated image for %s (%s)", slug, img.get("mime_type"))
-            return data_url
-    except Exception as ex:  # noqa: BLE001
-        logger.warning("companions: image generation failed for %s: %s", slug, repr(ex)[:120])
+    lock = _IMG_LOCKS.setdefault(slug, asyncio.Lock())
+    async with lock:
+        # Re-check inside the lock: another waiter may have just generated it.
+        cached = await col.find_one({"slug": slug}, {"_id": 0, "data_url": 1})
+        if cached and cached.get("data_url"):
+            return cached["data_url"]
+        try:
+            from emergentintegrations.llm.chat import LlmChat, UserMessage
+            chat = LlmChat(api_key=emergent_llm_key, session_id=f"companion-img-{slug}",
+                           system_message="You are an illustrator of reverent, peaceful Catholic devotional art.")
+            chat.with_model("gemini", IMAGE_MODEL).with_params(modalities=["image", "text"])
+            _text, images = await chat.send_message_multimodal_response(UserMessage(text=prompt))
+            if images:
+                img = images[0]
+                data_url = f"data:{img.get('mime_type', 'image/png')};base64,{img['data']}"
+                await col.update_one(
+                    {"slug": slug},
+                    {"$set": {"slug": slug, "data_url": data_url, "created_at": datetime.now(timezone.utc).isoformat()}},
+                    upsert=True,
+                )
+                logger.info("companions: generated image for %s (%s)", slug, img.get("mime_type"))
+                return data_url
+        except Exception as ex:  # noqa: BLE001
+            logger.warning("companions: image generation failed for %s: %s", slug, repr(ex)[:120])
     return None
 
 

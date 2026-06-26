@@ -1,0 +1,41 @@
+{
+  "summary": "Iteration 66 — verified the Catholic World Map expansion to 270 sites / 84 countries, the new 'Saint of the place near you' card with mini-pilgrimage planner, and end-to-end appearance on the Calendar. Backend pytest 8/8 PASS (/api/sites total=270 with 84 unique countries and 270 unique site_ids; idempotent across repeat GET; /api/sites/nearby with no params returns up to 8 items (daily-rotating fallback); /api/sites/nearby?lat=41.9&lng=12.45 returns items sorted ascending by distance_km with nearest=St. Peter's Basilica; Accept-Language: es localizes nearby names/history vs EN; POST /api/schedule with kind='pilgrimage' creates and the kind persists; GET /api/schedule lists it; DELETE /api/schedule/{id} removes it). Frontend (390x844, philipwils13@gmail.com, vocation=marriage/living): /community/map renders testID 'saint-near-you' with site name (Valencia Cathedral — daily-rotating pick, correct fallback since web preview has no geolocation), Plan opens 'pilgrimage-picker' which contains all five required date options (today/tomorrow/this-saturday/this-sunday/next-saturday); selecting 'pilgrimage-date-this-saturday' closes the picker and shows 'map-toast' = 'Added to your calendar for This Saturday.' Calendar (/calendar) shows the corresponding schedule-dot on Sat 2026-06-27 and tapping the cell surfaces 'Pilgrimage: Valencia Cathedral' in the day detail panel — full end-to-end map→schedule→calendar loop confirmed. Cleanup: all 3 test pilgrimage items deleted from DB. ONE BLOCKING UI GAP: the spec calls for opening detail sheets via 'map-toggle-list then a row', but the map screen has setShowList state without any visible toggle button (testID 'map-toggle-list' does not exist anywhere in /app/frontend/app/community/map.tsx). As a result the 'map-plan-pilgrimage' button inside the site detail sheet could not be exercised through the intended UI path. Minor: console warns 'Encountered two children with the same key' on the map screen (suggests a duplicate React key in the marker or list render — should be diagnosed). Deprecated/carry-over warnings: RNW shadow* and expo-notifications web listener (cosmetic).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "community/map.tsx — list-view toggle missing", "issue": "showList state is defined and a fully styled list renderer exists (lines 226-245), but no button calls setShowList(true). The spec's testID 'map-toggle-list' is absent from the file, so users cannot reach the list view or the in-sheet 'Plan a mini pilgrimage' button (testID map-plan-pilgrimage) through the UI. Reference: /app/frontend/app/community/map.tsx:78,226", "testID": "map-toggle-list", "priority": "HIGH"},
+      {"component": "community/map.tsx — duplicate React keys", "issue": "Console: 'Encountered two children with the same key' fires every time the map screen renders. Likely a duplicated key in markers/list rendering (markers use site_id which is unique, but the list rows in 226-245 also use site_id). Suggest auditing for any earlier render path that maps over sites with a non-unique key. Reference: /app/frontend/app/community/map.tsx", "testID": "", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "RNW shadow* style props", "issue": "(carry-over) Console: '\"shadow*\" style props are deprecated. Use \"boxShadow\".' — cosmetic, web only."},
+      {"component": "expo-notifications web shim", "issue": "(carry-over) Console: '[expo-notifications] Listening to push token changes is not yet fully supported on web. Adding a listener will have no effect.' — cosmetic."},
+      {"component": "props.pointerEvents deprecation", "issue": "Console (calendar): 'props.pointerEvents is deprecated. Use style.pointerEvents'. Cosmetic, web only."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter66_sites_pilgrimage.py",
+    "/app/test_reports/pytest/iteration_66.xml"
+  ],
+  "action_items": [
+    "Add a list/map toggle in community/map.tsx header with testID='map-toggle-list' that calls setShowList(prev => !prev). Without it the 'Plan a mini pilgrimage' button inside the site detail sheet is unreachable from the UI, and the spec's detail-sheet flow cannot be tested.",
+    "Investigate the 'Encountered two children with the same key' console error on /community/map (likely a duplicate key in a map() — check both the markers array and any DetailSection items)."
+  ],
+  "critical_code_review_comments": [
+    "catholic_sites.py: SEED_SITES has 270 entries spanning 84 countries; all site_ids unique; _seed_if_missing is idempotent (insert only when slug absent) — verified by back-to-back GET /api/sites.",
+    "catholic_sites.py nearby_sites: when lat/lng are provided, uses haversine and sorts ascending — verified nearest to Rome (41.9, 12.45) is St. Peter's Basilica. When no params, applies a daily ordinal rotation through a name-sorted list and truncates to 8 — matches spec.",
+    "schedule.py: KINDS includes 'pilgrimage' (line 27) and DEFAULTS maps it to footsteps-outline/#7A5CB0 — kind persists on create and DELETE removes correctly. Calendar already renders schedule-dot-{date} for any kind, including pilgrimage.",
+    "frontend/app/community/map.tsx: 'saint-near-you' + 'saint-near-plan' + 'pilgrimage-picker' + 'pilgrimage-date-*' + 'map-toast' all wired and working. createScheduleItem({kind:'pilgrimage', recurrence:'once', date, ref_slug, …}) succeeds. HOWEVER showList has no toggle button — see action items.",
+    "frontend/app/(tabs)/calendar.tsx: schedule-dot-{date} renders for pilgrimage items; day-tap reveals 'Pilgrimage: Valencia Cathedral' in the detail panel."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter66_sites_pilgrimage.py (new — 8 tests, all passing)"
+  ],
+  "success_rate": {"backend": "100% (8/8)", "frontend": "83% (5/6 spec flows; detail-sheet plan unreachable due to missing list toggle)"},
+  "seed_data_creation": "Backend auto-seeds catholic_sites to 270 docs on first GET /api/sites (idempotent). 3 test pilgrimage schedule items were created during UI testing and DELETED at the end of the run (verified 0 remaining). Account state preserved: philipwils13@gmail.com / vocation=marriage / state=living.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "After main agent adds the missing list/map toggle (testID 'map-toggle-list'), re-run the detail-sheet flow: tap map-toggle-list → tap any map-list-{slug} → in the detail sheet tap map-plan-pilgrimage → pick a date → confirm map-toast and Calendar dot. Backend is solid; only the list-toggle UI is missing. The duplicate-key console error is cosmetic but worth fixing for cleanliness.",
+  "rca_of_issue": "Map screen 'list view' code path exists (lines 226-245 of /app/frontend/app/community/map.tsx) and setShowList is declared at line 78, but the header (lines 176-183) never renders a button that calls setShowList(true). Therefore the 'showList ? <ScrollView…> : <MapView…>' branch is permanently false from the user's perspective, and the in-sheet 'Plan a mini pilgrimage' button (map-plan-pilgrimage) — though correctly wired to open the picker — cannot be reached. Fix: add a Pressable next to the back button (e.g., header right) with testID='map-toggle-list' and an onPress that toggles showList; alternatively, also expose a Pressable that opens the detail sheet for the daily-pick site (planFor would still flow through the existing picker)."
+}

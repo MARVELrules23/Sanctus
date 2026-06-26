@@ -13,9 +13,25 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useRouter } from "expo-router";
 
-import { listCatholicSites, CatholicSite } from "@/src/api";
+import { listCatholicSites, nearbyCatholicSites, createScheduleItem, CatholicSite } from "@/src/api";
+import * as Location from "expo-location";
 import CatholicMapView from "@/src/components/catholic-map/CatholicMapView";
 import { colors, fonts, radius, spacing } from "@/src/theme";
+
+// Upcoming weekend dates for a "mini pilgrimage" — simple, dependency-free picker.
+function pilgrimageDateOptions(): { label: string; date: string }[] {
+  const out: { label: string; date: string }[] = [];
+  const fmt = (d: Date) => d.toISOString().slice(0, 10);
+  const today = new Date();
+  const add = (n: number) => { const d = new Date(today); d.setDate(d.getDate() + n); return d; };
+  const nextDow = (dow: number) => { const d = new Date(today); const diff = (dow - d.getDay() + 7) % 7 || 7; d.setDate(d.getDate() + diff); return d; };
+  out.push({ label: "Today", date: fmt(today) });
+  out.push({ label: "Tomorrow", date: fmt(add(1)) });
+  const sat = nextDow(6); out.push({ label: "This Saturday", date: fmt(sat) });
+  const sun = nextDow(0); out.push({ label: "This Sunday", date: fmt(sun) });
+  const nextSat = new Date(sat); nextSat.setDate(nextSat.getDate() + 7); out.push({ label: "Next Saturday", date: fmt(nextSat) });
+  return out;
+}
 
 const TYPE_COLORS: Record<string, string> = {
   basilica: "#D4AF37",
@@ -60,6 +76,9 @@ export default function CatholicMapScreen() {
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<CatholicSite | null>(null);
   const [showList, setShowList] = useState(false);
+  const [featured, setFeatured] = useState<CatholicSite | null>(null);
+  const [planFor, setPlanFor] = useState<CatholicSite | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
@@ -73,9 +92,69 @@ export default function CatholicMapScreen() {
     }
   }, []);
 
+  // "Saint of the place near you" — try the user's location, else a daily pick.
+  const loadFeatured = useCallback(async () => {
+    let lat: number | undefined;
+    let lng: number | undefined;
+    try {
+      const perm = await Location.getForegroundPermissionsAsync();
+      if (perm.granted) {
+        const pos = await Location.getCurrentPositionAsync({});
+        lat = pos.coords.latitude;
+        lng = pos.coords.longitude;
+      }
+    } catch {
+      /* ignore — fall back to daily pick */
+    }
+    try {
+      const res = await nearbyCatholicSites(lat, lng);
+      setFeatured(res.items?.[0] || null);
+    } catch {
+      setFeatured(null);
+    }
+  }, []);
+
+  const useMyLocation = useCallback(async () => {
+    try {
+      const perm = await Location.requestForegroundPermissionsAsync();
+      if (perm.granted) {
+        const pos = await Location.getCurrentPositionAsync({});
+        const res = await nearbyCatholicSites(pos.coords.latitude, pos.coords.longitude);
+        setFeatured(res.items?.[0] || null);
+        setToast("Found the nearest holy place to you.");
+        setTimeout(() => setToast(null), 2500);
+      }
+    } catch {
+      setToast("Couldn't get your location.");
+      setTimeout(() => setToast(null), 2500);
+    }
+  }, []);
+
+  const planPilgrimage = useCallback(async (site: CatholicSite, date: string, label: string) => {
+    try {
+      await createScheduleItem({
+        kind: "pilgrimage",
+        title: `Pilgrimage: ${site.name}`,
+        note: `${site.city}, ${site.country}`,
+        recurrence: "once",
+        date,
+        ref_slug: site.slug,
+        icon: "footsteps-outline",
+        color: "#7A5CB0",
+      });
+      setPlanFor(null);
+      setToast(`Added to your calendar for ${label}.`);
+      setTimeout(() => setToast(null), 2800);
+    } catch (e: any) {
+      setToast(e?.message || "Couldn't add to calendar.");
+      setTimeout(() => setToast(null), 2800);
+    }
+  }, []);
+
   useEffect(() => {
     load();
-  }, [load]);
+    loadFeatured();
+  }, [load, loadFeatured]);
 
   const markers = useMemo(
     () => sites.map((s) => ({ id: s.site_id, name: s.name, type: s.type, lat: s.lat, lng: s.lng, persecuted: s.persecuted })),
@@ -101,10 +180,37 @@ export default function CatholicMapScreen() {
         <View style={styles.headerTitleWrap}>
           <Text style={styles.headerTitle}>Catholic World Map</Text>
         </View>
-        <Pressable testID="map-toggle-list" onPress={() => setShowList((v) => !v)} hitSlop={10}>
-          <Ionicons name={showList ? "map-outline" : "list-outline"} size={22} color={colors.primary} />
-        </Pressable>
       </View>
+
+      {/* Saint of the place near you */}
+      {featured ? (
+        <View style={styles.featCard} testID="saint-near-you">
+          <Pressable style={{ flex: 1 }} onPress={() => setSelected(featured)}>
+            <View style={styles.featTop}>
+              <Ionicons name="navigate-circle-outline" size={14} color={colors.gold} />
+              <Text style={styles.featLabel}>Saint of the place near you</Text>
+            </View>
+            <Text style={styles.featName} numberOfLines={1}>{featured.name}</Text>
+            <Text style={styles.featSub} numberOfLines={1}>
+              {featured.city}, {featured.country}
+              {featured.distance_km != null ? ` · ${featured.distance_km} km away` : ""}
+            </Text>
+          </Pressable>
+          <View style={styles.featActions}>
+            <Pressable testID="saint-near-locate" onPress={useMyLocation} hitSlop={8} style={styles.featIconBtn}>
+              <Ionicons name="locate-outline" size={18} color={colors.primary} />
+            </Pressable>
+            <Pressable testID="saint-near-plan" onPress={() => setPlanFor(featured)} style={({ pressed }) => [styles.featPlan, pressed && { opacity: 0.85 }]}>
+              <Ionicons name="footsteps-outline" size={14} color="#fff" />
+              <Text style={styles.featPlanText}>Plan</Text>
+            </Pressable>
+          </View>
+        </View>
+      ) : null}
+
+      {toast ? (
+        <View style={styles.toast} testID="map-toast"><Text style={styles.toastText}>{toast}</Text></View>
+      ) : null}
 
       {loading ? (
         <View style={styles.center}>
@@ -209,6 +315,15 @@ export default function CatholicMapScreen() {
                 ) : null}
 
                 <Pressable
+                  testID="map-plan-pilgrimage"
+                  onPress={() => { const s = selected; setSelected(null); setPlanFor(s); }}
+                  style={({ pressed }) => [styles.planBtn, pressed && { opacity: 0.85 }]}
+                >
+                  <Ionicons name="footsteps-outline" size={16} color="#fff" />
+                  <Text style={styles.planBtnText}>Plan a mini pilgrimage</Text>
+                </Pressable>
+
+                <Pressable
                   testID="map-close"
                   onPress={() => setSelected(null)}
                   style={({ pressed }) => [styles.closeBtn, pressed && { opacity: 0.85 }]}
@@ -217,6 +332,35 @@ export default function CatholicMapScreen() {
                 </Pressable>
               </ScrollView>
             ) : null}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Mini pilgrimage date picker */}
+      <Modal visible={!!planFor} animationType="fade" transparent onRequestClose={() => setPlanFor(null)}>
+        <View style={styles.planBackdrop}>
+          <Pressable style={styles.backdropFill} onPress={() => setPlanFor(null)} />
+          <View style={styles.planSheet} testID="pilgrimage-picker">
+            <Ionicons name="footsteps" size={26} color="#7A5CB0" style={{ alignSelf: "center" }} />
+            <Text style={styles.planTitle}>Plan a mini pilgrimage</Text>
+            {planFor ? <Text style={styles.planSite}>{planFor.name}</Text> : null}
+            <Text style={styles.planHint}>Pick a day and we'll add it to your calendar.</Text>
+            {pilgrimageDateOptions().map((opt) => (
+              <Pressable
+                key={opt.date}
+                testID={`pilgrimage-date-${opt.label.replace(/\s+/g, "-").toLowerCase()}`}
+                onPress={() => planFor && planPilgrimage(planFor, opt.date, opt.label)}
+                style={({ pressed }) => [styles.planOption, pressed && { opacity: 0.85 }]}
+              >
+                <Ionicons name="calendar-outline" size={16} color={colors.primary} />
+                <Text style={styles.planOptionText}>{opt.label}</Text>
+                <View style={{ flex: 1 }} />
+                <Text style={styles.planOptionDate}>{opt.date.slice(5)}</Text>
+              </Pressable>
+            ))}
+            <Pressable onPress={() => setPlanFor(null)} style={styles.planCancel}>
+              <Text style={styles.planCancelText}>Cancel</Text>
+            </Pressable>
           </View>
         </View>
       </Modal>
@@ -276,6 +420,34 @@ const styles = StyleSheet.create({
   },
   persTitle: { fontFamily: fonts.uiSemi, fontSize: 13.5, color: "#B3261E" },
   persNote: { fontFamily: fonts.bodyRegular, fontSize: 13, color: "#7A2520", lineHeight: 19, marginTop: 2 },
+  featCard: {
+    flexDirection: "row", alignItems: "center", gap: spacing.sm,
+    marginHorizontal: spacing.md, marginTop: spacing.sm,
+    backgroundColor: "#F3EFFB", borderWidth: 1, borderColor: "#DDD2F2",
+    borderRadius: radius.md, padding: spacing.md,
+  },
+  featTop: { flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 2 },
+  featLabel: { fontFamily: fonts.uiSemi, fontSize: 10.5, letterSpacing: 0.4, textTransform: "uppercase", color: "#7A5CB0" },
+  featName: { fontFamily: fonts.headingSemi, fontSize: 16, color: colors.primary },
+  featSub: { fontFamily: fonts.bodyRegular, fontSize: 12.5, color: colors.textMuted, marginTop: 1 },
+  featActions: { flexDirection: "row", alignItems: "center", gap: 8 },
+  featIconBtn: { padding: 4 },
+  featPlan: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#7A5CB0", borderRadius: radius.round, paddingHorizontal: 12, paddingVertical: 8 },
+  featPlanText: { fontFamily: fonts.uiSemi, fontSize: 13, color: "#fff" },
+  toast: { position: "absolute", bottom: 24, left: spacing.lg, right: spacing.lg, backgroundColor: colors.surfaceDark, borderRadius: radius.md, padding: spacing.md, zIndex: 50 },
+  toastText: { fontFamily: fonts.uiMedium, fontSize: 13.5, color: "#FBF6E9", textAlign: "center" },
+  planBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginTop: spacing.lg, backgroundColor: "#7A5CB0", borderRadius: radius.md, paddingVertical: 13 },
+  planBtnText: { fontFamily: fonts.uiSemi, fontSize: 15, color: "#fff" },
+  planBackdrop: { flex: 1, justifyContent: "center", backgroundColor: "rgba(0,0,0,0.4)", padding: spacing.lg },
+  planSheet: { backgroundColor: colors.background, borderRadius: 20, padding: spacing.lg, gap: 8 },
+  planTitle: { fontFamily: fonts.headingBold, fontSize: 20, color: colors.primary, textAlign: "center", marginTop: 4 },
+  planSite: { fontFamily: fonts.headingSemi, fontSize: 15, color: "#7A5CB0", textAlign: "center" },
+  planHint: { fontFamily: fonts.bodyRegular, fontSize: 13, color: colors.textSecondary, textAlign: "center", marginBottom: 6 },
+  planOption: { flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderColor: colors.borderSoft, borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 13, marginBottom: 4 },
+  planOptionText: { fontFamily: fonts.uiSemi, fontSize: 15, color: colors.primary },
+  planOptionDate: { fontFamily: fonts.bodyRegular, fontSize: 13, color: colors.textMuted },
+  planCancel: { paddingVertical: 12, alignItems: "center", marginTop: 2 },
+  planCancelText: { fontFamily: fonts.uiSemi, fontSize: 14, color: colors.textMuted },
   listScroll: { padding: spacing.md, gap: spacing.sm },
   intro: { fontFamily: fonts.bodyItalic, fontSize: 13.5, color: colors.textSecondary, marginBottom: spacing.sm },
   listRow: {

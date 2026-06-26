@@ -24,7 +24,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from pydantic import BaseModel, Field
 
-KINDS = {"meal", "workout", "virtue", "challenge", "custom"}
+KINDS = {"meal", "workout", "virtue", "challenge", "pilgrimage", "custom"}
 _TIME_RE = re.compile(r"^([01]\d|2[0-3]):([0-5]\d)$")  # 24h HH:MM
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
@@ -33,6 +33,7 @@ DEFAULTS = {
     "workout":   {"icon": "barbell-outline",    "color": "#3E5C76"},
     "virtue":    {"icon": "sparkles-outline",   "color": "#8A4A6C"},
     "challenge": {"icon": "flame-outline",       "color": "#9C3B2E"},
+    "pilgrimage":{"icon": "footsteps-outline",   "color": "#7A5CB0"},
     "custom":    {"icon": "ellipse-outline",     "color": "#5B7553"},
 }
 

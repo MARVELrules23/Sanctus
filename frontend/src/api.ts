@@ -1873,9 +1873,14 @@ export type CatholicSite = {
   source_url?: string;
   persecuted?: boolean;
   persecution_note?: string;
+  distance_km?: number;
 };
 export async function listCatholicSites(): Promise<{ items: CatholicSite[]; total: number }> {
   return await api(`/sites`);
+}
+export async function nearbyCatholicSites(lat?: number, lng?: number): Promise<{ items: CatholicSite[]; total: number }> {
+  const q = lat != null && lng != null ? `?lat=${lat}&lng=${lng}` : "";
+  return await api(`/sites/nearby${q}`);
 }
 
 export type VocationCompanion = { slug: string; name: string; why: string; prayer: string; devotions?: VocationItem[] };
@@ -1923,7 +1928,7 @@ export async function deleteVirtuePlan(id: string): Promise<{ ok: boolean }> {
 // Schedule
 // ---------------------------------------------------------------------------
 
-export type ScheduleKind = "meal" | "workout" | "virtue" | "challenge" | "custom";
+export type ScheduleKind = "meal" | "workout" | "virtue" | "challenge" | "pilgrimage" | "custom";
 
 export type ScheduleItem = {
   id: string;

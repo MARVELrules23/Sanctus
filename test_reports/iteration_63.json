@@ -1,0 +1,37 @@
+{
+  "summary": "Iteration 63 — verified expanded Catholic World Map (78 sites / 55 countries, idempotent) + new Vocation guide feature end-to-end. Backend (10/10 pytest passing): GET /api/sites returns 78 items across 55 countries with full schema (site_id, name, lat, lng, type, relics[], saints[], miracles[], history, source_url); seed is idempotent across repeat calls. GET /api/vocation/guide returns has_vocation=true with label, intro, morning_prayer{title,body}, companions[]{slug,name,why,prayer}, ideas[], traditions[], companion_saint, state; with vocation='' returns has_vocation=false. Traditions correctly DIFFER between state=discerning and state=living for the same vocation (marriage). Spanish (Accept-Language: es) and Italian (it) return translated prayer/ideas/traditions via the shared translation cache (first call cold via LLM, then cached). PUT /api/preferences round-trip preserves marital_status, vocation, vocation_state, dietary, and companion_saint — verified by GET after merging companion_saint into existing prefs. Frontend (mobile 390x844, authed via localStorage sanctus_session_token=test_feat_aug25): Home tab shows the vocation-home-card with 'HOLY MARRIAGE', 'Morning Prayer for the Family' and 'Walking with St. Joseph — Tap for prayers, ideas & traditions to grow →'. Tapping it routes to /vocation; the vocation-screen renders vocation-prayer (Morning Prayer for the Family body), the companion list, vocation-ideas, and the nested vocation-traditions box. Tapping vocation-companion-st-joseph selects it (checkmark + its prayer surfaces) and persists (re-render of Home card afterwards still reads 'Walking with St. Joseph'; GET /api/preferences confirms companion_saint='st-joseph'). Profile → 'Your Walk with Christ': pref-vstate-discerning and pref-vstate-living toggles are both present, tapping each updates GET /api/preferences accordingly (vocation_state=discerning → living). Catholic World Map (/community/map) renders the 78-site list ('Explore 78 significant Catholic places across the world.'); map-toggle-list works; tapping map-list-yamoussoukro opens the detail sheet showing 'Basilica of Our Lady of Peace, Yamoussoukro, Ivory Coast · 1985–1989' with the full history + Learn more + Close. Test account RESET to vocation=marriage, state=living, companion_saint=st-joseph, marital_status=single before finishing.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "RNW shadow* style props", "issue": "Console warns: '\"shadow*\" style props are deprecated. Use \"boxShadow\".' (app-wide, cosmetic on web only)."},
+      {"component": "props.pointerEvents", "issue": "Console warns: 'props.pointerEvents is deprecated. Use style.pointerEvents' (app-wide, cosmetic on web only)."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter63_vocation_sites.py",
+    "/app/test_reports/pytest/iteration_63.xml"
+  ],
+  "action_items": [
+    "(optional) The map detail sheet has no [data-testid=\"map-detail-sheet\"] wrapper — the sheet works visually but cannot be asserted by testID. Consider adding testID=\"map-detail-sheet\" to the bottom-sheet root for future automated tests.",
+    "(optional, pre-existing) Migrate shadow* style props to boxShadow / elevation and props.pointerEvents to style.pointerEvents to silence RNW deprecation warnings."
+  ],
+  "critical_code_review_comments": [
+    "vocations.py: state defaults to 'living' on the server when the prefs field is missing — matches frontend default and prevents 500s for legacy users.",
+    "vocations.py: _localize keeps a deep copy via _build_guide so module-level CONTENT is never mutated by per-request translation. ✔",
+    "catholic_sites.py: _seed_if_missing checks by slug before insert — verified idempotent (two back-to-back GET /api/sites both returned total=78).",
+    "catholic_sites.py: _public excludes Mongo _id ✔. Localization fans out via the shared translation cache so first es/it list call is slow but subsequent calls are instant.",
+    "Frontend Vocation screen merges existing prefs before PUT when persisting companion_saint — verified backend round-trip preserves all other preference fields (marital_status / vocation / vocation_state / dietary)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter63_vocation_sites.py (new)"
+  ],
+  "success_rate": {"backend": "100% (10/10)", "frontend": "100% (all required flows)"},
+  "seed_data_creation": "No new seed data. Backend auto-seeds 78 catholic_sites on first /api/sites hit (idempotent). Test ran against pre-existing account philipwils13@gmail.com via session token test_feat_aug25.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Translation cache for /api/vocation/guide: first es|it request takes ~10–30s while cold (LLM translates ~30 strings), subsequent calls instant from Mongo cache. PUT /api/preferences fully replaces the preferences doc per user_id — both the Vocation and Profile screens merge existing prefs before PUT, so always do the same in tests. Test account is currently set to vocation=marriage, vocation_state=living, companion_saint=st-joseph, marital_status=single.",
+  "rca_of_issue": "N/A — no defects."
+}

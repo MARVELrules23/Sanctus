@@ -17,6 +17,7 @@ import { useAuth } from "@/src/auth-context";
 import DailyPracticeCard from "@/src/components/DailyPracticeCard";
 import CatechismCard from "@/src/components/CatechismCard";
 import VirtusHomeCard from "@/src/components/VirtusHomeCard";
+import VocationHomeCard from "@/src/components/VocationHomeCard";
 import { useI18n } from "@/src/i18n";
 import { AutoText } from "@/src/auto-text";
 import SaintOfTheDayCard from "@/src/components/SaintOfTheDayCard";
@@ -274,6 +275,9 @@ export default function TodayScreen() {
 
         {/* Virtus — grow in virtue */}
         <VirtusHomeCard />
+
+        {/* Vocation — your walk with Christ (hidden until chosen) */}
+        <VocationHomeCard />
 
         {/* Schedule + In the World — side by side */}
         <View style={styles.featureRow}>

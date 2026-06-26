@@ -28,12 +28,14 @@ type Prefs = {
   devotion_focus: string;
   marital_status: string;
   vocation: string;
+  vocation_state: string;
 };
 
 const DIETARY_OPTIONS = ["balanced", "vegetarian", "pescetarian", "low-carb", "mediterranean"];
 const LEVEL_OPTIONS = ["beginner", "intermediate", "advanced"];
 const MARITAL_OPTIONS = ["single", "married"];
 const VOCATION_OPTIONS = ["singleness", "religious life", "marriage"];
+const VOCATION_STATE_OPTIONS = ["discerning", "living"];
 
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
@@ -199,6 +201,23 @@ export default function ProfileScreen() {
                 </Pressable>
               ))}
             </View>
+            {prefs.vocation ? (
+              <>
+                <AutoText style={styles.label}>Are you discerning or living this?</AutoText>
+                <View style={styles.optionRow}>
+                  {VOCATION_STATE_OPTIONS.map((opt) => (
+                    <Pressable
+                      key={opt}
+                      testID={`pref-vstate-${opt}`}
+                      onPress={() => update({ vocation_state: opt })}
+                      style={[styles.optionChip, (prefs.vocation_state || "living") === opt && styles.optionChipSel]}
+                    >
+                      <AutoText style={[styles.optionText, (prefs.vocation_state || "living") === opt && styles.optionTextSel]}>{opt}</AutoText>
+                    </Pressable>
+                  ))}
+                </View>
+              </>
+            ) : null}
 
             <Text style={styles.section}>{t("profile.discipline")}</Text>
             <Text style={styles.label}>{t("profile.fitnessLevel")}</Text>

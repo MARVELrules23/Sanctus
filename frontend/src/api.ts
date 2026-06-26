@@ -1876,6 +1876,25 @@ export async function listCatholicSites(): Promise<{ items: CatholicSite[]; tota
   return await api(`/sites`);
 }
 
+export type VocationCompanion = { slug: string; name: string; why: string; prayer: string };
+export type VocationItem = { title: string; body: string };
+export type VocationGuide = {
+  has_vocation: boolean;
+  vocation?: string;
+  state?: "discerning" | "living";
+  label?: string;
+  intro?: string;
+  morning_prayer?: { title: string; body: string };
+  companions?: VocationCompanion[];
+  ideas?: VocationItem[];
+  traditions?: VocationItem[];
+  companion_saint?: string;
+};
+export async function getVocationGuide(): Promise<VocationGuide> {
+  return await api(`/vocation/guide`);
+}
+
+
 
 export type WorldIssue = { slug: string; title: string; icon: string; accent: string; blurb: string };
 export type WorldContent = WorldIssue & {

@@ -1649,8 +1649,30 @@ def build_router(db: AsyncIOMotorDatabase, get_current_user, emergent_llm_key: s
             seen_coords.add((round(d.get("lat") or 0, 5), round(d.get("lng") or 0, 5)))
 
         osm_count = 0
-        span_ok = (north - south) <= 1.2 and (east - west) <= 1.2
-        if zoom >= 9 and span_ok:
+        span_ok = (north - south) <= 1.5 and (east - west) <= 1.5
+
+        # Pre-ingested OSM churches (fast, always available, dense). Shown from
+        # regional zoom upward so the map is full of churches even offline-of-Overpass.
+        if zoom >= 7 and span_ok:
+            stored = db["osm_churches"].find(
+                {"lat": {"$gte": south, "$lte": north}, "lng": {"$gte": west, "$lte": east}},
+                {"_id": 0, "osm_id": 1, "name": 1, "lat": 1, "lng": 1, "city": 1, "country": 1},
+            ).limit(1500)
+            async for o in stored:
+                key = (round(o.get("lat") or 0, 5), round(o.get("lng") or 0, 5))
+                if key in seen_coords:
+                    continue
+                seen_coords.add(key)
+                markers.append({
+                    "site_id": f"osm_{o['osm_id']}", "slug": f"osm-{o['osm_id']}",
+                    "name": o.get("name"), "type": "church",
+                    "lat": o.get("lat"), "lng": o.get("lng"), "persecuted": False, "osm": True,
+                    "city": o.get("city", ""), "country": o.get("country", ""),
+                })
+                osm_count += 1
+
+        # Live OSM fill at city zoom to catch churches not yet pre-ingested.
+        if zoom >= 9 and span_ok and (north - south) <= 1.2 and (east - west) <= 1.2:
             try:
                 osm = await _osm_bbox_churches(db, south, west, north, east)
                 for o in osm:
@@ -1663,7 +1685,7 @@ def build_router(db: AsyncIOMotorDatabase, get_current_user, emergent_llm_key: s
             except Exception:  # noqa: BLE001
                 pass
 
-        return {"items": markers[:1200], "total": len(markers), "osm_count": osm_count}
+        return {"items": markers[:1500], "total": len(markers), "osm_count": osm_count}
 
     @router.get("")
     async def list_sites(user=Depends(get_current_user)):

@@ -338,7 +338,9 @@ export default function CatholicMapScreen() {
       ) : (
         <View style={styles.mapWrap}>
           <CatholicMapView markers={mapMarkers} onSelect={onSelectId} onBoundsChange={handleBounds} />
-          <Text style={styles.zoomHint}>Zoom in to reveal every Catholic church in view</Text>
+          <View pointerEvents="none" style={styles.zoomHintWrap}>
+            <Text testID="map-zoom-hint" style={styles.zoomHint}>Zoom in to reveal every Catholic church in view</Text>
+          </View>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -496,7 +498,8 @@ const styles = StyleSheet.create({
   retry: { backgroundColor: colors.primary, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: radius.md },
   retryText: { fontFamily: fonts.uiSemi, color: "#fff" },
   mapWrap: { flex: 1 },
-  zoomHint: { position: "absolute", top: 8, alignSelf: "center", backgroundColor: "rgba(255,255,255,0.92)", borderRadius: radius.round, paddingHorizontal: 12, paddingVertical: 5, fontFamily: fonts.uiMedium, fontSize: 11.5, color: colors.textSecondary, overflow: "hidden" },
+  zoomHintWrap: { position: "absolute", top: 8, left: 0, right: 0, alignItems: "center" },
+  zoomHint: { backgroundColor: "rgba(255,255,255,0.92)", borderRadius: radius.round, paddingHorizontal: 12, paddingVertical: 5, fontFamily: fonts.uiMedium, fontSize: 11.5, color: colors.textSecondary, overflow: "hidden" },
   osmNote: { flexDirection: "row", alignItems: "flex-start", gap: 6, marginTop: 4, marginBottom: 2 },
   osmNoteText: { flex: 1, fontFamily: fonts.bodyItalic, fontSize: 12.5, color: colors.textMuted, lineHeight: 17 },
   legend: {

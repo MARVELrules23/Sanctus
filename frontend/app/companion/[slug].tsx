@@ -4,10 +4,14 @@ import { AutoText as Text } from "@/src/auto-text";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 
 import { getCompanion, getCompanionImage, CompanionDetail } from "@/src/api";
 import LofiSaintBackground from "@/src/components/LofiSaintBackground";
 import { colors, fonts, radius, spacing } from "@/src/theme";
+
+// Public-domain Gregorian chant (Internet Archive) — soft looping ambiance.
+const CHANT_URL = "https://archive.org/download/GregorianChantMass/02Track2.mp3";
 
 export default function CompanionScreen() {
   const router = useRouter();
@@ -15,6 +19,27 @@ export default function CompanionScreen() {
   const [data, setData] = useState<CompanionDetail | null>(null);
   const [image, setImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Soft looping Gregorian chant ambiance — auto-tries on open, stops on leave.
+  const player = useAudioPlayer(CHANT_URL);
+  const audioStatus = useAudioPlayerStatus(player);
+  const chantOn = !!audioStatus?.playing;
+
+  useEffect(() => {
+    try {
+      player.loop = true;
+      player.volume = 0.32;
+    } catch {/* ignore */}
+    const t = setTimeout(() => { try { player.play(); } catch {/* autoplay may be blocked on web */} }, 700);
+    return () => {
+      clearTimeout(t);
+      try { player.pause(); } catch {/* ignore */}
+    };
+  }, [player]);
+
+  const toggleChant = useCallback(() => {
+    try { chantOn ? player.pause() : player.play(); } catch {/* ignore */}
+  }, [player, chantOn]);
 
   const load = useCallback(async () => {
     if (!slug) return;
@@ -53,9 +78,14 @@ export default function CompanionScreen() {
       <View style={styles.hero}>
         <LofiSaintBackground image={image} />
         <SafeAreaView edges={["top"]} style={styles.heroSafe}>
-          <Pressable testID="companion-back" onPress={() => router.back()} hitSlop={12} style={styles.backBtn}>
-            <Ionicons name="chevron-back" size={26} color="#FFF8EA" />
-          </Pressable>
+          <View style={styles.topRow}>
+            <Pressable testID="companion-back" onPress={() => router.back()} hitSlop={12} style={styles.iconBtn}>
+              <Ionicons name="chevron-back" size={26} color="#FFF8EA" />
+            </Pressable>
+            <Pressable testID="companion-chant-toggle" onPress={toggleChant} hitSlop={12} style={styles.iconBtn}>
+              <Ionicons name={chantOn ? "musical-notes" : "musical-notes-outline"} size={20} color={chantOn ? "#FFE6A8" : "#FFF8EA"} />
+            </Pressable>
+          </View>
           <View style={{ flex: 1 }} />
           {data ? (
             <View style={styles.heroText}>
@@ -158,7 +188,8 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
   hero: { height: 320, backgroundColor: "#2B2440", overflow: "hidden" },
   heroSafe: { flex: 1, paddingHorizontal: spacing.md, paddingBottom: spacing.md },
-  backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.25)", marginTop: spacing.sm },
+  topRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: spacing.sm },
+  iconBtn: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.25)" },
   heroText: { gap: 2 },
   heroEyebrow: { fontFamily: fonts.uiSemi, fontSize: 11, letterSpacing: 2, color: "#FFE6A8" },
   heroName: { fontFamily: fonts.headingBold, fontSize: 30, color: "#FFF8EA", lineHeight: 36 },

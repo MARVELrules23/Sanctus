@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Linking,
@@ -13,9 +13,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useRouter } from "expo-router";
 
-import { listCatholicSites, nearbyCatholicSites, createScheduleItem, CatholicSite } from "@/src/api";
+import { listCatholicSites, nearbyCatholicSites, createScheduleItem, sitesInBbox, CatholicSite, BboxMarker } from "@/src/api";
 import * as Location from "expo-location";
-import CatholicMapView from "@/src/components/catholic-map/CatholicMapView";
+import CatholicMapView, { MapBounds } from "@/src/components/catholic-map/CatholicMapView";
 import { colors, fonts, radius, spacing } from "@/src/theme";
 
 // Upcoming weekend dates for a "mini pilgrimage" — simple, dependency-free picker.
@@ -172,15 +172,57 @@ export default function CatholicMapScreen() {
     locateAndLoad(true);
   }, [load, locateAndLoad]);
 
-  const markers = useMemo(
-    () => sites.map((s) => ({ id: s.site_id, name: s.name, type: s.type, lat: s.lat, lng: s.lng, persecuted: s.persecuted })),
+  // Curated markers serve as the world-view base layer (zoomed-out).
+  const curatedMarkers = useMemo(
+    () => sites.map((s) => ({ id: s.site_id, name: s.name, type: s.type, lat: s.lat, lng: s.lng, persecuted: s.persecuted, osm: false })),
     [sites],
   );
+  const [mapMarkers, setMapMarkers] = useState<typeof curatedMarkers>([]);
+  // Index of markers currently shown (id → marker) so taps on OSM churches resolve.
+  const markerIndex = useRef<Record<string, BboxMarker>>({});
+
+  useEffect(() => {
+    // Seed the map with curated significant sites once they load.
+    if (curatedMarkers.length && mapMarkers.length === 0) {
+      setMapMarkers(curatedMarkers);
+      sites.forEach((s) => { markerIndex.current[s.site_id] = s as unknown as BboxMarker; });
+    }
+  }, [curatedMarkers, mapMarkers.length, sites]);
+
+  const lastBboxKey = useRef<string>("");
+  const handleBounds = useCallback(async (b: MapBounds) => {
+    // Zoomed out: keep the curated significant-sites layer only.
+    if (b.zoom < 9) {
+      setMapMarkers(curatedMarkers);
+      return;
+    }
+    const key = `${b.south.toFixed(1)},${b.west.toFixed(1)},${b.north.toFixed(1)},${b.east.toFixed(1)}`;
+    if (key === lastBboxKey.current) return;
+    lastBboxKey.current = key;
+    try {
+      const res = await sitesInBbox(b.south, b.west, b.north, b.east, b.zoom);
+      res.items.forEach((m) => { markerIndex.current[m.site_id] = m; });
+      setMapMarkers(res.items.map((m) => ({
+        id: m.site_id, name: m.name, type: m.type, lat: m.lat, lng: m.lng, persecuted: m.persecuted, osm: m.osm,
+      })));
+    } catch {
+      /* keep current markers */
+    }
+  }, [curatedMarkers]);
 
   const onSelectId = useCallback(
     (id: string) => {
-      const s = sites.find((x) => x.site_id === id);
-      if (s) setSelected(s);
+      const curated = sites.find((x) => x.site_id === id);
+      if (curated) { setSelected(curated); return; }
+      // OSM / community-sourced church — synthesise a minimal detail record.
+      const m = markerIndex.current[id];
+      if (m) {
+        setSelected({
+          site_id: m.site_id, slug: m.slug, name: m.name, type: m.type,
+          city: m.city || "", country: m.country || "", lat: m.lat, lng: m.lng,
+          relics: [], saints: [], miracles: [], osm: true,
+        } as CatholicSite);
+      }
     },
     [sites],
   );
@@ -295,7 +337,8 @@ export default function CatholicMapScreen() {
         </ScrollView>
       ) : (
         <View style={styles.mapWrap}>
-          <CatholicMapView markers={markers} onSelect={onSelectId} />
+          <CatholicMapView markers={mapMarkers} onSelect={onSelectId} onBoundsChange={handleBounds} />
+          <Text style={styles.zoomHint}>Zoom in to reveal every Catholic church in view</Text>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -352,6 +395,24 @@ export default function CatholicMapScreen() {
                 <DetailSection icon="diamond-outline" title="Relics" items={selected.relics} />
                 <DetailSection icon="person-outline" title="Saints" items={selected.saints} />
                 <DetailSection icon="sparkles-outline" title="Miracles & Apparitions" items={selected.miracles} />
+
+                {selected.osm ? (
+                  <View style={styles.osmNote}>
+                    <Ionicons name="information-circle-outline" size={14} color={colors.textMuted} />
+                    <Text style={styles.osmNoteText}>Community-sourced from OpenStreetMap. Check the parish for Mass times.</Text>
+                  </View>
+                ) : null}
+
+                {selected.osm ? (
+                  <Pressable
+                    testID="map-open-maps"
+                    onPress={() => openInMaps(selected)}
+                    style={({ pressed }) => [styles.sourceBtn, pressed && { opacity: 0.8 }]}
+                  >
+                    <Ionicons name="navigate-outline" size={15} color={colors.primary} />
+                    <Text style={styles.sourceText}>Open in Maps</Text>
+                  </Pressable>
+                ) : null}
 
                 {selected.source_url ? (
                   <Pressable
@@ -435,6 +496,9 @@ const styles = StyleSheet.create({
   retry: { backgroundColor: colors.primary, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: radius.md },
   retryText: { fontFamily: fonts.uiSemi, color: "#fff" },
   mapWrap: { flex: 1 },
+  zoomHint: { position: "absolute", top: 8, alignSelf: "center", backgroundColor: "rgba(255,255,255,0.92)", borderRadius: radius.round, paddingHorizontal: 12, paddingVertical: 5, fontFamily: fonts.uiMedium, fontSize: 11.5, color: colors.textSecondary, overflow: "hidden" },
+  osmNote: { flexDirection: "row", alignItems: "flex-start", gap: 6, marginTop: 4, marginBottom: 2 },
+  osmNoteText: { flex: 1, fontFamily: fonts.bodyItalic, fontSize: 12.5, color: colors.textMuted, lineHeight: 17 },
   legend: {
     position: "absolute",
     bottom: spacing.md,

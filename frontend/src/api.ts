@@ -1889,6 +1889,22 @@ export async function nearbyCatholicSites(lat?: number, lng?: number): Promise<N
   const q = lat != null && lng != null ? `?lat=${lat}&lng=${lng}` : "";
   return await api(`/sites/nearby${q}`);
 }
+export type BboxMarker = {
+  site_id: string;
+  slug: string;
+  name: string;
+  type: CatholicSite["type"];
+  lat: number;
+  lng: number;
+  persecuted?: boolean;
+  osm?: boolean;
+};
+export async function sitesInBbox(
+  south: number, west: number, north: number, east: number, zoom: number,
+): Promise<{ items: BboxMarker[]; total: number; osm_count: number }> {
+  const q = `?south=${south}&west=${west}&north=${north}&east=${east}&zoom=${Math.round(zoom)}`;
+  return await api(`/sites/bbox${q}`);
+}
 
 export type VocationCompanion = { slug: string; name: string; why: string; prayer: string; devotions?: VocationItem[] };
 export type VocationItem = { title: string; body: string };

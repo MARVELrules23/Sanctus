@@ -1531,9 +1531,139 @@ async def _osm_nearby_churches(db, lat: float, lng: float) -> List[Dict[str, Any
     return deduped
 
 
+def _osm_bbox_query(s: float, w: float, n: float, e: float) -> str:
+    return (
+        f"[out:json][timeout:25];"
+        f"("
+        f'node["amenity"="place_of_worship"]["religion"="christian"]["denomination"~"catholic",i]({s},{w},{n},{e});'
+        f'way["amenity"="place_of_worship"]["religion"="christian"]["denomination"~"catholic",i]({s},{w},{n},{e});'
+        f");"
+        f"out center 700;"
+    )
+
+
+async def _osm_bbox_churches(db, south: float, west: float, north: float, east: float) -> List[Dict[str, Any]]:
+    """Real Catholic churches inside a map bounding box, sourced from OSM and cached.
+
+    The bbox is snapped outward to a 0.1° grid so nearby pans reuse the same cache row.
+    """
+    import math as _m
+    s = _m.floor(south * 10) / 10
+    w = _m.floor(west * 10) / 10
+    n = _m.ceil(north * 10) / 10
+    e = _m.ceil(east * 10) / 10
+    key = f"bbox:{s},{w},{n},{e}"
+    cache = db["osm_sites_cache"]
+    now = datetime.now(timezone.utc)
+    cached = await cache.find_one({"tile": key}, {"_id": 0})
+    if cached and cached.get("fetched_at"):
+        try:
+            if (now - datetime.fromisoformat(cached["fetched_at"])).days < _OSM_CACHE_DAYS:
+                return cached.get("items") or []
+        except Exception:  # noqa: BLE001
+            pass
+
+    items: List[Dict[str, Any]] = []
+    query = _osm_bbox_query(s, w, n, e)
+    for url in _OVERPASS_ENDPOINTS:
+        try:
+            async with httpx.AsyncClient(timeout=28) as client:
+                resp = await client.post(url, data={"data": query},
+                                         headers={"User-Agent": "SanctusApp/1.0 (Catholic church finder)"})
+            if resp.status_code != 200:
+                continue
+            data = resp.json()
+            for el in data.get("elements", []):
+                tags = el.get("tags") or {}
+                name = (tags.get("name") or "").strip()
+                if not name:
+                    continue
+                if el.get("type") == "node":
+                    elat, elng = el.get("lat"), el.get("lon")
+                else:
+                    c = el.get("center") or {}
+                    elat, elng = c.get("lat"), c.get("lon")
+                if elat is None or elng is None:
+                    continue
+                items.append({
+                    "site_id": f"osm_{el.get('type','n')[0]}{el.get('id')}",
+                    "slug": f"osm-{el.get('id')}",
+                    "name": name, "type": "church",
+                    "city": tags.get("addr:city") or tags.get("addr:town") or tags.get("addr:village") or "",
+                    "country": tags.get("addr:country") or "",
+                    "lat": elat, "lng": elng, "osm": True,
+                })
+            break
+        except Exception:  # noqa: BLE001
+            continue
+
+    seen = set()
+    deduped: List[Dict[str, Any]] = []
+    for it in items:
+        k = (round(it["lat"], 5), round(it["lng"], 5))
+        if k in seen:
+            continue
+        seen.add(k)
+        deduped.append(it)
+
+    if deduped:
+        await cache.update_one(
+            {"tile": key},
+            {"$set": {"tile": key, "fetched_at": now.isoformat(), "items": deduped}},
+            upsert=True,
+        )
+    return deduped
+
+
 def build_router(db: AsyncIOMotorDatabase, get_current_user, emergent_llm_key: str = "") -> APIRouter:
     router = APIRouter(prefix="/sites", tags=["catholic-sites"])
     col = db["catholic_sites"]
+
+    @router.get("/bbox")
+    async def sites_in_bbox(
+        south: float, west: float, north: float, east: float, zoom: int = 2,
+        user=Depends(get_current_user),
+    ):
+        """Markers within the visible map bounds.
+
+        Curated significant sites are always returned. When zoomed in to a city
+        (zoom >= 9) and the area is reasonably small, real Catholic churches in
+        view are added live from OpenStreetMap so users can browse essentially
+        every Mass-holding church on earth as they pan and zoom.
+        """
+        await _seed_if_missing(db)
+        markers: List[Dict[str, Any]] = []
+        seen_coords = set()
+
+        # Curated sites inside the bounds.
+        cur = col.find(
+            {"lat": {"$gte": south, "$lte": north}, "lng": {"$gte": west, "$lte": east}},
+            {"_id": 0, "site_id": 1, "slug": 1, "name": 1, "type": 1, "lat": 1, "lng": 1, "persecuted": 1},
+        )
+        async for d in cur:
+            markers.append({
+                "site_id": d.get("site_id"), "slug": d.get("slug"), "name": d.get("name"),
+                "type": d.get("type") or "church", "lat": d.get("lat"), "lng": d.get("lng"),
+                "persecuted": bool(d.get("persecuted", False)), "osm": False,
+            })
+            seen_coords.add((round(d.get("lat") or 0, 5), round(d.get("lng") or 0, 5)))
+
+        osm_count = 0
+        span_ok = (north - south) <= 1.2 and (east - west) <= 1.2
+        if zoom >= 9 and span_ok:
+            try:
+                osm = await _osm_bbox_churches(db, south, west, north, east)
+                for o in osm:
+                    key = (round(o["lat"], 5), round(o["lng"], 5))
+                    if key in seen_coords:
+                        continue
+                    seen_coords.add(key)
+                    markers.append(o)
+                    osm_count += 1
+            except Exception:  # noqa: BLE001
+                pass
+
+        return {"items": markers[:1200], "total": len(markers), "osm_count": osm_count}
 
     @router.get("")
     async def list_sites(user=Depends(get_current_user)):

@@ -1,0 +1,46 @@
+{
+  "summary": "Iteration 68 — viewport/bbox-driven Catholic World Map. Backend: 10/10 tests pass for the new GET /api/sites/bbox endpoint (auth, world-view-curated-only osm_count=0, Rome zoom=12 yields osm_count>50 with items within snapped bounds, repeat-call caching gives identical results and is not slower, London & Paris return real OSM churches, span-guard for a huge bbox at zoom=12 returns osm_count=0 quickly) plus full regression on /api/sites (270 curated), /api/sites/nearby (featured relic-bearing site + nearby_churches[]) and /api/sites/lourdes. Frontend: /community/map renders, the featured 'A holy place to explore — Valencia Cathedral / Relics to venerate here' card shows, the list toggle works, and the Leaflet iframe receives all 270 curated markers via postMessage (270 .leaflet-marker-icon nodes counted on the world view). HOWEVER the new 'Zoom in to reveal every Catholic church in view' hint text is NOT rendered in the DOM at all — document.body.innerText, querySelectorAll text search, and iframe content all confirm the string is missing despite being present at map.tsx:341. Deep-zoom interaction inside the Leaflet srcdoc iframe could not be automated (no exposed map handle); per spec this is not a failure, but it means the live /api/sites/bbox call at zoom>=9 was not triggered through the UI in this run — backend bbox behaviour was verified directly via pytest instead. No React Native red screen, no console errors, no deprecated-package usage on this screen.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "/community/map zoom hint",
+        "issue": "The new prompt 'Zoom in to reveal every Catholic church in view' is completely missing from the rendered output. Verified by (a) get_by_text wait timing out, (b) document.body.innerText scan, (c) querySelectorAll textContent scan, and (d) iframe content scan — none contain 'Zoom' or 'reveal'. The legend immediately below it renders normally, so mapWrap is mounted. Likely cause: the absolutely-positioned <Text style={styles.zoomHint}> with alignSelf:'center' + overflow:'hidden' and no explicit width collapses to 0 in react-native-web. Reference: /app/frontend/app/community/map.tsx:341 and styles.zoomHint at :499.",
+        "testID": "(none — should add testID='map-zoom-hint')",
+        "priority": "MEDIUM"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "/community/map",
+        "issues": [
+          "Zoom hint pill missing as above — users on a world view get no guidance that zooming in unlocks every church in view, which is the headline feature of this iteration."
+        ]
+      }
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter68_sites_bbox.py",
+    "/app/test_reports/pytest/iteration_68_sites_bbox.xml"
+  ],
+  "action_items": [
+    "Fix the missing zoom hint in /app/frontend/app/community/map.tsx:341 — wrap the <Text> in a <View style={{position:'absolute', top:8, left:0, right:0, alignItems:'center'}}> and make the Text itself a non-absolute pill, OR set explicit width/maxWidth on styles.zoomHint and drop alignSelf. Also add testID='map-zoom-hint' so future automation can assert it.",
+    "Optionally expose the Leaflet map handle (e.g., window.__leafletMap = map) inside mapHtml.ts so Playwright can drive zoom/pan and exercise /api/sites/bbox end-to-end."
+  ],
+  "critical_code_review_comments": [
+    "catholic_sites.py is 1727 lines and contains the seed data, Overpass clients, both /nearby and /bbox routes, and helper utilities. Consider splitting into catholic_sites_data.py (SEED_SITES), catholic_sites_osm.py (Overpass + cache), and catholic_sites_router.py — file size threshold for review is 700 lines.",
+    "/api/sites/bbox response is hard-capped at 1200 markers (markers[:1200]) but the cap is silent. Consider returning a 'truncated': true flag so the UI can hint the user to zoom further when their viewport hits the cap.",
+    "_osm_bbox_churches snaps bbox to 0.1deg which makes the cache effective but means returned points can fall slightly outside the requested bbox (verified — Rome call at south=41.85 returned a point at lat=41.7998). UI should be aware; tests now use 0.15deg of slack."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter68_sites_bbox.py (new)"
+  ],
+  "success_rate": {"backend": "100% (10/10)", "frontend": "80% (map renders + markers + featured card + list toggle, but zoom hint missing; live bbox-on-zoom not driven through UI)"},
+  "seed_data_creation": "None. Test reused the existing pre-seeded session token 'test_feat_aug25' (philipwils13@gmail.com).",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend /api/sites/bbox is fully verified — re-run /app/backend/tests/test_iter68_sites_bbox.py to regress. For the frontend, the only outstanding bug is the missing zoom-hint pill on /community/map; after E1's fix, search document.body.innerText for 'Zoom in to reveal' to verify. To exercise the live bbox call from the UI, expose the Leaflet map instance on window inside mapHtml.ts and have Playwright invoke setView([41.9,12.5], 13) then watch for a /api/sites/bbox network request.",
+  "rca_of_issue": "Zoom hint missing — Reproduction: open /community/map with mobile viewport 390x844, wait 8s, inspect document.body.innerText: the string 'Zoom in to reveal' is absent. RCA: <Text style={styles.zoomHint}> at map.tsx:341 uses {position:'absolute', top:8, alignSelf:'center', overflow:'hidden'} with no width/maxWidth. In react-native-web, an absolutely-positioned RNText with alignSelf and overflow:hidden but no measured width can collapse and be culled from layout. Mitigation: wrap in a centring container OR set width/maxWidth on the Text and remove alignSelf."
+}

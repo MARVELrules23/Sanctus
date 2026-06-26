@@ -26,10 +26,14 @@ type Prefs = {
   fitness_level: string;
   fitness_goal: string;
   devotion_focus: string;
+  marital_status: string;
+  vocation: string;
 };
 
 const DIETARY_OPTIONS = ["balanced", "vegetarian", "pescetarian", "low-carb", "mediterranean"];
 const LEVEL_OPTIONS = ["beginner", "intermediate", "advanced"];
+const MARITAL_OPTIONS = ["single", "married"];
+const VOCATION_OPTIONS = ["singleness", "religious life", "marriage"];
 
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
@@ -162,8 +166,41 @@ export default function ProfileScreen() {
               returnKeyType="done"
             />
 
-            <Text style={styles.section}>{t("profile.discipline")}</Text>
-            <Text style={styles.label}>{t("profile.fitnessLevel")}</Text>
+            <AutoText style={styles.section}>Your Walk with Christ</AutoText>
+            <View style={{ flexDirection: "row", gap: 6, alignItems: "flex-start", backgroundColor: colors.borderSoft, borderRadius: radius.md, padding: spacing.sm, marginBottom: spacing.sm }}>
+              <Ionicons name="lock-closed" size={13} color={colors.textMuted} />
+              <AutoText style={{ flex: 1, fontFamily: fonts.bodyRegular, fontSize: 12, color: colors.textSecondary, lineHeight: 17 }}>
+                Private — only you can see this. We use it to tailor better habits and ideas for your personal walk with Christ.
+              </AutoText>
+            </View>
+            <AutoText style={styles.label}>Marital status</AutoText>
+            <View style={styles.optionRow}>
+              {MARITAL_OPTIONS.map((opt) => (
+                <Pressable
+                  key={opt}
+                  testID={`pref-marital-${opt}`}
+                  onPress={() => update({ marital_status: opt })}
+                  style={[styles.optionChip, prefs.marital_status === opt && styles.optionChipSel]}
+                >
+                  <AutoText style={[styles.optionText, prefs.marital_status === opt && styles.optionTextSel]}>{opt}</AutoText>
+                </Pressable>
+              ))}
+            </View>
+            <AutoText style={styles.label}>Vocation</AutoText>
+            <View style={styles.optionRow}>
+              {VOCATION_OPTIONS.map((opt) => (
+                <Pressable
+                  key={opt}
+                  testID={`pref-vocation-${opt.replace(/\s+/g, "-")}`}
+                  onPress={() => update({ vocation: opt })}
+                  style={[styles.optionChip, prefs.vocation === opt && styles.optionChipSel]}
+                >
+                  <AutoText style={[styles.optionText, prefs.vocation === opt && styles.optionTextSel]}>{opt}</AutoText>
+                </Pressable>
+              ))}
+            </View>
+
+            <Text style={styles.section}>{t("profile.discipline")}</Text>            <Text style={styles.label}>{t("profile.fitnessLevel")}</Text>
             <View style={styles.optionRow}>
               {LEVEL_OPTIONS.map((opt) => (
                 <Pressable

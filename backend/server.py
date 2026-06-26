@@ -75,6 +75,10 @@ class PreferencesPayload(BaseModel):
     fitness_level: Optional[str] = "intermediate"  # beginner / intermediate / advanced
     fitness_goal: Optional[str] = "general fitness"
     devotion_focus: Optional[str] = "daily prayer"
+    # Private to the user (never exposed in public profiles). Used only to tailor
+    # habits and spiritual suggestions.
+    marital_status: Optional[str] = ""  # single | married
+    vocation: Optional[str] = ""  # singleness | religious life | marriage
 
 
 class GenerateMealRequest(BaseModel):

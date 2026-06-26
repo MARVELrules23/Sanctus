@@ -1371,6 +1371,7 @@ def _public(doc: Dict[str, Any]) -> Dict[str, Any]:
         "source_url": doc.get("source_url"),
         "persecuted": bool(doc.get("persecuted", False)),
         "persecution_note": doc.get("persecution_note", ""),
+        "osm": bool(doc.get("osm", False)),
     }
 
 
@@ -1386,6 +1387,8 @@ async def _localize(db, items: List[Dict[str, Any]]):
     str_fields = ["name", "blurb", "history", "city", "country", "founded", "persecution_note"]
     list_fields = ["relics", "saints", "miracles"]
     for i, it in enumerate(items):
+        if it.get("osm"):
+            continue  # community-sourced churches are not translated (volume)
         for f in str_fields:
             v = it.get(f)
             if isinstance(v, str) and v.strip():

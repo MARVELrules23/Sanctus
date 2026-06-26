@@ -81,6 +81,8 @@ export default function CatholicMapScreen() {
   const [featured, setFeatured] = useState<CatholicSite | null>(null);
   const [planFor, setPlanFor] = useState<CatholicSite | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [usingLocation, setUsingLocation] = useState(false);
+  const [nearCity, setNearCity] = useState<string>("");
 
   const load = useCallback(async () => {
     setError(null);
@@ -94,43 +96,47 @@ export default function CatholicMapScreen() {
     }
   }, []);
 
-  // "Saint of the place near you" — try the user's location, else a daily pick.
-  const loadFeatured = useCallback(async () => {
-    let lat: number | undefined;
-    let lng: number | undefined;
+  // Resolve the user's GPS location and load the truly nearest holy place.
+  // `prompt` = ask for permission (used by the "locate" button & first mount).
+  const locateAndLoad = useCallback(async (prompt: boolean) => {
     try {
-      const perm = await Location.getForegroundPermissionsAsync();
+      const perm = prompt
+        ? await Location.requestForegroundPermissionsAsync()
+        : await Location.getForegroundPermissionsAsync();
       if (perm.granted) {
-        const pos = await Location.getCurrentPositionAsync({});
-        lat = pos.coords.latitude;
-        lng = pos.coords.longitude;
+        const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        const { latitude, longitude } = pos.coords;
+        const res = await nearbyCatholicSites(latitude, longitude);
+        setFeatured(res.items?.[0] || null);
+        setUsingLocation(true);
+        try {
+          const geo = await Location.reverseGeocodeAsync({ latitude, longitude });
+          const g = geo?.[0];
+          setNearCity([g?.city || g?.subregion || g?.region, g?.country].filter(Boolean).join(", "));
+        } catch {
+          setNearCity("");
+        }
+        return true;
       }
     } catch {
-      /* ignore — fall back to daily pick */
+      /* fall through to daily pick */
     }
+    // Fallback: no location — show a place to explore (not "near you").
     try {
-      const res = await nearbyCatholicSites(lat, lng);
+      const res = await nearbyCatholicSites();
       setFeatured(res.items?.[0] || null);
     } catch {
       setFeatured(null);
     }
+    setUsingLocation(false);
+    return false;
   }, []);
 
   const useMyLocation = useCallback(async () => {
-    try {
-      const perm = await Location.requestForegroundPermissionsAsync();
-      if (perm.granted) {
-        const pos = await Location.getCurrentPositionAsync({});
-        const res = await nearbyCatholicSites(pos.coords.latitude, pos.coords.longitude);
-        setFeatured(res.items?.[0] || null);
-        setToast("Found the nearest holy place to you.");
-        setTimeout(() => setToast(null), 2500);
-      }
-    } catch {
-      setToast("Couldn't get your location.");
-      setTimeout(() => setToast(null), 2500);
-    }
-  }, []);
+    const ok = await locateAndLoad(true);
+    setToast(ok ? "Found the nearest holy place to you." : "Location unavailable — enable location to find nearby places.");
+    setTimeout(() => setToast(null), 3000);
+  }, [locateAndLoad]);
 
   const planPilgrimage = useCallback(async (site: CatholicSite, date: string, label: string) => {
     try {
@@ -155,8 +161,8 @@ export default function CatholicMapScreen() {
 
   useEffect(() => {
     load();
-    loadFeatured();
-  }, [load, loadFeatured]);
+    locateAndLoad(true);
+  }, [load, locateAndLoad]);
 
   const markers = useMemo(
     () => sites.map((s) => ({ id: s.site_id, name: s.name, type: s.type, lat: s.lat, lng: s.lng, persecuted: s.persecuted })),
@@ -193,7 +199,7 @@ export default function CatholicMapScreen() {
           <Pressable style={{ flex: 1 }} onPress={() => setSelected(featured)}>
             <View style={styles.featTop}>
               <Ionicons name="navigate-circle-outline" size={14} color={colors.gold} />
-              <Text style={styles.featLabel}>Saint of the place near you</Text>
+              <Text style={styles.featLabel}>{usingLocation ? (nearCity ? `Near ${nearCity}` : "Saint of the place near you") : "A holy place to explore"}</Text>
             </View>
             <Text style={styles.featName} numberOfLines={1}>{featured.name}</Text>
             <Text style={styles.featSub} numberOfLines={1}>
@@ -231,7 +237,7 @@ export default function CatholicMapScreen() {
       ) : showList ? (
         <ScrollView contentContainerStyle={styles.listScroll}>
           <Text style={styles.intro}>Explore {sites.length} significant Catholic places across the world.</Text>
-          {sites.map((s) => (
+          {sites.filter((s) => !s.osm).map((s) => (
             <Pressable
               key={s.site_id}
               testID={`map-list-${s.slug}`}

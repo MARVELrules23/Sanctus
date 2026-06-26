@@ -1874,6 +1874,7 @@ export type CatholicSite = {
   persecuted?: boolean;
   persecution_note?: string;
   distance_km?: number;
+  osm?: boolean;
 };
 export async function listCatholicSites(): Promise<{ items: CatholicSite[]; total: number }> {
   return await api(`/sites`);

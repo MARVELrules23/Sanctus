@@ -30,7 +30,9 @@ function pilgrimageDateOptions(): { label: string; date: string }[] {
   const sat = nextDow(6); out.push({ label: "This Saturday", date: fmt(sat) });
   const sun = nextDow(0); out.push({ label: "This Sunday", date: fmt(sun) });
   const nextSat = new Date(sat); nextSat.setDate(nextSat.getDate() + 7); out.push({ label: "Next Saturday", date: fmt(nextSat) });
-  return out;
+  // Drop any option whose date duplicates an earlier one (e.g. Tomorrow == This Saturday).
+  const seen = new Set<string>();
+  return out.filter((o) => (seen.has(o.date) ? false : (seen.add(o.date), true)));
 }
 
 const TYPE_COLORS: Record<string, string> = {
@@ -180,6 +182,9 @@ export default function CatholicMapScreen() {
         <View style={styles.headerTitleWrap}>
           <Text style={styles.headerTitle}>Catholic World Map</Text>
         </View>
+        <Pressable testID="map-toggle-list" onPress={() => setShowList((v) => !v)} hitSlop={10}>
+          <Ionicons name={showList ? "map-outline" : "list-outline"} size={22} color={colors.primary} />
+        </Pressable>
       </View>
 
       {/* Saint of the place near you */}
@@ -344,10 +349,10 @@ export default function CatholicMapScreen() {
             <Ionicons name="footsteps" size={26} color="#7A5CB0" style={{ alignSelf: "center" }} />
             <Text style={styles.planTitle}>Plan a mini pilgrimage</Text>
             {planFor ? <Text style={styles.planSite}>{planFor.name}</Text> : null}
-            <Text style={styles.planHint}>Pick a day and we'll add it to your calendar.</Text>
+            <Text style={styles.planHint}>Pick a day to add it to your calendar.</Text>
             {pilgrimageDateOptions().map((opt) => (
               <Pressable
-                key={opt.date}
+                key={opt.label}
                 testID={`pilgrimage-date-${opt.label.replace(/\s+/g, "-").toLowerCase()}`}
                 onPress={() => planFor && planPilgrimage(planFor, opt.date, opt.label)}
                 style={({ pressed }) => [styles.planOption, pressed && { opacity: 0.85 }]}

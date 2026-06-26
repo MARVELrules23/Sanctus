@@ -78,7 +78,7 @@ export default function CatholicMapScreen() {
   }, [load]);
 
   const markers = useMemo(
-    () => sites.map((s) => ({ id: s.site_id, name: s.name, type: s.type, lat: s.lat, lng: s.lng })),
+    () => sites.map((s) => ({ id: s.site_id, name: s.name, type: s.type, lat: s.lat, lng: s.lng, persecuted: s.persecuted })),
     [sites],
   );
 
@@ -127,11 +127,12 @@ export default function CatholicMapScreen() {
               onPress={() => setSelected(s)}
               style={({ pressed }) => [styles.listRow, pressed && { opacity: 0.85 }]}
             >
-              <View style={[styles.dot, { backgroundColor: TYPE_COLORS[s.type] || colors.gold }]} />
+              <View style={[styles.dot, { backgroundColor: s.persecuted ? "#B3261E" : TYPE_COLORS[s.type] || colors.gold }]} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.listTitle} numberOfLines={1}>{s.name}</Text>
                 <Text style={styles.listSub} numberOfLines={1}>{s.city}, {s.country}</Text>
               </View>
+              {s.persecuted ? <Ionicons name="alert-circle" size={16} color="#B3261E" style={{ marginRight: 4 }} /> : null}
               <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
             </Pressable>
           ))}
@@ -151,6 +152,10 @@ export default function CatholicMapScreen() {
                 <Text style={styles.legendText}>{TYPE_LABELS[t]}</Text>
               </View>
             ))}
+            <View style={styles.legendItem}>
+              <View style={[styles.dot, styles.dotPersecuted]} />
+              <Text style={styles.legendText}>Under persecution</Text>
+            </View>
           </ScrollView>
         </View>
       )}
@@ -175,6 +180,16 @@ export default function CatholicMapScreen() {
                     {selected.founded ? `  ·  ${selected.founded}` : ""}
                   </Text>
                 </View>
+
+                {selected.persecuted ? (
+                  <View style={styles.persBanner} testID="map-persecution-banner">
+                    <Ionicons name="alert-circle" size={18} color="#B3261E" />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.persTitle}>Church under persecution</Text>
+                      {selected.persecution_note ? <Text style={styles.persNote}>{selected.persecution_note}</Text> : null}
+                    </View>
+                  </View>
+                ) : null}
 
                 {selected.history ? <Text style={styles.history}>{selected.history}</Text> : null}
 
@@ -247,6 +262,20 @@ const styles = StyleSheet.create({
   },
   legendText: { fontFamily: fonts.uiMedium, fontSize: 11, color: colors.textSecondary },
   dot: { width: 11, height: 11, borderRadius: 6 },
+  dotPersecuted: { backgroundColor: "#B3261E", borderWidth: 1.5, borderColor: "#F4C7C3" },
+  persBanner: {
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "flex-start",
+    backgroundColor: "#FCEDEC",
+    borderWidth: 1,
+    borderColor: "#F2C5C1",
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginTop: spacing.sm,
+  },
+  persTitle: { fontFamily: fonts.uiSemi, fontSize: 13.5, color: "#B3261E" },
+  persNote: { fontFamily: fonts.bodyRegular, fontSize: 13, color: "#7A2520", lineHeight: 19, marginTop: 2 },
   listScroll: { padding: spacing.md, gap: spacing.sm },
   intro: { fontFamily: fonts.bodyItalic, fontSize: 13.5, color: colors.textSecondary, marginBottom: spacing.sm },
   listRow: {

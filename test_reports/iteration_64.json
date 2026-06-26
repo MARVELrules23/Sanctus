@@ -1,0 +1,34 @@
+{
+  "summary": "Iteration 64 — verified expanded Catholic World Map (99 sites / 59 countries) with NEW 'churches under persecution' flag end-to-end + expanded vocation traditions per (vocation, state). Backend (13/13 pytest passing): GET /api/sites returns exactly 99 items across 59 countries (seed idempotent across repeat calls). Every item carries persecuted (bool) + persecution_note (string); exactly 6 sites have persecuted=true and the slugs match the spec — {our-lady-salvation-baghdad, al-tahira-qaraqosh, st-thecla-maaloula, owo-nigeria, managua-cathedral, sacred-heart-lahore}. GET /api/sites/our-lady-salvation-baghdad returns persecuted=true + non-empty persecution_note; GET /api/sites/lourdes returns persecuted=false. Accept-Language: es and it both localize persecution_note + name/history via the shared translation cache (first call cold ~20-45s, subsequent instant). GET /api/vocation/guide for vocation=marriage state=living returns exactly 11 traditions (expected: Enthrone Sacred Heart, family Rosary, liturgical year, Bless children, home altar, Chalk door at Epiphany, Angelus, holy water at door, Feast/rest Sundays, lives of saints at bedtime, Renew vows); state=discerning returns a smaller 6-item list with completely different titles. Religious life and singleness both return non-empty distinct traditions for discerning vs living. es/it localize the traditions. Account RESET to vocation=marriage state=living at end. Frontend (mobile 390x844): /community/map header shows 'Catholic World Map'; map view shows red markers for persecuted sites (Iraq/Syria/Nigeria/Lebanon visible) and the legend ScrollView includes the 'Under persecution' entry. Toggling to list view renders 'Explore 99 significant Catholic places across the world.' + exactly 99 rows; persecuted rows (e.g. Al-Tahira, Sacred Heart Lahore) display a red dot + red alert-circle icon. Tapping map-list-our-lady-salvation-baghdad opens the detail sheet with the testID=map-persecution-banner showing 'Church under persecution' heading + the full Iraq persecution note. Tapping map-list-lourdes opens a sheet with NO persecution banner (count=0). /vocation screen for marriage/living renders vocation-prayer (Morning Prayer for the Family body), 4 companions with St. Joseph default, vocation-ideas, and the nested vocation-traditions box containing all 11 expanded traditions (verified: Enthrone Sacred Heart, Bless your children, Pray the Angelus, Renew your vows present). No critical issues.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "RNW shadow* style props", "issue": "(carry-over from iter62/63) Console warns: '\"shadow*\" style props are deprecated. Use \"boxShadow\".' — cosmetic, web only."},
+      {"component": "props.pointerEvents", "issue": "(carry-over) 'props.pointerEvents is deprecated. Use style.pointerEvents' — cosmetic, web only."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter64_persecution_traditions.py",
+    "/app/test_reports/pytest/iteration_64.xml",
+    "/app/test_reports/pytest/iteration_64_i18n.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "catholic_sites.py: 6 persecuted sites correctly tagged with persecuted=True + persecution_note. _seed_if_missing checks by slug before insert — idempotency confirmed (two back-to-back GETs both return total=99).",
+    "catholic_sites.py: persecution_note is included in the localization fan-out so es/it return translated text via the shared translation cache.",
+    "vocations.py: marriage/living now has 11 hand-curated traditions; marriage/discerning has 6 distinct titles; module-level CONTENT is never mutated thanks to copy.deepcopy in _build_guide ✔.",
+    "frontend/map.tsx: legend shows 'Under persecution' on map view; list-view rows use a red dot (#B3261E) and red Ionicons alert-circle when persecuted=true; detail sheet renders a red banner with testID=map-persecution-banner only when persecuted. Clean separation, no UI overlap."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter64_persecution_traditions.py (new)"
+  ],
+  "success_rate": {"backend": "100% (13/13)", "frontend": "100% (all required flows)"},
+  "seed_data_creation": "No new seed. Backend auto-seeds the additional 21 sites (78 → 99) on first GET /api/sites; verified idempotent. Test ran against pre-existing account philipwils13@gmail.com via session token test_feat_aug25.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Cloudflare gateway times out at ~100s, but the translation cache cold-start for /api/sites with Accept-Language: es takes ~44s and for it ~16s when called via the internal port (localhost:8001). Strategy used: warm via curl on localhost:8001, then re-run i18n tests through the public URL where they complete in <35s combined. After this run, the es/it caches are warm for both /api/sites and /api/vocation/guide. Test account RESET to vocation=marriage, vocation_state=living, companion_saint=st-joseph.",
+  "rca_of_issue": "N/A — no defects."
+}

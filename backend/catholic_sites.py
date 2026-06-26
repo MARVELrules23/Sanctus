@@ -783,6 +783,172 @@ SEED_SITES: List[Dict[str, Any]] = [
      "seat of the Bishop of Auckland.",
      "relics": [], "saints": [], "miracles": [],
      "source_url": "https://www.stpatricks.org.nz/"},
+    # ---- Churches under persecution (highlighted) ---- #
+    {"slug": "our-lady-salvation-baghdad", "name": "Our Lady of Salvation Cathedral", "type": "cathedral",
+     "city": "Baghdad", "country": "Iraq", "lat": 33.3152, "lng": 44.3661, "founded": "1968",
+     "blurb": "Syriac Catholic cathedral, site of the 2010 massacre, a symbol of Iraq's suffering Church.",
+     "history": "On 31 October 2010, gunmen attacked during Mass, killing 58 worshippers and priests. The "
+     "martyrs' cause for beatification is open; the church remains a sign of faith amid persecution.",
+     "relics": [], "saints": ["The 2010 Martyrs of Baghdad (cause open)"], "miracles": [],
+     "persecuted": True,
+     "persecution_note": "Iraq's Christians have been devastated by war and terrorism; this cathedral itself was the site of a 2010 massacre. Pray for the persecuted Church in Iraq.",
+     "source_url": "https://en.wikipedia.org/wiki/Our_Lady_of_Salvation_Church,_Baghdad"},
+    {"slug": "al-tahira-qaraqosh", "name": "Al-Tahira (Immaculate Conception) Church", "type": "church",
+     "city": "Qaraqosh", "country": "Iraq", "lat": 36.2700, "lng": 43.3800, "founded": "1932 / restored 2021",
+     "blurb": "The largest church in Iraq, burned by ISIS in 2014 and since restored.",
+     "history": "When ISIS overran the Nineveh Plains in 2014, this great church was desecrated and burned. "
+     "After the town's liberation it was restored, and Pope Francis prayed here during his 2021 visit to Iraq.",
+     "relics": [], "saints": [], "miracles": [],
+     "persecuted": True,
+     "persecution_note": "Desecrated and burned by ISIS in 2014; the Christians of the Nineveh Plains were driven from their ancient homeland. Pray for their return and protection.",
+     "source_url": "https://en.wikipedia.org/wiki/Al-Tahira_Church,_Bakhdida"},
+    {"slug": "st-thecla-maaloula", "name": "Monastery of St. Thecla (Mar Takla)", "type": "monastery",
+     "city": "Maaloula", "country": "Syria", "lat": 33.8463, "lng": 36.5447, "founded": "ancient",
+     "blurb": "An ancient shrine in one of the last towns where Aramaic, the language of Jesus, is still spoken.",
+     "history": "Honouring St. Thecla, disciple of St. Paul, the monastery was attacked in 2013 and its nuns "
+     "abducted (later freed). Maaloula remains a fragile witness of Christianity's earliest days.",
+     "relics": ["Shrine of St. Thecla"], "saints": ["St. Thecla"], "miracles": [],
+     "persecuted": True,
+     "persecution_note": "Attacked during Syria's war; its nuns were abducted in 2013. Pray for Syria's ancient Christian communities.",
+     "source_url": "https://en.wikipedia.org/wiki/Mar_Takla"},
+    {"slug": "owo-nigeria", "name": "St. Francis Xavier Catholic Church, Owo", "type": "church",
+     "city": "Owo", "country": "Nigeria", "lat": 7.1962, "lng": 5.5870, "founded": "20th century",
+     "blurb": "Site of the 2022 Pentecost Sunday massacre, a wound on Nigeria's vibrant Church.",
+     "history": "On Pentecost Sunday 2022, gunmen attacked the congregation during Mass, killing dozens of "
+     "worshippers. It stands as a memorial of the suffering of Nigerian Christians.",
+     "relics": [], "saints": [], "miracles": [],
+     "persecuted": True,
+     "persecution_note": "Nigerian Christians face frequent deadly attacks; this parish suffered a massacre on Pentecost 2022. Pray for Nigeria's persecuted faithful.",
+     "source_url": "https://en.wikipedia.org/wiki/Owo_church_massacre"},
+    {"slug": "managua-cathedral", "name": "Metropolitan Cathedral of Managua", "type": "cathedral",
+     "city": "Managua", "country": "Nicaragua", "lat": 12.1500, "lng": -86.2735, "founded": "1993",
+     "blurb": "Seat of a Church enduring severe state repression in Nicaragua.",
+     "history": "The distinctive domed cathedral is the centre of a Church whose bishops, priests and "
+     "faithful have faced exile, imprisonment and the suppression of processions under the government.",
+     "relics": [], "saints": [], "miracles": [],
+     "persecuted": True,
+     "persecution_note": "Nicaragua's Catholic Church faces intense state persecution — clergy exiled or jailed, processions banned. Pray for the Church in Nicaragua.",
+     "source_url": "https://en.wikipedia.org/wiki/Metropolitan_Cathedral_of_Managua"},
+    {"slug": "sacred-heart-lahore", "name": "Sacred Heart Cathedral, Lahore", "type": "cathedral",
+     "city": "Lahore", "country": "Pakistan", "lat": 31.5600, "lng": 74.3300, "founded": "1907",
+     "blurb": "A mother church of Pakistan's small, often-threatened Christian minority.",
+     "history": "One of the largest churches in Pakistan, it serves a faithful community that endures "
+     "blasphemy accusations, mob violence and church bombings with remarkable courage.",
+     "relics": [], "saints": [], "miracles": [],
+     "persecuted": True,
+     "persecution_note": "Pakistan's Christians face blasphemy laws, mob violence and church attacks. Pray for their safety and freedom.",
+     "source_url": "https://en.wikipedia.org/wiki/Sacred_Heart_Cathedral,_Lahore"},
+    # ---- More churches around the world ---- #
+    {"slug": "st-patricks-nyc", "name": "St. Patrick's Cathedral", "type": "cathedral",
+     "city": "New York", "country": "United States", "lat": 40.7585, "lng": -73.9759, "founded": "1858–1878",
+     "blurb": "The neo-Gothic seat of the Archdiocese of New York on Fifth Avenue.",
+     "history": "A landmark of American Catholicism, it holds the remains of New York's bishops and the relics "
+     "of St. Elizabeth Ann Seton and St. Frances Cabrini in its altars.",
+     "relics": ["Relics of St. Elizabeth Ann Seton & St. Frances Cabrini"],
+     "saints": ["St. Elizabeth Ann Seton", "St. Frances Xavier Cabrini"], "miracles": [],
+     "source_url": "https://saintpatrickscathedral.org/"},
+    {"slug": "metropolitan-cathedral-mexico", "name": "Mexico City Metropolitan Cathedral", "type": "cathedral",
+     "city": "Mexico City", "country": "Mexico", "lat": 19.4341, "lng": -99.1330, "founded": "1573–1813",
+     "blurb": "The oldest and largest cathedral in the Americas, on the great square of Mexico City.",
+     "history": "Built over two centuries atop the former Aztec sacred precinct, it blends Renaissance, "
+     "Baroque and Neoclassical styles and is the heart of Mexican Catholic life.",
+     "relics": [], "saints": [], "miracles": [],
+     "source_url": "https://en.wikipedia.org/wiki/Mexico_City_Metropolitan_Cathedral"},
+    {"slug": "sacre-coeur", "name": "Basilica of the Sacred Heart (Sacré-Cœur)", "type": "basilica",
+     "city": "Paris", "country": "France", "lat": 48.8867, "lng": 2.3431, "founded": "1875–1914",
+     "blurb": "Atop Montmartre, a basilica of perpetual adoration of the Sacred Heart since 1885.",
+     "history": "Built as a national act of penance and hope, the white-domed basilica has hosted continuous "
+     "Eucharistic adoration, day and night, for well over a century.",
+     "relics": [], "saints": [], "miracles": [],
+     "source_url": "https://www.sacre-coeur-montmartre.com/english/"},
+    {"slug": "st-vitus-prague", "name": "St. Vitus Cathedral", "type": "cathedral",
+     "city": "Prague", "country": "Czechia", "lat": 50.0909, "lng": 14.4006, "founded": "1344–1929",
+     "blurb": "The great cathedral within Prague Castle, holding Bohemia's holy relics.",
+     "history": "Burial place of Bohemian kings and saints, it enshrines the tomb of St. Wenceslaus and the "
+     "relics of St. John of Nepomuk in a silver tomb.",
+     "relics": ["Tomb of St. Wenceslaus", "Tomb of St. John of Nepomuk"],
+     "saints": ["St. Wenceslaus", "St. John of Nepomuk", "St. Adalbert"], "miracles": [],
+     "source_url": "https://www.katedralasvatehovita.cz/en"},
+    {"slug": "milan-duomo", "name": "Milan Cathedral (Duomo)", "type": "cathedral",
+     "city": "Milan", "country": "Italy", "lat": 45.4642, "lng": 9.1900, "founded": "1386–1965",
+     "blurb": "The vast Gothic Duomo, guarding a Holy Nail of the Crucifixion.",
+     "history": "Crowned with countless spires and statues, the cathedral preserves a relic believed to be a "
+     "Nail from the Cross, raised yearly in the Rite of the Nivola begun by St. Charles Borromeo.",
+     "relics": ["A Holy Nail of the Crucifixion", "Body of St. Charles Borromeo (in the crypt)"],
+     "saints": ["St. Charles Borromeo", "St. Ambrose (patron of Milan)"], "miracles": [],
+     "source_url": "https://www.duomomilano.it/en/"},
+    {"slug": "seville-cathedral", "name": "Seville Cathedral", "type": "cathedral",
+     "city": "Seville", "country": "Spain", "lat": 37.3859, "lng": -5.9932, "founded": "1401–1528",
+     "blurb": "The largest Gothic cathedral in the world, with the tomb of Christopher Columbus.",
+     "history": "Built on the site of a former mosque (its Giralda was the minaret), it is a UNESCO site and "
+     "holds the monumental tomb of Christopher Columbus.",
+     "relics": [], "saints": ["St. Ferdinand III of Castile (buried in the royal chapel)"], "miracles": [],
+     "source_url": "https://www.catedraldesevilla.es/en/"},
+    {"slug": "chartres", "name": "Chartres Cathedral", "type": "cathedral",
+     "city": "Chartres", "country": "France", "lat": 48.4474, "lng": 1.4877, "founded": "1194–1220",
+     "blurb": "A summit of Gothic art, keeper of the Sancta Camisa, the veil of the Virgin Mary.",
+     "history": "Famed for its stained glass and labyrinth, Chartres has been a Marian pilgrimage since the "
+     "relic of the Virgin's veil was given by Charles the Bald in 876.",
+     "relics": ["The Sancta Camisa (veil of the Blessed Virgin Mary)"], "saints": [], "miracles": [],
+     "source_url": "https://www.cathedrale-chartres.org/en/"},
+    {"slug": "aachen-cathedral", "name": "Aachen Cathedral", "type": "cathedral",
+     "city": "Aachen", "country": "Germany", "lat": 50.7747, "lng": 6.0838, "founded": "796–805",
+     "blurb": "Charlemagne's chapel and a great medieval pilgrimage of relics.",
+     "history": "The first UNESCO World Heritage Site in Germany, it holds Charlemagne's throne and shrine "
+     "and, every seven years, displays its famous Marian relics to pilgrims.",
+     "relics": ["The four great Aachen relics (incl. cloak of Mary)", "Shrine of Charlemagne"],
+     "saints": [], "miracles": [], "source_url": "https://www.aachenerdom.de/en/"},
+    {"slug": "st-stephens-vienna", "name": "St. Stephen's Cathedral", "type": "cathedral",
+     "city": "Vienna", "country": "Austria", "lat": 48.2086, "lng": 16.3731, "founded": "1137–1511",
+     "blurb": "The soaring Gothic heart of Vienna and of Austrian Catholicism.",
+     "history": "With its multicoloured tiled roof and great south tower, 'Steffl' has witnessed Austria's "
+     "history for centuries and holds the catacombs of Viennese archbishops.",
+     "relics": [], "saints": [], "miracles": [],
+     "source_url": "https://www.stephanskirche.at/index.php/en/"},
+    {"slug": "holy-blood-bruges", "name": "Basilica of the Holy Blood", "type": "basilica",
+     "city": "Bruges", "country": "Belgium", "lat": 51.2086, "lng": 3.2578, "founded": "12th century",
+     "blurb": "Home of a venerated relic of the Precious Blood of Christ.",
+     "history": "The basilica enshrines a relic of the Holy Blood, said to have been brought from the Holy "
+     "Land; it is carried through Bruges each year in the Procession of the Holy Blood.",
+     "relics": ["A relic of the Precious Blood of Christ"], "saints": [],
+     "miracles": ["The relic of the Holy Blood, venerated for centuries"],
+     "source_url": "https://www.holyblood.com/"},
+    {"slug": "manila-cathedral", "name": "Manila Cathedral", "type": "cathedral",
+     "city": "Manila", "country": "Philippines", "lat": 14.5917, "lng": 120.9742, "founded": "1958 (8th rebuild)",
+     "blurb": "The Minor Basilica of the Immaculate Conception, mother church of the Philippines.",
+     "history": "Destroyed and rebuilt eight times by fire, earthquake and war, the cathedral stands in "
+     "Intramuros as a sign of the resilient faith of the Filipino people.",
+     "relics": [], "saints": [], "miracles": [],
+     "source_url": "https://manilacathedral.com.ph/"},
+    {"slug": "brasilia-cathedral", "name": "Cathedral of Brasília", "type": "cathedral",
+     "city": "Brasília", "country": "Brazil", "lat": -15.7986, "lng": -47.8756, "founded": "1958–1970",
+     "blurb": "Oscar Niemeyer's luminous modernist cathedral, crowned with soaring white ribs.",
+     "history": "Designed by Oscar Niemeyer, its hyperboloid structure of 16 concrete columns opens to the "
+     "sky, with suspended angels and a flood of light — a modern hymn in stone and glass.",
+     "relics": [], "saints": [], "miracles": [],
+     "source_url": "https://en.wikipedia.org/wiki/Cathedral_of_Bras%C3%ADlia"},
+    {"slug": "st-josephs-hanoi", "name": "St. Joseph's Cathedral, Hanoi", "type": "cathedral",
+     "city": "Hanoi", "country": "Vietnam", "lat": 21.0288, "lng": 105.8490, "founded": "1886",
+     "blurb": "The neo-Gothic mother church of Hanoi, dedicated to St. Joseph, patron of Vietnam.",
+     "history": "One of the oldest churches in Vietnam, modelled on Notre-Dame de Paris, it remains a "
+     "vibrant centre of faith for the Vietnamese Church.",
+     "relics": [], "saints": ["St. Joseph (patron of Vietnam)"], "miracles": [],
+     "source_url": "https://en.wikipedia.org/wiki/St._Joseph%27s_Cathedral,_Hanoi"},
+    {"slug": "velankanni", "name": "Basilica of Our Lady of Good Health", "type": "basilica",
+     "city": "Velankanni", "country": "India", "lat": 10.6800, "lng": 79.8500, "founded": "16th–20th century",
+     "blurb": "The 'Lourdes of the East', a great Marian shrine of southern India.",
+     "history": "Tradition tells of Our Lady's apparitions to local boys and the rescue of Portuguese "
+     "sailors from a storm; the shrine draws millions of pilgrims of every faith for its reported healings.",
+     "relics": ["The image of Our Lady of Good Health"], "saints": [],
+     "miracles": ["Marian apparitions at Velankanni", "Reported healings"],
+     "source_url": "https://en.wikipedia.org/wiki/Basilica_of_Our_Lady_of_Good_Health"},
+    {"slug": "sacred-heart-guangzhou", "name": "Sacred Heart Cathedral, Guangzhou", "type": "cathedral",
+     "city": "Guangzhou", "country": "China", "lat": 23.1130, "lng": 113.2530, "founded": "1863–1888",
+     "blurb": "The 'Stone House' — a rare all-granite Gothic cathedral in southern China.",
+     "history": "Built entirely of granite by French missionaries, it is one of the largest Gothic churches "
+     "in East Asia and a treasured home for Guangzhou's Catholics.",
+     "relics": [], "saints": [], "miracles": [],
+     "source_url": "https://en.wikipedia.org/wiki/Sacred_Heart_Cathedral_(Guangzhou)"},
 ]
 
 
@@ -803,6 +969,8 @@ def _public(doc: Dict[str, Any]) -> Dict[str, Any]:
         "saints": doc.get("saints") or [],
         "miracles": doc.get("miracles") or [],
         "source_url": doc.get("source_url"),
+        "persecuted": bool(doc.get("persecuted", False)),
+        "persecution_note": doc.get("persecution_note", ""),
     }
 
 
@@ -815,7 +983,7 @@ async def _localize(db, items: List[Dict[str, Any]]):
     texts: List[str] = []
     # (item_index, field, list_index|-1)
     idx: List[tuple] = []
-    str_fields = ["name", "blurb", "history", "city", "country", "founded"]
+    str_fields = ["name", "blurb", "history", "city", "country", "founded", "persecution_note"]
     list_fields = ["relics", "saints", "miracles"]
     for i, it in enumerate(items):
         for f in str_fields:

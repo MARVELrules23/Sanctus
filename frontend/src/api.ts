@@ -1871,6 +1871,8 @@ export type CatholicSite = {
   saints: string[];
   miracles: string[];
   source_url?: string;
+  persecuted?: boolean;
+  persecution_note?: string;
 };
 export async function listCatholicSites(): Promise<{ items: CatholicSite[]; total: number }> {
   return await api(`/sites`);

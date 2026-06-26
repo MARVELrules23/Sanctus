@@ -10,6 +10,7 @@ export type MapMarker = {
   type: string;
   lat: number;
   lng: number;
+  persecuted?: boolean;
 };
 
 const TYPE_COLORS: Record<string, string> = {
@@ -38,6 +39,10 @@ export function buildMapHtml(markers: MapMarker[]): string {
       transform: rotate(-45deg); border: 2px solid #fff;
       box-shadow: 0 1px 3px rgba(0,0,0,0.4);
     }
+    .pin.persecuted {
+      border-color: #B3261E;
+      box-shadow: 0 0 0 3px rgba(179,38,30,0.35), 0 1px 3px rgba(0,0,0,0.4);
+    }
   </style>
 </head>
 <body>
@@ -58,9 +63,10 @@ export function buildMapHtml(markers: MapMarker[]): string {
     }).addTo(map);
     MARKERS.forEach(function (m) {
       var color = COLORS[m.type] || '#B05A7A';
+      var cls = m.persecuted ? 'pin persecuted' : 'pin';
       var icon = L.divIcon({
         className: '',
-        html: '<div class="pin" style="background:' + color + '"></div>',
+        html: '<div class="' + cls + '" style="background:' + color + '"></div>',
         iconSize: [18, 18],
         iconAnchor: [9, 18],
       });

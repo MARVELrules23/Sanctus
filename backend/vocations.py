@@ -74,6 +74,12 @@ CONTENT: Dict[str, Dict[str, Any]] = {
                  "can help you read the movements of your heart and listen for God's call."},
                 {"title": "Pray a novena to St. Joseph", "body": "Entrust your future to the guardian "
                  "of the Holy Family; ask him to lead you to the path where you will become a saint."},
+                {"title": "Make a monthly day of recollection", "body": "Step away for a morning of "
+                 "silence, Mass and confession to listen for where the Lord is gently leading you."},
+                {"title": "Examine your deepest desires", "body": "In prayer, notice what gives lasting "
+                 "peace rather than passing excitement — God often calls through the desires he has planted."},
+                {"title": "Serve in several ministries", "body": "Try teaching, caring for the poor or the "
+                 "sick — a vocation is frequently discovered in the joy of self-giving service."},
             ],
             "living": [
                 {"title": "Adopt a simple Rule of Life", "body": "Set fixed times for prayer, work, "
@@ -82,6 +88,14 @@ CONTENT: Dict[str, Dict[str, Any]] = {
                  "Rosary, or Sunday Mass. Holy friendship is a foretaste of heaven and a guard against loneliness."},
                 {"title": "Tithe your time to the parish", "body": "Let your community know you. Lectoring, "
                  "hospitality, or catechesis turns free time into a self-gift that bears lasting fruit."},
+                {"title": "Begin with a Morning Offering", "body": "Consecrate every act, joy and trial of "
+                 "the day to the Sacred Heart of Jesus the moment you wake."},
+                {"title": "Keep First Fridays and First Saturdays", "body": "Honour the Sacred Heart and the "
+                 "Immaculate Heart with these traditional devotions of reparation and love."},
+                {"title": "Make a yearly pilgrimage", "body": "Visit a shrine each year to rekindle your "
+                 "zeal, give thanks, and place your life again in God's hands."},
+                {"title": "Practise spiritual parenthood", "body": "Pray for and quietly mentor the young, "
+                 "the poor, priests and religious — your love bears fruit far beyond what you see."},
             ],
         },
     },
@@ -128,6 +142,14 @@ CONTENT: Dict[str, Dict[str, Any]] = {
                  "often a whisper, heard only when we still the noise around and within us."},
                 {"title": "Pray for the grace to know God's will", "body": "Ask daily, with St. Ignatius, "
                  "for the freedom to want only what God wants — and trust he will make the way clear."},
+                {"title": "Keep a daily holy hour", "body": "Grow accustomed now to long, quiet prayer "
+                 "before the Lord — it is the heartbeat of every consecrated life."},
+                {"title": "Practise obedience in small things", "body": "Learn to surrender your own "
+                 "preferences in ordinary daily life; this is the soil in which a religious vocation grows."},
+                {"title": "Live simply and give to the poor", "body": "Taste evangelical poverty before "
+                 "you would profess it — let go of what you do not need and share with those in want."},
+                {"title": "Read the lives of the founders", "body": "Let the charisms of Benedict, Francis, "
+                 "Dominic, Clare and Ignatius speak to your heart — God may call you through one of them."},
             ],
             "living": [
                 {"title": "Keep the rhythm of the Hours", "body": "Let the bells of prayer order your "
@@ -136,6 +158,16 @@ CONTENT: Dict[str, Dict[str, Any]] = {
                  "as a sacred space where the soul rests in God alone."},
                 {"title": "Celebrate your community's feasts", "body": "Keep the feast of your founder "
                  "and patrons with joy — these traditions are the family memory that forms each generation."},
+                {"title": "Practise lectio and the Jesus Prayer", "body": "Let the Word of God and the "
+                 "holy Name of Jesus echo within you through the day, until prayer becomes as natural as breathing."},
+                {"title": "Offer your work as prayer", "body": "Live 'ora et labora' — sanctify manual "
+                 "labour and ordinary tasks by offering them to God with love."},
+                {"title": "Welcome the guest as Christ", "body": "Keep the ancient tradition of "
+                 "hospitality: see the face of the Lord in every visitor and stranger who comes."},
+                {"title": "Guard silence and custody of the eyes", "body": "Cherish exterior and interior "
+                 "silence, and guard your senses, so the soul remains recollected and at peace in God."},
+                {"title": "Make a daily examen of conscience", "body": "Each night review the day with "
+                 "gratitude and humility — a tender conscience is the safeguard of perseverance."},
             ],
         },
     },
@@ -182,6 +214,12 @@ CONTENT: Dict[str, Dict[str, Any]] = {
                  "and speak openly of your hopes for a future domestic church."},
                 {"title": "Pray a novena to St. Joseph for a holy spouse", "body": "Ask the guardian of "
                  "the Holy Family to lead you to — or strengthen you for — a holy marriage."},
+                {"title": "Let courtship be a school of patience", "body": "Practise forgiving quickly "
+                 "and putting the other first — the habits you build now will carry into marriage."},
+                {"title": "Pray a daily decade for your future family", "body": "Entrust your future "
+                 "spouse and children — even now — to the care of Our Lady."},
+                {"title": "Find a mentor couple", "body": "Seek out a holy married couple, and make a "
+                 "good marriage preparation (Pre-Cana), to learn what self-giving love really asks."},
             ],
             "living": [
                 {"title": "Enthrone the Sacred Heart in your home", "body": "Install an image of the "
@@ -194,6 +232,20 @@ CONTENT: Dict[str, Dict[str, Any]] = {
                  "Church's seasons fill your home with wonder."},
                 {"title": "Bless your children", "body": "Trace a cross on each child's forehead at "
                  "bedtime. A parent's blessing is an ancient and powerful tradition of the domestic church."},
+                {"title": "Keep a home altar or prayer corner", "body": "Set apart a sacred space with a "
+                 "crucifix, an icon of Our Lady, holy water and a candle — a place the family gathers to pray."},
+                {"title": "Chalk your door at Epiphany", "body": "Write 20 + C + M + B + 26 above the door "
+                 "and ask God's blessing on all who enter — and have a priest bless your home."},
+                {"title": "Pray the Angelus at noon", "body": "Pause at midday to remember the Incarnation; "
+                 "a small bell or phone reminder can call the household to prayer."},
+                {"title": "Keep holy water at the door", "body": "Bless yourselves on leaving and entering, "
+                 "a simple reminder of baptism that sanctifies the comings and goings of the home."},
+                {"title": "Feast and rest on Sundays", "body": "Make the Lord's Day different — Mass "
+                 "together, a special meal, and true rest from work — so children taste the joy of the faith."},
+                {"title": "Read the lives of the saints at bedtime", "body": "Let your children fall asleep "
+                 "with heroes of holiness, and grow up wanting to imitate them."},
+                {"title": "Renew your vows each anniversary", "body": "Before the Lord, consecrate your "
+                 "marriage anew to the Holy Family, asking the grace to love as Christ loves the Church."},
             ],
         },
     },

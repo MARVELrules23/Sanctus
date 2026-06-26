@@ -45,16 +45,35 @@ CONTENT: Dict[str, Dict[str, Any]] = {
         "companions": [
             {"slug": "catherine-siena", "name": "St. Catherine of Siena",
              "why": "A consecrated virgin in the world who changed the Church through prayer and love.",
-             "prayer": "St. Catherine, teach me to love Christ with an undivided heart."},
+             "prayer": "St. Catherine, teach me to love Christ with an undivided heart.",
+             "devotions": [
+                {"title": "Build your 'interior cell'", "body": "As she taught, withdraw daily into the inner cell of self-knowledge and the love of God, carrying it with you everywhere."},
+                {"title": "Pray for the Church and the Pope", "body": "Make her great love your own — offer a daily prayer for the Holy Father and the unity of the Church."},
+                {"title": "Read her Dialogue & Letters", "body": "Let her bold, tender counsel form your soul; keep her feast on 29 April."},
+             ]},
             {"slug": "pier-giorgio", "name": "Bl. Pier Giorgio Frassati",
              "why": "A joyful young layman who found holiness in friendship, the poor, and the mountains.",
-             "prayer": "Bl. Pier Giorgio, help me to live my youth 'verso l'alto' — toward the heights."},
+             "prayer": "Bl. Pier Giorgio, help me to live my youth 'verso l'alto' — toward the heights.",
+             "devotions": [
+                {"title": "Make the Eucharist your 'fuel'", "body": "Receive Communion often and visit the Blessed Sacrament — as he did before climbing mountains or serving the poor."},
+                {"title": "Take up the works of mercy", "body": "Visit the sick and the poor in secret, as he did, giving even your bus fare away."},
+                {"title": "Aim 'Verso l'alto'", "body": "Make his motto your own — reach higher each day in holiness, friendship and joy."},
+             ]},
             {"slug": "john-paul-ii", "name": "St. John Paul II",
              "why": "He lived his single years in deep prayer and gave the Church the Theology of the Body.",
-             "prayer": "St. John Paul II, help me discover the meaning of self-gift."},
+             "prayer": "St. John Paul II, help me discover the meaning of self-gift.",
+             "devotions": [
+                {"title": "Consecrate yourself: 'Totus Tuus'", "body": "Entrust everything to Our Lady, as he did — make a Marian consecration and renew it often."},
+                {"title": "Pray the Luminous Mysteries", "body": "Pray the mysteries of light he gave the Church, meditating on the public life of Christ."},
+                {"title": "Study the Theology of the Body", "body": "Read or listen to his teaching on love, the body and the gift of self."},
+             ]},
             {"slug": "agnes", "name": "St. Agnes",
              "why": "A young virgin martyr who gave her whole heart to Christ alone.",
-             "prayer": "St. Agnes, guard my heart and keep it for the Lord."},
+             "prayer": "St. Agnes, guard my heart and keep it for the Lord.",
+             "devotions": [
+                {"title": "Ask daily for the gift of purity", "body": "Each morning, place your heart in her care and ask her help to love chastely and wholly."},
+                {"title": "Keep her feast (21 January)", "body": "Honour the young virgin-martyr who chose Christ above all, even unto death."},
+             ]},
         ],
         "ideas": [
             {"title": "Pray before the Eucharist", "body": "Spend a weekly holy hour before the "
@@ -113,16 +132,36 @@ CONTENT: Dict[str, Dict[str, Any]] = {
         "companions": [
             {"slug": "therese-lisieux", "name": "St. Thérèse of Lisieux",
              "why": "The 'Little Flower' who found holiness in small things done with great love.",
-             "prayer": "St. Thérèse, teach me your little way of trust and surrender."},
+             "prayer": "St. Thérèse, teach me your little way of trust and surrender.",
+             "devotions": [
+                {"title": "Walk the 'Little Way'", "body": "Do the smallest duties with the greatest love, offering each one to Jesus as a child to a Father."},
+                {"title": "Pray the Novena of Roses", "body": "Make her famous 24-glory novena and watch for the 'shower of roses' she promised to send."},
+                {"title": "Offer little sacrifices", "body": "Keep 'sacrifice beads' or simply count hidden acts of love through the day."},
+             ]},
             {"slug": "benedict", "name": "St. Benedict",
              "why": "Father of Western monasticism, who ordered life around prayer and work — 'ora et labora'.",
-             "prayer": "St. Benedict, help me to prefer nothing whatever to Christ."},
+             "prayer": "St. Benedict, help me to prefer nothing whatever to Christ.",
+             "devotions": [
+                {"title": "Live 'Ora et Labora'", "body": "Balance fixed times of prayer with honest work, sanctifying the whole day."},
+                {"title": "Venerate the St. Benedict Medal", "body": "Wear or keep the medal of protection, praying for deliverance from all evil."},
+                {"title": "Read the Rule and seek peace", "body": "Read a little of his Rule daily and practise stability, humility and obedience."},
+             ]},
             {"slug": "francis-assisi", "name": "St. Francis of Assisi",
              "why": "He embraced Lady Poverty and rebuilt the Church through humble love.",
-             "prayer": "St. Francis, make me an instrument of God's peace."},
+             "prayer": "St. Francis, make me an instrument of God's peace.",
+             "devotions": [
+                {"title": "Pray the Peace Prayer", "body": "Make 'Lord, make me an instrument of your peace' your daily prayer."},
+                {"title": "Embrace simplicity and the poor", "body": "Give to those in need and let go of excess, loving Lady Poverty as he did."},
+                {"title": "Venerate the San Damiano Crucifix", "body": "Pray before the cross that spoke to him: 'Rebuild my Church.'"},
+             ]},
             {"slug": "teresa-avila", "name": "St. Teresa of Ávila",
              "why": "Reformer and mystic who taught that prayer is friendship with the God who loves us.",
-             "prayer": "St. Teresa, let nothing disturb me, for God alone suffices."},
+             "prayer": "St. Teresa, let nothing disturb me, for God alone suffices.",
+             "devotions": [
+                {"title": "Pray her bookmark: 'Nada te turbe'", "body": "'Let nothing disturb you… God alone suffices.' Pray it whenever your heart is troubled."},
+                {"title": "Practise mental prayer daily", "body": "Spend time alone with the God who loves you — her definition of prayer is simply friendship with him."},
+                {"title": "Read 'The Interior Castle'", "body": "Let her map of the soul's journey toward union with God guide your own prayer."},
+             ]},
         ],
         "ideas": [
             {"title": "Pray before the Eucharist", "body": "Make daily adoration the heart of your "
@@ -185,16 +224,36 @@ CONTENT: Dict[str, Dict[str, Any]] = {
         "companions": [
             {"slug": "st-joseph", "name": "St. Joseph",
              "why": "Guardian of the Holy Family — model of the faithful, hardworking, protecting spouse.",
-             "prayer": "St. Joseph, guardian of families, watch over my home."},
+             "prayer": "St. Joseph, guardian of families, watch over my home.",
+             "devotions": [
+                {"title": "Keep Wednesdays for St. Joseph", "body": "Dedicate Wednesdays to him with a prayer or small sacrifice for your family and work."},
+                {"title": "Pray the Litany or Chaplet of St. Joseph", "body": "Entrust your home, your livelihood and a holy death to his fatherly care."},
+                {"title": "'Go to Joseph'", "body": "Begin the day asking his protection over your spouse, children and household."},
+             ]},
             {"slug": "louis-zelie", "name": "Sts. Louis & Zélie Martin",
              "why": "A married couple, parents of St. Thérèse, canonized together for their holy family life.",
-             "prayer": "Sts. Louis and Zélie, teach us to make our home a school of holiness."},
+             "prayer": "Sts. Louis and Zélie, teach us to make our home a school of holiness.",
+             "devotions": [
+                {"title": "Pray together each night as they did", "body": "End the day with shared prayer, entrusting your marriage and children to God."},
+                {"title": "Sanctify work and family meals", "body": "Offer the ordinary tasks and the family table to God, as they sanctified daily life."},
+                {"title": "Attend daily Mass when you can", "body": "They began each day at early Mass — let the Eucharist be the foundation of your family."},
+             ]},
             {"slug": "gianna-molla", "name": "St. Gianna Beretta Molla",
              "why": "A wife, mother, and doctor who loved her family and gave her life for her child.",
-             "prayer": "St. Gianna, help me to love my family with sacrificial love."},
+             "prayer": "St. Gianna, help me to love my family with sacrificial love.",
+             "devotions": [
+                {"title": "Offer your daily duties with love", "body": "Like her, sanctify work, marriage and motherhood by doing each ordinary duty for love of God."},
+                {"title": "Pray for expectant mothers", "body": "Honour the dignity of every life — pray daily for mothers and the unborn."},
+                {"title": "Pray her prayer for families", "body": "Ask her intercession for your spouse, children and the health of your family."},
+             ]},
             {"slug": "monica", "name": "St. Monica",
              "why": "Her tears and unceasing prayer won the conversion of her son, St. Augustine.",
-             "prayer": "St. Monica, teach me to pray with perseverance for those I love."},
+             "prayer": "St. Monica, teach me to pray with perseverance for those I love.",
+             "devotions": [
+                {"title": "Pray with perseverance for loved ones", "body": "Never give up praying for the conversion of those you love — she prayed 17 years for St. Augustine."},
+                {"title": "Offer your tears and patience", "body": "Unite your sufferings and longings to hers, trusting that no prayer of a faithful heart is wasted."},
+                {"title": "Pray her novena for conversions", "body": "Make a novena to St. Monica for a wandering family member or friend."},
+             ]},
         ],
         "ideas": [
             {"title": "Pray before the Eucharist", "body": "Visit the Blessed Sacrament — together when "
@@ -274,6 +333,9 @@ async def _localize(db, payload: Dict[str, Any]) -> Dict[str, Any]:
     for c in payload.get("companions") or []:
         collect(lambda c=c: c.get("why"), lambda t, c=c: c.__setitem__("why", t))
         collect(lambda c=c: c.get("prayer"), lambda t, c=c: c.__setitem__("prayer", t))
+        for dv in c.get("devotions") or []:
+            collect(lambda d=dv: d.get("title"), lambda t, d=dv: d.__setitem__("title", t))
+            collect(lambda d=dv: d.get("body"), lambda t, d=dv: d.__setitem__("body", t))
     for sec in ("ideas", "traditions"):
         for item in payload.get(sec) or []:
             collect(lambda i=item: i.get("title"), lambda t, i=item: i.__setitem__("title", t))

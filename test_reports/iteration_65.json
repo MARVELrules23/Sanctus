@@ -1,0 +1,35 @@
+{
+  "summary": "Iteration 65 — verified expanded Catholic World Map (now 133 sites / 62 countries) + companion devotions on every vocation companion (with i18n). Backend (9/9 pytest passing): GET /api/sites returns exactly 133 items across 62 countries, with site_id uniqueness; seed idempotent across back-to-back calls (total stays 133, no duplicate site_ids). The persecuted contract is unchanged: exactly 6 sites have persecuted=true, each with non-empty persecution_note. The five new spec slugs all resolve via GET /api/sites/{slug}: st-nicholas-bari (Bari, Italy), turin-cathedral (Turin, Italy — Holy Shroud), divine-mercy-krakow (Kraków, Poland), medjugorje (Bosnia and Herzegovina), santo-nino-cebu (Cebu, Philippines) — each returns non-empty name/country/city/history and numeric lat/lng. GET /api/vocation/guide returns companions[] where every companion (4 for marriage, 4 for religious life, 4 for singleness) has a non-empty devotions[] of {title, body}; St Joseph (marriage default) has 3 devotions. Accept-Language: es and it both localize companion devotions (titles/bodies differ from EN) via the shared translation cache (warmed once on localhost in ~8s; subsequent calls instant). After the localized fetches, EN companion devotions are unchanged — confirms _build_guide's deepcopy keeps module CONTENT immutable. Frontend (mobile 390x844): /vocation — selecting vocation-companion-st-joseph reveals testID=companion-devotions-st-joseph containing 'Ways to grow closer to St. Joseph' + 'Keep Wednesdays for St. Joseph' + 'Pray the Litany or Chaplet of St. Joseph'. Tapping vocation-companion-gianna-molla swaps the block: joseph block disappears, companion-devotions-gianna-molla appears. /community/map → map-toggle-list renders the new sites: map-list-turin-cathedral, map-list-divine-mercy-krakow, map-list-medjugorje, map-list-st-nicholas-bari, map-list-santo-nino-cebu all present; tapping turin-cathedral and divine-mercy-krakow each opens the detail sheet (map-close visible; screenshot confirms 'Sanctuary of Divine Mercy, Kraków · Kraków, Poland · 1891 / 2002' with relics + Learn more + Close). Test account RESET to vocation=marriage / vocation_state=living / companion_saint=st-joseph at the end. No critical issues.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "RNW shadow* style props", "issue": "(carry-over from iter62/63/64) Console warns: '\"shadow*\" style props are deprecated. Use \"boxShadow\".' — cosmetic, web only."},
+      {"component": "expo-notifications web shim", "issue": "(carry-over) Console warns: '[expo-notifications] Listening to push token changes is not yet fully supported on web. Adding a listener will have no effect.' — cosmetic, web preview only."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter65_sites_devotions.py",
+    "/app/test_reports/pytest/iteration_65.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "catholic_sites.py: 133 unique slugs/site_ids across 62 unique countries verified; SEED_SITES dedupes by slug in _seed_if_missing (idempotent ✔).",
+    "catholic_sites.py: persecuted=True count remains 6 with non-empty persecution_note — unchanged contract preserved across the expansion.",
+    "vocations.py: every companion in CONTENT (marriage, religious life, singleness) now has 'devotions': [{title, body}, …]; _localize fans out into companion devotions so es/it translate via the shared cache.",
+    "vocations.py: _build_guide uses copy.deepcopy of companions[], so per-request localization does not mutate module-level CONTENT — verified by re-fetching EN after es/it and confirming devotion titles/bodies unchanged.",
+    "frontend/app/vocation/index.tsx: testID=`companion-devotions-${slug}` renders only when c.slug === selected; switching companions correctly unmounts the prior block (verified DOM presence test).",
+    "frontend/app/community/map.tsx: list-view rows use testID=`map-list-${slug}` and tapping opens the detail sheet (map-close visible) for all five new sites."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter65_sites_devotions.py (new)"
+  ],
+  "success_rate": {"backend": "100% (9/9)", "frontend": "100% (all required flows)"},
+  "seed_data_creation": "No new seed data. Backend auto-extends catholic_sites to 133 docs on first GET /api/sites — verified idempotent. Tested as philipwils13@gmail.com via session token test_feat_aug25.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Strategy: warm /api/vocation/guide for es and it on localhost:8001 once before running pytest to avoid the Cloudflare 100s gateway timeout — first cold call takes ~8s each. After this iteration the translation cache is warm for both /api/sites and /api/vocation/guide in es+it. Test account RESET to vocation=marriage, vocation_state=living, companion_saint=st-joseph.",
+  "rca_of_issue": "N/A — no defects."
+}

@@ -102,6 +102,20 @@ export default function VocationScreen() {
                       <Text style={styles.companionName}>{c.name}</Text>
                       <Text style={styles.companionWhy}>{c.why}</Text>
                       {sel ? <Text style={styles.companionPrayer}>“{c.prayer}”</Text> : null}
+                      {sel && c.devotions && c.devotions.length > 0 ? (
+                        <View style={styles.devBox} testID={`companion-devotions-${c.slug}`}>
+                          <Text style={styles.devHeader}>Ways to grow closer to {c.name}</Text>
+                          {c.devotions.map((d, i) => (
+                            <View key={i} style={styles.devItem}>
+                              <Ionicons name="leaf-outline" size={13} color={colors.goldDark} style={{ marginTop: 2 }} />
+                              <View style={{ flex: 1 }}>
+                                <Text style={styles.devTitle}>{d.title}</Text>
+                                <Text style={styles.devBody}>{d.body}</Text>
+                              </View>
+                            </View>
+                          ))}
+                        </View>
+                      ) : null}
                     </View>
                   </Pressable>
                 );
@@ -178,6 +192,11 @@ const styles = StyleSheet.create({
   companionName: { fontFamily: fonts.headingSemi, fontSize: 16, color: colors.primary },
   companionWhy: { fontFamily: fonts.bodyRegular, fontSize: 13, color: colors.textSecondary, marginTop: 2, lineHeight: 19 },
   companionPrayer: { fontFamily: fonts.bodyItalic, fontSize: 13.5, color: colors.goldDark, marginTop: 6, fontStyle: "italic" },
+  devBox: { marginTop: 10, borderTopWidth: 1, borderTopColor: "#EBDDB4", paddingTop: 8, gap: 8 },
+  devHeader: { fontFamily: fonts.uiSemi, fontSize: 11.5, letterSpacing: 0.4, textTransform: "uppercase", color: colors.goldDark, marginBottom: 2 },
+  devItem: { flexDirection: "row", gap: 6, alignItems: "flex-start" },
+  devTitle: { fontFamily: fonts.uiSemi, fontSize: 13.5, color: colors.primary },
+  devBody: { fontFamily: fonts.bodyRegular, fontSize: 13, color: colors.textSecondary, lineHeight: 19, marginTop: 1 },
   ideaBox: {
     marginTop: spacing.lg, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderSoft,
     borderRadius: radius.lg, padding: spacing.md,

@@ -1878,7 +1878,7 @@ export async function listCatholicSites(): Promise<{ items: CatholicSite[]; tota
   return await api(`/sites`);
 }
 
-export type VocationCompanion = { slug: string; name: string; why: string; prayer: string };
+export type VocationCompanion = { slug: string; name: string; why: string; prayer: string; devotions?: VocationItem[] };
 export type VocationItem = { title: string; body: string };
 export type VocationGuide = {
   has_vocation: boolean;

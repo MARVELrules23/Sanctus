@@ -24,8 +24,6 @@ load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
 OVERPASS = [
     "https://overpass-api.de/api/interpreter",
-    "https://overpass.kumi.systems/api/interpreter",
-    "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
 ]
 
 # Half-size of each query box in degrees (~0.35° ≈ 35-40 km half-width).
@@ -120,19 +118,18 @@ def query(s: float, w: float, n: float, e: float) -> str:
 
 async def fetch_box(client: httpx.AsyncClient, s, w, n, e):
     q = query(s, w, n, e)
-    for url in OVERPASS:
-        for attempt in range(2):
+    for attempt in range(5):
+        for url in OVERPASS:
             try:
                 r = await client.post(url, data={"data": q},
                                       headers={"User-Agent": "SanctusApp/1.0 (church ingest)"})
                 if r.status_code == 200:
                     return r.json().get("elements", [])
                 if r.status_code in (429, 504):
-                    await asyncio.sleep(5 * (attempt + 1))
-                    continue
+                    break  # rate limited — back off below
             except Exception as ex:  # noqa: BLE001
-                print("  err", url[:40], repr(ex)[:80])
-                await asyncio.sleep(3)
+                print("  err", repr(ex)[:70])
+        await asyncio.sleep(8 * (attempt + 1))  # 8,16,24,32s backoff
     return None
 
 
@@ -161,20 +158,25 @@ def parse(elements):
 
 
 async def main():
+    import random
     db = AsyncIOMotorClient(os.environ["MONGO_URL"])[os.environ["DB_NAME"]]
     col = db["osm_churches"]
     await col.create_index("osm_id", unique=True)
     await col.create_index([("lat", 1), ("lng", 1)])
 
+    cities = CITIES[:]
+    random.shuffle(cities)  # broad global coverage early, not country-by-country
     start_total = await col.count_documents({})
-    print(f"START: {start_total} churches already stored. Sweeping {len(CITIES)} metros...")
+    print(f"START: {start_total} churches already stored. Sweeping {len(cities)} metros...")
 
-    async with httpx.AsyncClient(timeout=70) as client:
-        for i, (name, lat, lng) in enumerate(CITIES, 1):
+    async with httpx.AsyncClient(timeout=50) as client:
+        failed = []
+        for i, (name, lat, lng) in enumerate(cities, 1):
             t0 = time.time()
             els = await fetch_box(client, lat - HALF, lng - HALF, lat + HALF, lng + HALF)
             if els is None:
-                print(f"[{i}/{len(CITIES)}] {name}: FAILED (all mirrors)")
+                print(f"[{i}/{len(cities)}] {name}: FAILED")
+                failed.append((name, lat, lng))
                 await asyncio.sleep(2)
                 continue
             docs = parse(els)
@@ -184,8 +186,22 @@ async def main():
                 if res.upserted_id is not None:
                     new += 1
             total = await col.count_documents({})
-            print(f"[{i}/{len(CITIES)}] {name}: +{new} new ({len(docs)} found) | total={total} | {time.time()-t0:.1f}s")
-            await asyncio.sleep(1.0)  # be polite to Overpass
+            print(f"[{i}/{len(cities)}] {name}: +{new} new ({len(docs)} found) | total={total} | {time.time()-t0:.1f}s")
+            await asyncio.sleep(1.5)  # be polite to Overpass
+
+        if failed:
+            print(f"--- retry pass: {len(failed)} cities ---")
+            await asyncio.sleep(15)
+            for name, lat, lng in failed:
+                els = await fetch_box(client, lat - HALF, lng - HALF, lat + HALF, lng + HALF)
+                if els is None:
+                    print(f"  retry {name}: still failed")
+                    await asyncio.sleep(3)
+                    continue
+                for d in parse(els):
+                    await col.update_one({"osm_id": d["osm_id"]}, {"$set": d}, upsert=True)
+                print(f"  retry {name}: OK")
+                await asyncio.sleep(2)
 
     total = await col.count_documents({})
     print(f"DONE. Total stored churches: {total} (added {total - start_total} this run).")

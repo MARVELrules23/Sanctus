@@ -11,6 +11,7 @@ translation cache, exactly like the miracles feed.
 """
 from __future__ import annotations
 
+import asyncio
 import math
 import uuid
 from datetime import datetime, timezone
@@ -1419,7 +1420,14 @@ async def _localize(db, items: List[Dict[str, Any]]):
     return items
 
 
+_SEED_DONE = False
+_OSM_INDEX_DONE = False
+
+
 async def _seed_if_missing(db) -> int:
+    global _SEED_DONE
+    if _SEED_DONE:
+        return 0
     col = db["catholic_sites"]
     inserted = 0
     now = datetime.now(timezone.utc).isoformat()
@@ -1428,7 +1436,45 @@ async def _seed_if_missing(db) -> int:
             continue
         await col.insert_one({"site_id": f"site_{uuid.uuid4().hex[:12]}", **s, "created_at": now})
         inserted += 1
+    _SEED_DONE = True
     return inserted
+
+
+async def _ensure_osm_index(db) -> None:
+    global _OSM_INDEX_DONE
+    if _OSM_INDEX_DONE:
+        return
+    try:
+        await db["osm_churches"].create_index([("lat", 1), ("lng", 1)])
+        await db["osm_churches"].create_index("osm_id", unique=True)
+    except Exception:  # noqa: BLE001
+        pass
+    _OSM_INDEX_DONE = True
+
+
+async def _bbox_ingest_bg(db, south: float, west: float, north: float, east: float) -> None:
+    """Fetch live OSM churches for a bbox and persist them into osm_churches so
+    they appear instantly on the next pan. Runs detached from the request."""
+    try:
+        items = await _osm_bbox_churches(db, south, west, north, east)
+        coll = db["osm_churches"]
+        for o in items:
+            sid = o.get("site_id", "")
+            oid = sid[4:] if sid.startswith("osm_") else (o.get("slug", "").replace("osm-", "") or sid)
+            if not oid:
+                continue
+            await coll.update_one(
+                {"osm_id": oid},
+                {"$set": {
+                    "osm_id": oid, "name": o.get("name"), "type": "church",
+                    "city": o.get("city", ""), "country": o.get("country", ""),
+                    "lat": o.get("lat"), "lng": o.get("lng"), "osm": True,
+                }},
+                upsert=True,
+            )
+    except Exception:  # noqa: BLE001
+        pass
+
 
 
 def _haversine(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
@@ -1632,6 +1678,7 @@ def build_router(db: AsyncIOMotorDatabase, get_current_user, emergent_llm_key: s
         every Mass-holding church on earth as they pan and zoom.
         """
         await _seed_if_missing(db)
+        await _ensure_osm_index(db)
         markers: List[Dict[str, Any]] = []
         seen_coords = set()
 
@@ -1671,19 +1718,10 @@ def build_router(db: AsyncIOMotorDatabase, get_current_user, emergent_llm_key: s
                 })
                 osm_count += 1
 
-        # Live OSM fill at city zoom to catch churches not yet pre-ingested.
-        if zoom >= 9 and span_ok and (north - south) <= 1.2 and (east - west) <= 1.2:
-            try:
-                osm = await _osm_bbox_churches(db, south, west, north, east)
-                for o in osm:
-                    key = (round(o["lat"], 5), round(o["lng"], 5))
-                    if key in seen_coords:
-                        continue
-                    seen_coords.add(key)
-                    markers.append(o)
-                    osm_count += 1
-            except Exception:  # noqa: BLE001
-                pass
+        # Live OSM fill runs DETACHED so the response is never blocked on the
+        # external Overpass API — newly found churches persist for the next pan.
+        if zoom >= 9 and (north - south) <= 1.2 and (east - west) <= 1.2:
+            asyncio.create_task(_bbox_ingest_bg(db, south, west, north, east))
 
         return {"items": markers[:1500], "total": len(markers), "osm_count": osm_count}
 

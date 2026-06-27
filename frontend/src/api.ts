@@ -1963,6 +1963,12 @@ export async function getCompanionImage(slug: string): Promise<{ image: string |
   return await api(`/companions/${slug}/image`);
 }
 
+// Lazily-generated lo-fi backdrop of St. Joseph at his carpenter's bench
+// (used by the Sanctuary "St. Joseph's Workshop" study mode).
+export async function getSanctuaryStudyImage(): Promise<{ image: string | null }> {
+  return await api(`/sanctuary/study-image`);
+}
+
 // ---- 33-Day Consecration to St. Joseph ----
 export type ConsecrationDay = { day: number; title: string; theme: string };
 export type ConsecrationActive = {

@@ -70,6 +70,28 @@ export default function SanctuaryHub() {
           </View>
         </Pressable>
 
+        <Pressable
+          testID="sanctuary-workshop-card"
+          onPress={() => router.push("/sanctuary/workshop")}
+          style={({ pressed }) => [styles.card, styles.workshopCard, pressed && styles.pressed]}
+        >
+          <View style={styles.cardHeader}>
+            <Ionicons name="construct-outline" size={28} color={colors.gold} />
+            <View style={styles.tag}>
+              <Text style={styles.tagText}>LOFI · GREGORIAN CHANT</Text>
+            </View>
+          </View>
+          <Text style={styles.cardTitle}>St. Joseph&apos;s Workshop</Text>
+          <Text style={styles.cardBody}>
+            Study beside St. Joseph as he quietly works wood, with extra-soft Gregorian chant and a
+            gentle focus timer. Work as he worked &mdash; faithfully, one plank at a time.
+          </Text>
+          <View style={styles.cardFooter}>
+            <Text style={styles.cardFooterText}>Enter the workshop</Text>
+            <Ionicons name="arrow-forward" size={16} color={colors.gold} />
+          </View>
+        </Pressable>
+
         <View style={styles.footer}>
           <Ionicons name="musical-notes-outline" size={14} color={colors.textMuted} />
           <Text style={styles.footerText}>
@@ -119,6 +141,9 @@ const styles = StyleSheet.create({
   },
   studyCard: {
     backgroundColor: "#1F3A52",
+  },
+  workshopCard: {
+    backgroundColor: "#3A2A1C",
   },
   cardHeader: {
     flexDirection: "row",

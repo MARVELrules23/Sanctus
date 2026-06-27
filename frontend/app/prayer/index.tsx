@@ -6,8 +6,8 @@ import { Stack, useRouter } from "expo-router";
 
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 import { mysteryForDate, MYSTERY_SETS, MysterySet } from "@/src/rosary";
-import { CHAPLETS, CHAPLET_ORDER } from "@/src/prayers/chaplets";
-import { DEVOTIONS, DEVOTION_CATEGORIES } from "@/src/prayers/devotions";
+import { CHAPLET_ORDER } from "@/src/prayers/chaplets";
+import { DEVOTION_CATEGORIES } from "@/src/prayers/devotions";
 import { todayISO } from "@/src/date-utils";
 import { useI18n } from "@/src/i18n";
 import { useTranslator } from "@/src/translate";
@@ -30,8 +30,10 @@ export default function PrayerHubScreen() {
   const todayMystery: MysterySet = useMemo(() => mysteryForDate(new Date()), []);
 
   const items: CardItem[] = useMemo(() => {
+    const chapletCount = CHAPLET_ORDER.length;
+    const countFor = (key: string) => DEVOTION_CATEGORIES.find((c) => c.key === key)?.keys.length || 0;
     const arr: CardItem[] = [];
-    // Rosary featured first — show today's mystery set
+    // Rosary featured first — opens the prayer directly with today's mysteries.
     arr.push({
       testID: "prayer-card-rosary",
       title: "Holy Rosary",
@@ -43,7 +45,71 @@ export default function PrayerHubScreen() {
         router.push({ pathname: "/prayer/[kind]", params: { kind: "rosary", date: today } }),
       featured: true,
     });
-    // Novenas hub
+    // Category boxes — each opens a screen listing the prayers within.
+    arr.push({
+      testID: "prayer-cat-chaplets",
+      title: "Chaplets",
+      subtitle: "Divine Mercy, St. Michael, Sacred Heart & more",
+      meta: `${chapletCount} CHAPLETS`,
+      color: "#1E73BE",
+      icon: "ellipsis-horizontal-circle-outline",
+      onPress: () => router.push({ pathname: "/prayer/category/[cat]", params: { cat: "chaplets" } }),
+    });
+    arr.push({
+      testID: "prayer-cat-marian",
+      title: "Marian Prayers",
+      subtitle: "Angelus, Memorare, Salve Regina, Magnificat…",
+      meta: `${countFor("marian")} PRAYERS`,
+      color: "#3F62A8",
+      icon: "flower-outline",
+      onPress: () => router.push({ pathname: "/prayer/category/[cat]", params: { cat: "marian" } }),
+    });
+    arr.push({
+      testID: "prayer-cat-litany",
+      title: "Litanies",
+      subtitle: "Of the Saints, Loreto, Sacred Heart, Humility…",
+      meta: `${countFor("litany")} LITANIES`,
+      color: "#7A5C00",
+      icon: "people-circle-outline",
+      onPress: () => router.push({ pathname: "/prayer/category/[cat]", params: { cat: "litany" } }),
+    });
+    arr.push({
+      testID: "prayer-cat-stations",
+      title: "Stations of the Cross",
+      subtitle: "Traditional, Scriptural & St. Alphonsus' Way",
+      meta: `${countFor("stations")} VERSIONS`,
+      color: "#5D4037",
+      icon: "walk-outline",
+      onPress: () => router.push({ pathname: "/prayer/category/[cat]", params: { cat: "stations" } }),
+    });
+    arr.push({
+      testID: "prayer-cat-mass",
+      title: "Mass & Communion",
+      subtitle: "Prayers before & after Mass and Communion",
+      meta: `${countFor("mass")} PRAYERS`,
+      color: "#1E5631",
+      icon: "wine-outline",
+      onPress: () => router.push({ pathname: "/prayer/category/[cat]", params: { cat: "mass" } }),
+    });
+    arr.push({
+      testID: "prayer-cat-devotional",
+      title: "Devotions & Acts",
+      subtitle: "St. Michael, Morning Offering, Te Deum…",
+      meta: `${countFor("devotional")} PRAYERS`,
+      color: "#5B3475",
+      icon: "ribbon-outline",
+      onPress: () => router.push({ pathname: "/prayer/category/[cat]", params: { cat: "devotional" } }),
+    });
+    arr.push({
+      testID: "prayer-cat-seasonal",
+      title: "Seasonal & Feast Day",
+      subtitle: "Prayers for Advent, Lent, Easter & feasts",
+      meta: `${countFor("seasonal")} PRAYERS`,
+      color: "#C9A227",
+      icon: "leaf-outline",
+      onPress: () => router.push({ pathname: "/prayer/category/[cat]", params: { cat: "seasonal" } }),
+    });
+    // Multi-day journeys (their own routes).
     arr.push({
       testID: "prayer-card-novenas",
       title: "Novenas",
@@ -53,7 +119,6 @@ export default function PrayerHubScreen() {
       icon: "calendar-outline",
       onPress: () => router.push("/novenas"),
     });
-    // 33-Day Consecration to St. Joseph
     arr.push({
       testID: "prayer-card-consecration",
       title: "Consecration to St. Joseph",
@@ -63,7 +128,6 @@ export default function PrayerHubScreen() {
       icon: "shield-half-outline",
       onPress: () => router.push("/consecration" as any),
     });
-    // Daily Companions — choose up to 3 saints to walk with
     arr.push({
       testID: "prayer-card-companions",
       title: "Daily Companions",
@@ -73,20 +137,6 @@ export default function PrayerHubScreen() {
       icon: "people-outline",
       onPress: () => router.push("/companions" as any),
     });
-    // Chaplets
-    for (const key of CHAPLET_ORDER) {
-      const c = CHAPLETS[key];
-      arr.push({
-        testID: `prayer-card-${key}`,
-        title: c.title,
-        subtitle: c.subtitle,
-        meta: c.duration,
-        color: c.color,
-        icon: c.icon,
-        onPress: () =>
-          router.push({ pathname: "/prayer/[kind]", params: { kind: key } }),
-      });
-    }
     return arr;
   }, [router, today, todayMystery]);
 
@@ -96,13 +146,6 @@ export default function PrayerHubScreen() {
   const allStrings = useMemo(() => {
     const a: string[] = [introTitle, introBody];
     items.forEach((it) => { a.push(it.title, it.subtitle, it.meta || ""); });
-    DEVOTION_CATEGORIES.forEach((cat) => {
-      a.push(cat.label);
-      cat.keys.forEach((k) => {
-        const d = DEVOTIONS[k];
-        if (d) a.push(d.title, d.subtitle, d.duration);
-      });
-    });
     return a;
   }, [items]);
   const { tr } = useTranslator(allStrings);
@@ -155,34 +198,6 @@ export default function PrayerHubScreen() {
             </View>
             <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
           </Pressable>
-        ))}
-
-        {DEVOTION_CATEGORIES.map((cat) => (
-          <View key={cat.key} testID={`devotion-section-${cat.key}`}>
-            <Text style={styles.sectionHeader}>{tr(cat.label)}</Text>
-            {cat.keys.map((k) => {
-              const d = DEVOTIONS[k];
-              if (!d) return null;
-              return (
-                <Pressable
-                  key={k}
-                  testID={`prayer-card-${k}`}
-                  onPress={() => router.push({ pathname: "/prayer/[kind]", params: { kind: k } })}
-                  style={({ pressed }) => [styles.card, pressed && styles.pressed]}
-                >
-                  <View style={[styles.iconWrap, { backgroundColor: d.color }]}>
-                    <Ionicons name={d.icon as any} size={22} color={"#FAF9F6"} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.cardTitle}>{tr(d.title)}</Text>
-                    <Text style={styles.cardSub}>{tr(d.subtitle)}</Text>
-                    <Text style={styles.cardMeta}>{tr(d.duration)}</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-                </Pressable>
-              );
-            })}
-          </View>
         ))}
 
         <View style={{ height: spacing.xxl }} />

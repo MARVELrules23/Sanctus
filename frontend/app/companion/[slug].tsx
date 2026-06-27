@@ -180,6 +180,25 @@ export default function CompanionScreen() {
             </>
           ) : null}
 
+          {/* Daily traditions one can do to grow closer */}
+          {data.daily_traditions && data.daily_traditions.length > 0 ? (
+            <View style={styles.dailyTradBox} testID="companion-daily-traditions">
+              <View style={styles.cardHead}>
+                <Ionicons name="repeat-outline" size={16} color={colors.gold} />
+                <Text style={styles.cardHeadText}>Daily traditions to grow closer</Text>
+              </View>
+              {data.daily_traditions.map((t, i) => (
+                <View key={i} style={styles.tradition}>
+                  <Ionicons name="ellipse" size={8} color={colors.goldDark} style={{ marginTop: 6 }} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.tradName}>{t.title}</Text>
+                    <Text style={styles.tradBody}>{t.body}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          ) : null}
+
           {/* Virtues to imitate */}
           <View style={styles.cardHead}>
             <Ionicons name="ribbon-outline" size={16} color={colors.gold} />
@@ -305,6 +324,7 @@ const styles = StyleSheet.create({
   tradName: { fontFamily: fonts.uiSemi, fontSize: 14.5, color: colors.primary },
   tradBody: { fontFamily: fonts.bodyRegular, fontSize: 13.5, color: colors.textSecondary, lineHeight: 20, marginTop: 1 },
   vocBox: { backgroundColor: "#F3EEFB", borderWidth: 1, borderColor: "#DED2F0", borderRadius: radius.lg, padding: spacing.md, marginTop: spacing.sm },
+  dailyTradBox: { backgroundColor: "#FBF6E8", borderWidth: 1, borderColor: "#EADfBE", borderRadius: radius.lg, padding: spacing.md, marginTop: spacing.sm, marginBottom: spacing.sm },
   softBtn: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderSoft, borderRadius: radius.md, padding: spacing.md, marginTop: spacing.xs },
   softBtnText: { flex: 1, fontFamily: fonts.uiSemi, fontSize: 14, color: colors.primary },
   primaryBtn: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: colors.primary, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.sm },

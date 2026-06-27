@@ -743,6 +743,110 @@ CHURCH_TRADITIONS: Dict[str, List[Dict[str, str]]] = {
     ],
 }
 
+# --------------------------------------------------------------------------- #
+# Daily traditions — small, repeatable practices (rooted in the Church's       #
+# devotional tradition for each saint) one can do EACH DAY to grow closer.     #
+# Distinct from CHURCH_TRADITIONS above (which lean to feasts & customs).       #
+# --------------------------------------------------------------------------- #
+DAILY_TRADITIONS: Dict[str, List[Dict[str, str]]] = {
+    "catherine-siena": [
+        {"title": "Enter the 'inner cell'", "body": "Pause once today in self-knowledge before God, the cell she said we carry within us."},
+        {"title": "Pray for the Pope & the Church", "body": "Offer a short daily prayer for the Holy Father and the Church's unity, as she did."},
+        {"title": "Speak to Jesus as a friend", "body": "Make a spiritual Communion and tell Christ crucified one thing on your heart."},
+    ],
+    "pier-giorgio": [
+        {"title": "Daily Eucharist", "body": "Receive Communion or make a spiritual Communion — the secret of his joy."},
+        {"title": "One hidden act of charity", "body": "Help someone quietly today, the way he gave away even his bus fare."},
+        {"title": "Aim 'verso l'alto'", "body": "Pray a decade of the Rosary and offer one effort 'toward the heights.'"},
+    ],
+    "john-paul-ii": [
+        {"title": "Renew 'Totus Tuus'", "body": "Each morning entrust your whole day to Jesus through Mary."},
+        {"title": "Chaplet at 3 o'clock", "body": "Pray the Chaplet of Divine Mercy at the Hour of Mercy."},
+        {"title": "'Be not afraid'", "body": "Make one courageous act of faith you've been putting off."},
+    ],
+    "agnes": [
+        {"title": "Guard your heart", "body": "Offer a small act of purity today — custody of the eyes and thoughts."},
+        {"title": "Pray for the young & the chaste", "body": "Remember those striving for purity in a short daily prayer."},
+        {"title": "A quiet courage", "body": "Stand gently for Christ in one ordinary moment today."},
+    ],
+    "therese-lisieux": [
+        {"title": "Sacrifice beads", "body": "Offer small hidden sacrifices through the day, counting them as love."},
+        {"title": "Small things, great love", "body": "Do one ordinary task today with extraordinary love."},
+        {"title": "Childlike trust", "body": "End the day with a short act of abandonment into the Father's hands."},
+    ],
+    "benedict": [
+        {"title": "Pray the Hours", "body": "Pray at least one hour of the Divine Office (Morning or Evening Prayer)."},
+        {"title": "Ora et labora", "body": "Offer your work today as a prayer, doing it for God's glory."},
+        {"title": "Listen in silence", "body": "Keep a moment of quiet, listening 'with the ear of your heart.'"},
+    ],
+    "francis-assisi": [
+        {"title": "Be an instrument of peace", "body": "Make peace with one person, or pray his Peace Prayer."},
+        {"title": "Praise God in creation", "body": "Thank God for one created thing — Brother Sun, Sister Water."},
+        {"title": "A small poverty", "body": "Give something away or do without one comfort for love of Christ."},
+    ],
+    "teresa-avila": [
+        {"title": "Mental prayer", "body": "Keep a set time of quiet conversation with the God who dwells within you."},
+        {"title": "Teresa's bookmark", "body": "Pray slowly: 'Let nothing disturb you… God alone suffices.'"},
+        {"title": "Recollection", "body": "Recall God's presence within once during the busy day."},
+    ],
+    "st-joseph": [
+        {"title": "'Go to Joseph'", "body": "Bring one need to him today with a short prayer of confidence."},
+        {"title": "Work in silence", "body": "Offer your labour quietly and faithfully, as the carpenter of Nazareth did."},
+        {"title": "Honour Wednesdays", "body": "Pray the Litany of St. Joseph, especially on Wednesdays."},
+    ],
+    "louis-zelie": [
+        {"title": "The family decade", "body": "Pray at least a decade of the Rosary with (or for) your family."},
+        {"title": "Sanctify your duty", "body": "Offer today's work and chores to God as they did."},
+        {"title": "Patient love at home", "body": "Make one small act of patient, faithful love for your household."},
+    ],
+    "gianna-molla": [
+        {"title": "Duty with a glad heart", "body": "Do your daily work cheerfully, offering it as love."},
+        {"title": "Pray for mothers & the unborn", "body": "Remember expectant mothers and the unborn in a short prayer."},
+        {"title": "One sacrifice of love", "body": "Offer a small sacrifice today for someone you love."},
+    ],
+    "monica": [
+        {"title": "Persevere for a loved one", "body": "Pray daily, without losing heart, for someone far from God."},
+        {"title": "Offer your worry", "body": "Hand your anxieties to God with trust, as she gave Him her tears."},
+        {"title": "An act of hope", "body": "Renew hope that God is at work, even when you see no fruit yet."},
+    ],
+    "guardian-angel": [
+        {"title": "'Angel of God'", "body": "Pray the prayer morning and night, asking to be lit, guarded, ruled, and guided."},
+        {"title": "Ask before deciding", "body": "Pause and ask your angel's help before a choice today."},
+        {"title": "Send your angel", "body": "Ask your angel to carry a prayer to someone in need."},
+    ],
+    "padre-pio": [
+        {"title": "The Rosary — his weapon", "body": "Keep the Rosary in hand and pray it daily."},
+        {"title": "Examine & confess", "body": "Examine your conscience tonight; seek Confession often."},
+        {"title": "'Pray, hope, don't worry'", "body": "Make one deliberate act of trust in God's Providence today."},
+    ],
+    "st-lucy": [
+        {"title": "Ask for the light of faith", "body": "Pray to see clearly what God asks of you today."},
+        {"title": "Use your eyes for good", "body": "Guard what you look at; turn your gaze to what is true and pure."},
+        {"title": "A small almsgiving", "body": "Give to someone in need in her memory, as she gave her dowry."},
+    ],
+    "st-faustina": [
+        {"title": "Chaplet at 3 o'clock", "body": "Pray the Chaplet of Divine Mercy at the Hour of Great Mercy."},
+        {"title": "'Jesus, I trust in You'", "body": "Repeat this aspiration often through the day."},
+        {"title": "A work of mercy", "body": "Show mercy once today in deed, word, or prayer."},
+    ],
+    "blessed-virgin-mary": [
+        {"title": "Pray the Rosary", "body": "Pray a decade or the full Rosary, meditating on Christ with His Mother."},
+        {"title": "The Angelus at noon", "body": "Pause to recall the Incarnation in the Angelus."},
+        {"title": "A Hail Mary for the difficult", "body": "Pray a Hail Mary for anyone you find hard to love today."},
+    ],
+    "sacred-heart": [
+        {"title": "Morning Offering", "body": "Offer the day — prayers, works, joys, sufferings — to His Sacred Heart."},
+        {"title": "An act of reparation", "body": "Make a spiritual Communion or short act of love to console His Heart."},
+        {"title": "'Heart of Jesus, I trust in You'", "body": "Return to His Heart with this aspiration when you grow anxious."},
+    ],
+    "sts-peter-paul": [
+        {"title": "Read St. Paul", "body": "Take up a few verses of the Epistles as daily spiritual reading."},
+        {"title": "Confess Christ", "body": "Make an act of faith with Peter: 'You are the Christ, the Son of the living God.'"},
+        {"title": "Pray for the Church's mission", "body": "Pray for the Pope and for the spread of the Gospel."},
+    ],
+}
+
+
 # Day-focused prayer shown at the top of each companion's daily space.
 DAILY_PRAYERS: Dict[str, str] = {
     "catherine-siena": "St. Catherine of Siena, set my heart on fire this day with love for Christ and His Church; let me dwell in the cell of self-knowledge and love. Pray for me today.",
@@ -910,6 +1014,7 @@ def _public(slug: str, c: Dict[str, Any], vocation: str = "", state: str = "") -
         "novena_slug": c.get("novena_slug"),
         "daily_act": _today_act(c["daily_acts"]),
         "church_traditions": CHURCH_TRADITIONS.get(slug, []),
+        "daily_traditions": DAILY_TRADITIONS.get(slug, []),
         "vocation_traditions": voc_trad,
         "has_consecration": True,  # the St. Joseph consecration is open to all companions
         "is_joseph": slug == "st-joseph",

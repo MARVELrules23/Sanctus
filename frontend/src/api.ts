@@ -1937,6 +1937,7 @@ export type CompanionDetail = {
   novena_slug?: string;
   daily_act: { text: string; index: number; total: number };
   church_traditions: CompanionTradition[];
+  daily_traditions: CompanionTradition[];
   vocation_traditions: { label: string; items: CompanionTradition[] } | null;
   has_consecration: boolean;
   is_joseph: boolean;

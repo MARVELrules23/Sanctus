@@ -353,12 +353,18 @@ class DayModel(BaseModel):
     day: int
 
 
+class JournalModel(BaseModel):
+    text: str
+
+
 def build_router(db: AsyncIOMotorDatabase, get_current_user, emergent_llm_key: str = "") -> APIRouter:
     router = APIRouter(prefix="/novenas", tags=["novenas"])
     enroll = db["novena_enrollments"]
+    journal = db["novena_journal"]
 
-    async def _active(user_id: str) -> Optional[Dict[str, Any]]:
-        return await enroll.find_one({"user_id": user_id, "status": "active"}, {"_id": 0})
+    async def _actives(user_id: str) -> List[Dict[str, Any]]:
+        cur = enroll.find({"user_id": user_id, "status": "active"}, {"_id": 0})
+        return await cur.to_list(length=200)
 
     @router.get("")
     async def list_novenas(user=Depends(get_current_user)):
@@ -367,17 +373,18 @@ def build_router(db: AsyncIOMotorDatabase, get_current_user, emergent_llm_key: s
         themes = await _localize_strings(db, [i["theme"] for i in items])
         for it, nm, th in zip(items, names, themes):
             it["name"], it["theme"] = nm, th
-        active = await _active(user.user_id)
-        return {"items": items, "active": _enrollment_public(active) if active else None}
+        actives = await _actives(user.user_id)
+        return {"items": items, "actives": [_enrollment_public(a) for a in actives]}
 
     @router.get("/active")
     async def get_active(user=Depends(get_current_user)):
-        a = await _active(user.user_id)
-        if not a:
-            return {"active": None}
-        out = _enrollment_public(a)
-        out["novena"] = _public_catalog(NOVENA_BY_SLUG[a["slug"]])
-        return {"active": out}
+        actives = await _actives(user.user_id)
+        out = []
+        for a in actives:
+            e = _enrollment_public(a)
+            e["novena"] = _public_catalog(NOVENA_BY_SLUG[a["slug"]])
+            out.append(e)
+        return {"actives": out}
 
     @router.post("/{slug}/start")
     async def start(slug: str, payload: StartModel, user=Depends(get_current_user)):
@@ -388,13 +395,8 @@ def build_router(db: AsyncIOMotorDatabase, get_current_user, emergent_llm_key: s
             _parse_date(payload.start_date)
         except ValueError:
             raise HTTPException(status_code=400, detail="start_date must be YYYY-MM-DD")
-        existing = await _active(user.user_id)
-        if existing and existing["slug"] != slug:
-            raise HTTPException(
-                status_code=409,
-                detail={"message": "You already have an active novena.", "active_slug": existing["slug"]},
-            )
-        # (Re)start: replace any prior enrollment for this user+slug.
+        # Multiple novenas may run at once. (Re)start only replaces any prior
+        # enrollment for this same novena.
         await enroll.delete_many({"user_id": user.user_id, "slug": slug})
         doc = {
             "user_id": user.user_id, "slug": slug, "start_date": payload.start_date,
@@ -404,9 +406,12 @@ def build_router(db: AsyncIOMotorDatabase, get_current_user, emergent_llm_key: s
         await enroll.insert_one(dict(doc))
         return _enrollment_public(doc)
 
-    @router.post("/stop")
-    async def stop(user=Depends(get_current_user)):
-        await enroll.update_many({"user_id": user.user_id, "status": "active"}, {"$set": {"status": "abandoned"}})
+    @router.post("/{slug}/stop")
+    async def stop(slug: str, user=Depends(get_current_user)):
+        await enroll.update_many(
+            {"user_id": user.user_id, "slug": slug, "status": "active"},
+            {"$set": {"status": "abandoned"}},
+        )
         return {"ok": True}
 
     @router.post("/{slug}/complete-day")
@@ -421,6 +426,35 @@ def build_router(db: AsyncIOMotorDatabase, get_current_user, emergent_llm_key: s
         await enroll.update_one({"_id": e["_id"]}, {"$set": {"completed_days": done, "status": status}})
         e["completed_days"], e["status"] = done, status
         return _enrollment_public(e)
+
+    # ---- Journal: a place to write intentions toward each novena ---- #
+    @router.get("/{slug}/journal")
+    async def get_journal(slug: str, user=Depends(get_current_user)):
+        if slug not in NOVENA_BY_SLUG:
+            raise HTTPException(status_code=404, detail="Novena not found")
+        cur = journal.find({"user_id": user.user_id, "slug": slug}, {"_id": 0, "user_id": 0}).sort("created_at", -1)
+        items = await cur.to_list(length=300)
+        return {"items": items}
+
+    @router.post("/{slug}/journal")
+    async def add_journal(slug: str, payload: JournalModel, user=Depends(get_current_user)):
+        if slug not in NOVENA_BY_SLUG:
+            raise HTTPException(status_code=404, detail="Novena not found")
+        text = (payload.text or "").strip()
+        if not text:
+            raise HTTPException(status_code=400, detail="Intention cannot be empty")
+        entry = {
+            "id": uuid.uuid4().hex, "user_id": user.user_id, "slug": slug,
+            "text": text[:2000], "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        await journal.insert_one(dict(entry))
+        entry.pop("user_id", None)
+        return entry
+
+    @router.delete("/{slug}/journal/{entry_id}")
+    async def delete_journal(slug: str, entry_id: str, user=Depends(get_current_user)):
+        await journal.delete_one({"user_id": user.user_id, "slug": slug, "id": entry_id})
+        return {"ok": True}
 
     @router.get("/{slug}")
     async def get_one(slug: str, user=Depends(get_current_user)):

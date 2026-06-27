@@ -19,6 +19,7 @@ import { AutoText } from "@/src/auto-text";
 import { colors, fonts, radius, spacing } from "@/src/theme";
 
 type Enrollment = { slug: string; start_date: string; end_date: string; completed_days: number[]; status: string; total_days: number };
+type JournalEntry = { id: string; slug: string; text: string; created_at: string };
 type Detail = {
   slug: string; name: string; patron: string; feast: string; theme: string; intro: string;
   color: string; icon: string; main_prayer: string; day_intentions: string[] | null;
@@ -44,6 +45,9 @@ export default function NovenaDetailScreen() {
   const [busy, setBusy] = useState(false);
   const [selDay, setSelDay] = useState(1);
   const [reflection, setReflection] = useState<Record<number, string>>({});
+  const [journal, setJournal] = useState<JournalEntry[]>([]);
+  const [journalText, setJournalText] = useState("");
+  const [journalBusy, setJournalBusy] = useState(false);
 
   const load = useCallback(async () => {
     const res = await api<Detail>(`/novenas/${slug}`);
@@ -52,6 +56,10 @@ export default function NovenaDetailScreen() {
       const cur = Math.min(9, Math.max(1, daysBetween(res.enrollment.start_date, todayISO()) + 1));
       setSelDay(cur);
     }
+    try {
+      const j = await api<{ items: JournalEntry[] }>(`/novenas/${slug}/journal`);
+      setJournal(j.items || []);
+    } catch { /* ignore */ }
   }, [slug]);
 
   useEffect(() => { load(); }, [load]);
@@ -78,16 +86,7 @@ export default function NovenaDetailScreen() {
       await api(`/novenas/${slug}/start`, { method: "POST", body: { start_date: startDate } });
       await load();
     } catch (e: any) {
-      const detail = e?.detail || e?.message;
-      const activeSlug = detail?.active_slug;
-      if (activeSlug) {
-        Alert.alert("Another novena is active", "You can only run one novena at a time. Stop the current one to start this?", [
-          { text: "Cancel", style: "cancel" },
-          { text: "Stop & Start", style: "destructive", onPress: async () => { await api("/novenas/stop", { method: "POST" }); await api(`/novenas/${slug}/start`, { method: "POST", body: { start_date: startDate } }); await load(); } },
-        ]);
-      } else {
-        Alert.alert("Could not start", String(detail || e));
-      }
+      Alert.alert("Could not start", String(e?.detail || e?.message || e));
     } finally {
       setBusy(false);
     }
@@ -108,9 +107,32 @@ export default function NovenaDetailScreen() {
     ]);
   };
   const stop = () => {
-    Alert.alert("Stop novena?", "Your progress will be cleared.", [
+    Alert.alert("Stop novena?", "Your progress will be cleared. Your journal entries are kept.", [
       { text: "Cancel", style: "cancel" },
-      { text: "Stop", style: "destructive", onPress: async () => { await api("/novenas/stop", { method: "POST" }); await load(); } },
+      { text: "Stop", style: "destructive", onPress: async () => { await api(`/novenas/${slug}/stop`, { method: "POST" }); await load(); } },
+    ]);
+  };
+
+  const addJournal = async () => {
+    const text = journalText.trim();
+    if (!text) return;
+    setJournalBusy(true);
+    try {
+      const entry = await api<JournalEntry>(`/novenas/${slug}/journal`, { method: "POST", body: { text } });
+      setJournal((p) => [entry, ...p]);
+      setJournalText("");
+    } catch (e: any) {
+      Alert.alert("Could not save", String(e?.detail || e?.message || e));
+    } finally { setJournalBusy(false); }
+  };
+
+  const deleteJournal = (id: string) => {
+    Alert.alert("Delete entry?", "This intention will be removed.", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Delete", style: "destructive", onPress: async () => {
+        await api(`/novenas/${slug}/journal/${id}`, { method: "DELETE" });
+        setJournal((p) => p.filter((x) => x.id !== id));
+      } },
     ]);
   };
 
@@ -227,6 +249,44 @@ export default function NovenaDetailScreen() {
             </View>
           </>
         )}
+
+        {/* Intentions journal — available whether or not the novena is active */}
+        <View style={styles.journalBox} testID="novena-journal">
+          <View style={styles.journalHead}>
+            <Ionicons name="create-outline" size={16} color={d.color} />
+            <AutoText style={styles.journalTitle}>Intentions journal</AutoText>
+          </View>
+          <AutoText style={styles.journalHint}>Write the intentions you are carrying into this novena and return to them as you pray.</AutoText>
+          <TextInput
+            value={journalText}
+            onChangeText={setJournalText}
+            placeholder="What are you praying for?"
+            placeholderTextColor={colors.textMuted}
+            style={styles.journalInput}
+            multiline
+            testID="novena-journal-input"
+          />
+          <Pressable onPress={addJournal} disabled={journalBusy || !journalText.trim()} testID="novena-journal-add"
+            style={({ pressed }) => [styles.journalAddBtn, { backgroundColor: d.color }, (pressed || journalBusy || !journalText.trim()) && { opacity: 0.6 }]}>
+            {journalBusy ? <ActivityIndicator color="#fff" /> : <AutoText style={styles.journalAddText}>Add intention</AutoText>}
+          </Pressable>
+
+          {journal.length === 0 ? (
+            <AutoText style={styles.journalEmpty}>No intentions written yet.</AutoText>
+          ) : (
+            journal.map((j) => (
+              <View key={j.id} style={styles.journalEntry} testID={`novena-journal-entry-${j.id}`}>
+                <View style={{ flex: 1 }}>
+                  <RNText style={styles.journalEntryText}>{j.text}</RNText>
+                  <RNText style={styles.journalDate}>{new Date(j.created_at).toLocaleDateString()}</RNText>
+                </View>
+                <Pressable onPress={() => deleteJournal(j.id)} hitSlop={10} testID={`novena-journal-del-${j.id}`}>
+                  <Ionicons name="trash-outline" size={16} color={colors.textMuted} />
+                </Pressable>
+              </View>
+            ))
+          )}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -268,4 +328,15 @@ const styles = StyleSheet.create({
   footerRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.lg },
   secBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingVertical: 10 },
   secText: { fontFamily: fonts.uiSemi, fontSize: 13, color: colors.primary },
+  journalBox: { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.borderSoft, padding: spacing.md, marginTop: spacing.lg },
+  journalHead: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 },
+  journalTitle: { fontFamily: fonts.headingSemi, fontSize: 16, color: colors.primary },
+  journalHint: { fontFamily: fonts.bodyRegular, fontSize: 12.5, color: colors.textSecondary, lineHeight: 19, marginBottom: spacing.sm },
+  journalInput: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: 11, fontFamily: fonts.bodyRegular, fontSize: 15, color: colors.textPrimary, minHeight: 70, textAlignVertical: "top" },
+  journalAddBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", borderRadius: radius.md, paddingVertical: 11, marginTop: spacing.sm },
+  journalAddText: { fontFamily: fonts.uiSemi, fontSize: 14, color: "#fff" },
+  journalEmpty: { fontFamily: fonts.bodyItalic, fontStyle: "italic", fontSize: 13, color: colors.textMuted, marginTop: spacing.md },
+  journalEntry: { flexDirection: "row", alignItems: "flex-start", gap: spacing.sm, paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.borderSoft },
+  journalEntryText: { fontFamily: fonts.bodyRegular, fontSize: 14.5, color: colors.textPrimary, lineHeight: 21 },
+  journalDate: { fontFamily: fonts.uiMedium, fontSize: 11, color: colors.textMuted, marginTop: 3 },
 });

@@ -26,14 +26,14 @@ export default function NovenasListScreen() {
   const router = useRouter();
   const { lang } = useI18n();
   const [items, setItems] = useState<Novena[] | null>(null);
-  const [active, setActive] = useState<Active | null>(null);
+  const [actives, setActives] = useState<Active[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const res = await api<{ items: Novena[]; active: Active | null }>("/novenas");
+      const res = await api<{ items: Novena[]; actives: Active[] }>("/novenas");
       setItems(res.items || []);
-      setActive(res.active || null);
+      setActives(res.actives || []);
     } catch {
       setItems([]);
     }
@@ -42,7 +42,7 @@ export default function NovenasListScreen() {
   useEffect(() => { load(); }, [load]);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  const activeNovena = active ? items?.find((n) => n.slug === active.slug) : null;
+  const activeSlugs = new Set(actives.map((a) => a.slug));
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]} testID="novenas-screen">
@@ -56,23 +56,32 @@ export default function NovenasListScreen() {
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxl }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} tintColor={colors.gold} />}>
         <Text style={styles.intro}>
-          Nine days of prayer, beginning on a date you choose. Pray a little each day; after each day
-          a reflection helps you carry the grace forward.
+          Nine days of prayer, beginning on a date you choose. You can pray more than one novena at a
+          time, and write your intentions in each one&apos;s journal.
         </Text>
 
-        {active && activeNovena ? (
-          <Pressable testID="novena-active-banner" onPress={() => router.push(`/novenas/${active.slug}`)}
-            style={({ pressed }) => [styles.activeCard, pressed && styles.pressed]}>
-            <View style={[styles.iconWrap, { backgroundColor: activeNovena.color }]}>
-              <Ionicons name={activeNovena.icon as any} size={20} color="#FAF9F6" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.activeLabel}>IN PROGRESS</Text>
-              <Text style={styles.activeName}>{activeNovena.name}</Text>
-              <Text style={styles.activeProg}>{`${active.completed_days.length} of ${active.total_days} days complete`}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-          </Pressable>
+        {actives.length > 0 ? (
+          <>
+            <Text style={styles.sectionLabel}>{`In progress · ${actives.length}`}</Text>
+            {actives.map((a) => {
+              const n = items?.find((x) => x.slug === a.slug);
+              if (!n) return null;
+              return (
+                <Pressable key={a.slug} testID={`novena-active-${a.slug}`} onPress={() => router.push(`/novenas/${a.slug}`)}
+                  style={({ pressed }) => [styles.activeCard, pressed && styles.pressed]}>
+                  <View style={[styles.iconWrap, { backgroundColor: n.color }]}>
+                    <Ionicons name={n.icon as any} size={20} color="#FAF9F6" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.activeLabel}>IN PROGRESS</Text>
+                    <Text style={styles.activeName}>{n.name}</Text>
+                    <Text style={styles.activeProg}>{`${a.completed_days.length} of ${a.total_days} days complete`}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+                </Pressable>
+              );
+            })}
+          </>
         ) : null}
 
         {items === null ? (
@@ -89,7 +98,11 @@ export default function NovenasListScreen() {
                 <Text style={styles.cardSub}>{n.theme}</Text>
                 <Text style={styles.cardMeta}>FEAST · {n.feast}</Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+              {activeSlugs.has(n.slug) ? (
+                <View style={styles.inProgPill}><Ionicons name="ellipse" size={8} color={colors.gold} /></View>
+              ) : (
+                <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+              )}
             </Pressable>
           ))
         )}
@@ -103,6 +116,8 @@ const styles = StyleSheet.create({
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.borderSoft },
   headerTitle: { fontFamily: fonts.headingSemi, fontSize: 18, color: colors.textPrimary, flex: 1, textAlign: "center" },
   intro: { fontFamily: fonts.bodyRegular, fontSize: 14, color: colors.textSecondary, lineHeight: 21, marginBottom: spacing.lg },
+  sectionLabel: { fontFamily: fonts.uiSemi, fontSize: 11, letterSpacing: 1.4, color: colors.gold, marginBottom: spacing.sm },
+  inProgPill: { width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center", borderWidth: 1.5, borderColor: colors.gold },
   activeCard: { flexDirection: "row", alignItems: "center", gap: spacing.sm, backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.lg, borderWidth: 1.5, borderColor: colors.gold },
   activeLabel: { fontFamily: fonts.uiSemi, fontSize: 9, letterSpacing: 1.4, color: colors.gold },
   activeName: { fontFamily: fonts.headingSemi, fontSize: 16, color: colors.primary, marginTop: 1 },

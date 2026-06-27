@@ -1946,7 +1946,7 @@ export type CompanionDetail = {
 };
 export type CompanionListItem = {
   slug: string; name: string; feast?: string; tagline: string;
-  selected: boolean; is_vocation_companion: boolean; linked?: string | null;
+  selected: boolean; is_vocation_companion: boolean; is_permanent?: boolean; linked?: string | null;
 };
 export async function listCompanions(): Promise<{
   companions: CompanionListItem[]; selected: string[]; max: number; vocation_companion: string;

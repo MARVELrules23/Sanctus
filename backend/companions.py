@@ -766,9 +766,12 @@ DAILY_PRAYERS: Dict[str, str] = {
     "sts-peter-paul": "Sts. Peter and Paul, obtain for me this day a faith as firm as rock and a zeal as bold as fire, that I may follow Christ without fear. Pray for me.",
 }
 
+# The Guardian Angel is a permanent companion for everyone — always present,
+# never counted against the 3 daily companions the user chooses.
+PERMANENT_COMPANION = "guardian-angel"
+
 # Display order for the daily-companions hub.
-COMPANION_ORDER: List[str] = [
-    "blessed-virgin-mary", "sacred-heart", "guardian-angel", "sts-peter-paul",
+COMPANION_ORDER: List[str] = [ "blessed-virgin-mary", "sacred-heart", "guardian-angel", "sts-peter-paul",
     "padre-pio", "st-faustina", "st-lucy",
     "therese-lisieux", "francis-assisi", "st-joseph", "teresa-avila",
     "catherine-siena", "benedict", "john-paul-ii", "pier-giorgio",
@@ -922,7 +925,7 @@ def build_router(db: AsyncIOMotorDatabase, get_current_user, emergent_llm_key: s
     @router.get("")
     async def list_companions(user=Depends(get_current_user)):
         prefs = await db.preferences.find_one({"user_id": user.user_id}, {"_id": 0}) or {}
-        selected = prefs.get("daily_companions") or []
+        selected = [s for s in (prefs.get("daily_companions") or []) if s != PERMANENT_COMPANION]
         vocation_companion = (prefs.get("companion_saint") or "").strip()
         items = []
         for slug in COMPANION_ORDER:
@@ -932,10 +935,12 @@ def build_router(db: AsyncIOMotorDatabase, get_current_user, emergent_llm_key: s
                 "tagline": _tagline(c),
                 "selected": slug in selected,
                 "is_vocation_companion": slug == vocation_companion,
+                "is_permanent": slug == PERMANENT_COMPANION,
                 "linked": c.get("linked"),
             })
         return {"companions": items, "selected": selected, "max": 3,
-                "vocation_companion": vocation_companion}
+                "vocation_companion": vocation_companion,
+                "permanent": PERMANENT_COMPANION}
 
     @router.post("/select")
     async def select_companion(payload: Dict[str, Any], user=Depends(get_current_user)):
@@ -943,8 +948,10 @@ def build_router(db: AsyncIOMotorDatabase, get_current_user, emergent_llm_key: s
         action = (payload.get("action") or "toggle").strip()
         if slug not in COMPANIONS:
             raise HTTPException(status_code=404, detail="Companion not found")
+        if slug == PERMANENT_COMPANION:
+            raise HTTPException(status_code=400, detail="Your Guardian Angel is always with you and cannot be removed.")
         prefs = await db.preferences.find_one({"user_id": user.user_id}, {"_id": 0}) or {}
-        selected: List[str] = list(prefs.get("daily_companions") or [])
+        selected: List[str] = [s for s in (prefs.get("daily_companions") or []) if s != PERMANENT_COMPANION]
         if action == "remove" or (action == "toggle" and slug in selected):
             selected = [s for s in selected if s != slug]
         else:

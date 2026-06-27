@@ -46,6 +46,7 @@ export default function CompanionsHub() {
   };
 
   const vocationItem = items.find((i) => i.slug === vocation);
+  const permanentItem = items.find((i) => i.is_permanent);
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]} testID="companions-hub">
@@ -63,9 +64,25 @@ export default function CompanionsHub() {
       ) : (
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <Text style={styles.intro}>
-            Choose up to 3 daily companions to walk with — together with your vocation companion, that's 4 in total. Tap a name to enter their space.
+            Choose up to 3 daily companions to walk with — together with your Guardian Angel and your vocation companion, that makes 5 saints at your side. Tap a name to enter their space.
           </Text>
-          <Text style={styles.counter}>{selected.length} / 3 daily chosen · + your vocation companion = {selected.length + (vocationItem ? 1 : 0)} total</Text>
+          <Text style={styles.counter}>{selected.length} / 3 daily chosen · + your Guardian Angel & vocation companion</Text>
+
+          {permanentItem ? (
+            <Pressable
+              testID="companions-permanent-card"
+              onPress={() => router.push(`/companion/${permanentItem.slug}` as any)}
+              style={({ pressed }) => [styles.card, styles.permanentCard, pressed && { opacity: 0.9 }]}
+            >
+              <Ionicons name="shield-checkmark" size={22} color="#7A86C4" style={{ marginRight: 10 }} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.permTag}>ALWAYS WITH YOU</Text>
+                <Text style={styles.name}>{permanentItem.name}</Text>
+                <Text style={styles.tagline} numberOfLines={2}>{permanentItem.tagline}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#7A86C4" />
+            </Pressable>
+          ) : null}
 
           {vocationItem ? (
             <Pressable
@@ -74,7 +91,7 @@ export default function CompanionsHub() {
               style={({ pressed }) => [styles.card, styles.vocationCard, pressed && { opacity: 0.9 }]}
             >
               <View style={{ flex: 1 }}>
-                <Text style={styles.vocTag}>YOUR VOCATION COMPANION</Text>
+                <Text style={styles.vocTag}>YOUR VOCATION COMPANION · switch in your Vocation space</Text>
                 <Text style={styles.name}>{vocationItem.name}</Text>
                 <Text style={styles.tagline} numberOfLines={2}>{vocationItem.tagline}</Text>
               </View>
@@ -82,7 +99,7 @@ export default function CompanionsHub() {
             </Pressable>
           ) : null}
 
-          {items.filter((i) => !i.is_vocation_companion).map((c) => {
+          {items.filter((i) => !i.is_vocation_companion && !i.is_permanent).map((c) => {
             const isSel = selected.includes(c.slug);
             return (
               <View key={c.slug} style={[styles.card, isSel && styles.cardSel]}>
@@ -137,6 +154,8 @@ const styles = StyleSheet.create({
   card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderSoft, borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.sm },
   cardSel: { borderColor: colors.gold, backgroundColor: "#FBF4DF" },
   vocationCard: { flexDirection: "row", alignItems: "center", borderColor: colors.gold, backgroundColor: "#FAF3E2" },
+  permanentCard: { flexDirection: "row", alignItems: "center", borderColor: "#7A86C4", backgroundColor: "#EEF0FA" },
+  permTag: { fontFamily: fonts.uiSemi, fontSize: 10.5, letterSpacing: 1.2, color: "#5A66A8" },
   vocTag: { fontFamily: fonts.uiSemi, fontSize: 10.5, letterSpacing: 1.2, color: colors.gold },
   cardMain: { flexDirection: "row", alignItems: "center", gap: 8 },
   nameRow: { flexDirection: "row", alignItems: "center", gap: 6 },

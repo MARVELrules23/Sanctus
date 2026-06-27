@@ -290,7 +290,7 @@ export default function PrayerRunnerScreen() {
                       date: todayISO(),
                       mode: "free",
                       seed_title: tr(meta.title),
-                      seed_body: `${tr(meta.title)} — ${es ? "completado hoy" : "completed today"}.\n\n${ui.goodWork}: ${tr(meta.good_work)}\n\n${es ? "Reflexión" : "Reflection"}:\n`,
+                      seed_body: `${tr(meta.title)} — ${es ? "completado hoy" : it ? "completato oggi" : "completed today"}.\n\n${ui.goodWork}: ${tr(meta.good_work)}\n\n${es ? "Reflexión" : it ? "Riflessione" : "Reflection"}:\n`,
                     },
                   })
                 }

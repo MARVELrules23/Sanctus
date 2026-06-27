@@ -12,7 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 
-import { api, ChallengeWindow, JournalEntry, LiturgicalDay, listChallengeWindows, listSchedule, ScheduleItem } from "@/src/api";
+import { api, ChallengeWindow, JournalEntry, LiturgicalDay, listAttendingEvents, listChallengeWindows, listSchedule, ParishEvent, ScheduleItem } from "@/src/api";
 import { useChallengeMasterPref } from "@/src/use-challenge-pref";
 import LiturgicalBadge from "@/src/components/LiturgicalBadge";
 import { colorForLiturgical, colors, fonts, radius, shadow, spacing } from "@/src/theme";
@@ -35,7 +35,17 @@ export default function CalendarScreen() {
   const [challenges, setChallenges] = useState<ChallengeWindow[]>([]);
   const [novenaWin, setNovenaWin] = useState<ChallengeWindow | null>(null);
   const [scheduleItems, setScheduleItems] = useState<ScheduleItem[]>([]);
+  const [attending, setAttending] = useState<ParishEvent[]>([]);
   const { enabled: challengeMasterOn, setEnabled: setChallengeMasterOn } = useChallengeMasterPref();
+
+  const loadAttending = useCallback(async () => {
+    try {
+      const r = await listAttendingEvents(180);
+      setAttending(r.items || []);
+    } catch {
+      setAttending([]);
+    }
+  }, []);
 
   // Pull every liturgical challenge's window computed for the year currently
   // being viewed — so all tracks (Hallowtide, Advent, Lent, and the
@@ -122,7 +132,7 @@ export default function CalendarScreen() {
     setLoading(true);
     (async () => {
       try {
-        await Promise.all([load(), loadEntryDates(), loadChallenges(), loadSchedule()]);
+        await Promise.all([load(), loadEntryDates(), loadChallenges(), loadSchedule(), loadAttending()]);
       } finally {
         if (!cancel) setLoading(false);
       }
@@ -130,10 +140,29 @@ export default function CalendarScreen() {
     return () => {
       cancel = true;
     };
-  }, [load, loadEntryDates, loadChallenges, loadSchedule]);
+  }, [load, loadEntryDates, loadChallenges, loadSchedule, loadAttending]);
 
   // Refresh the schedule whenever the screen regains focus (e.g. after adding).
-  useFocusEffect(useCallback(() => { void loadSchedule(); }, [loadSchedule]));
+  useFocusEffect(useCallback(() => { void loadSchedule(); void loadAttending(); }, [loadSchedule, loadAttending]));
+
+  // Group the events the user is attending by their LOCAL calendar date.
+  const eventsByDate = useMemo(() => {
+    const m = new Map<string, ParishEvent[]>();
+    for (const ev of attending) {
+      const d = new Date(ev.start_at);
+      if (isNaN(d.getTime())) continue;
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      const arr = m.get(key) || [];
+      arr.push(ev);
+      m.set(key, arr);
+    }
+    return m;
+  }, [attending]);
+
+  const eventsForSel = useMemo(() => {
+    const list = (eventsByDate.get(selected) || []).slice();
+    return list.sort((a, b) => (a.start_at || "").localeCompare(b.start_at || ""));
+  }, [eventsByDate, selected]);
 
   useEffect(() => {
     void loadEntriesFor(selected);
@@ -287,6 +316,9 @@ export default function CalendarScreen() {
                     )}
                     {hasSchedule(cell.date) && (
                       <View style={styles.scheduleDot} testID={`schedule-dot-${cell.date}`} />
+                    )}
+                    {eventsByDate.has(cell.date) && (
+                      <View style={styles.eventDot} testID={`event-dot-${cell.date}`} />
                     )}
                     {cellChallenges.length > 0 ? (
                       <View style={styles.cellChallengeBarRow} testID={`cal-challenge-${cell.date}`}>
@@ -455,6 +487,45 @@ export default function CalendarScreen() {
                 <Text style={styles.schedOpenText}>Open full schedule</Text>
                 <Ionicons name="chevron-forward" size={15} color={colors.gold} />
               </Pressable>
+            </View>
+
+            {/* Parish events the user is attending on the selected day */}
+            <View style={styles.scheduleSection} testID="cal-events-section">
+              <View style={styles.journalHead}>
+                <Text style={styles.journalTitle}>Events you&apos;re attending</Text>
+                <Pressable
+                  testID="cal-events-browse"
+                  onPress={() => router.push("/parish-events")}
+                  style={({ pressed }) => [styles.addBtn, pressed && styles.pressed]}
+                >
+                  <Ionicons name="search" size={14} color={colors.gold} />
+                  <Text style={styles.addBtnText}>Browse</Text>
+                </Pressable>
+              </View>
+              {eventsForSel.length === 0 ? (
+                <Text style={styles.scheduleEmpty}>
+                  No events marked for this day. Tap &ldquo;I&apos;m going&rdquo; on a parish event and it will appear here.
+                </Text>
+              ) : (
+                eventsForSel.map((ev) => {
+                  const t = new Date(ev.start_at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+                  return (
+                    <Pressable
+                      key={ev.occurrence_key || ev.id}
+                      testID={`cal-event-item-${ev.id}`}
+                      onPress={() => router.push("/parish-events")}
+                      style={({ pressed }) => [styles.schedRow, { borderLeftColor: colors.gold }, pressed && styles.pressed]}
+                    >
+                      <Ionicons name="people-outline" size={16} color={colors.gold} />
+                      <Text style={styles.schedTime}>{t}</Text>
+                      <Text style={styles.schedTitle} numberOfLines={1}>{ev.title}</Text>
+                      {ev.recurrence && ev.recurrence !== "once" ? (
+                        <Ionicons name="repeat" size={13} color={colors.textMuted} />
+                      ) : null}
+                    </Pressable>
+                  );
+                })
+              )}
             </View>
 
             {/* Journal entries for selected day */}
@@ -702,6 +773,15 @@ const styles = StyleSheet.create({
     height: 5,
     borderRadius: 3,
     backgroundColor: colors.primary,
+  },
+  eventDot: {
+    position: "absolute",
+    bottom: 4,
+    left: 14,
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: colors.gold,
   },
   scheduleSection: {
     marginTop: spacing.lg,

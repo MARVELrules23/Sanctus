@@ -64,6 +64,76 @@ EVENT_TYPE_LABELS = {
 
 AUTO_HIDE_FLAG_COUNT = 3
 
+# Recurrence ---------------------------------------------------------------
+RECURRENCES = {"once", "weekly", "biweekly", "monthly", "annually"}
+RECURRENCE_LABELS = {
+    "once": "One-time",
+    "weekly": "Weekly",
+    "biweekly": "Every 2 weeks",
+    "monthly": "Monthly",
+    "annually": "Annually",
+}
+# Cap how many future occurrences of a recurring series we ever expand in one
+# response, so a yearly/weekly event can't balloon the payload.
+MAX_OCCURRENCES = 26
+
+
+def _add_months(dt: datetime, months: int) -> datetime:
+    """Add whole months to a datetime, clamping the day to the month's length."""
+    month_index = dt.month - 1 + months
+    year = dt.year + month_index // 12
+    month = month_index % 12 + 1
+    # Clamp day (e.g. Jan 31 + 1 month -> Feb 28/29).
+    import calendar as _cal
+    day = min(dt.day, _cal.monthrange(year, month)[1])
+    return dt.replace(year=year, month=month, day=day)
+
+
+def _next_occurrence(dt: datetime, recurrence: str) -> datetime:
+    if recurrence == "weekly":
+        return dt + timedelta(days=7)
+    if recurrence == "biweekly":
+        return dt + timedelta(days=14)
+    if recurrence == "monthly":
+        return _add_months(dt, 1)
+    if recurrence == "annually":
+        return _add_months(dt, 12)
+    return dt  # "once" — no next
+
+
+def _expand_occurrences(
+    doc: Dict[str, Any], window_start: datetime, window_end: datetime
+) -> List[Dict[str, Any]]:
+    """Return one shaped-ish (start_at,end_at) pair per occurrence of `doc`
+    that falls within [window_start, window_end]. Non-recurring events yield
+    at most their single instance (handled by the caller's query)."""
+    recurrence = doc.get("recurrence") or "once"
+    base_start = doc.get("start_at")
+    if base_start and base_start.tzinfo is None:
+        base_start = base_start.replace(tzinfo=timezone.utc)
+    if recurrence == "once" or not base_start:
+        return [{"start_at": base_start, "end_at": doc.get("end_at")}]
+
+    duration = None
+    if doc.get("end_at"):
+        end0 = doc["end_at"]
+        if end0.tzinfo is None:
+            end0 = end0.replace(tzinfo=timezone.utc)
+        duration = end0 - base_start
+
+    out: List[Dict[str, Any]] = []
+    cur = base_start
+    guard = 0
+    while cur <= window_end and guard < 600:
+        guard += 1
+        if cur >= window_start:
+            out.append({"start_at": cur, "end_at": (cur + duration) if duration else None})
+            if len(out) >= MAX_OCCURRENCES:
+                break
+        cur = _next_occurrence(cur, recurrence)
+    return out
+
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -101,15 +171,23 @@ def _haversine_km(a_lat: float, a_lng: float, b_lat: float, b_lng: float) -> flo
     return 2 * R * math.asin(math.sqrt(s))
 
 
-def _shape(doc: Dict[str, Any], viewer_user_id: Optional[str] = None) -> Dict[str, Any]:
+def _shape(doc: Dict[str, Any], viewer_user_id: Optional[str] = None,
+           occ: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    start_at = occ["start_at"] if occ else doc.get("start_at")
+    end_at = occ["end_at"] if occ else doc.get("end_at")
+    recurrence = doc.get("recurrence") or "once"
     out = {
         "id": doc.get("id"),
         "type": doc.get("type"),
         "type_label": EVENT_TYPE_LABELS.get(doc.get("type", ""), "Event"),
         "title": doc.get("title"),
         "description": doc.get("description") or "",
-        "start_at": _iso(doc.get("start_at")),
-        "end_at": _iso(doc.get("end_at")),
+        "start_at": _iso(start_at),
+        "end_at": _iso(end_at),
+        "recurrence": recurrence,
+        "recurrence_label": RECURRENCE_LABELS.get(recurrence, "One-time"),
+        # Stable per-occurrence key for list rendering / calendar add.
+        "occurrence_key": f"{doc.get('id')}#{_iso(start_at) or ''}",
         "church_id": doc.get("church_id"),
         "church_name": doc.get("church_name"),
         "address": doc.get("address") or "",
@@ -119,6 +197,8 @@ def _shape(doc: Dict[str, Any], viewer_user_id: Optional[str] = None) -> Dict[st
         "organizer_name": doc.get("organizer_name"),
         "created_at": _iso(doc.get("created_at")),
         "flag_count": int(doc.get("flag_count", 0) or 0),
+        "going": bool(viewer_user_id and viewer_user_id in (doc.get("attendees") or [])),
+        "going_count": len(doc.get("attendees") or []),
         "is_owner": bool(viewer_user_id and viewer_user_id == doc.get("organizer_user_id")),
         "has_flagged": bool(
             viewer_user_id and viewer_user_id in (doc.get("flagged_by") or [])
@@ -142,6 +222,14 @@ class CreateEventRequest(BaseModel):
     address: Optional[str] = Field(None, max_length=240)
     lat: float
     lng: float
+    recurrence: str = "once"
+
+    @field_validator("recurrence")
+    @classmethod
+    def _rec_known(cls, v: str) -> str:
+        if v not in RECURRENCES:
+            raise ValueError(f"unknown recurrence '{v}'")
+        return v
 
     @field_validator("type")
     @classmethod
@@ -189,10 +277,18 @@ def build_router(db: AsyncIOMotorDatabase, get_user) -> APIRouter:
     ):
         now = _now()
         until = now + timedelta(days=days)
+        window_start = now - timedelta(hours=2)
 
         filt: Dict[str, Any] = {
             "removed": {"$ne": True},
-            "start_at": {"$gte": now - timedelta(hours=2), "$lte": until},
+            # Include one-time events within the window, plus any recurring
+            # series whose first instance starts on/before the window end
+            # (their occurrences are expanded below).
+            "$or": [
+                {"start_at": {"$gte": window_start, "$lte": until}},
+                {"recurrence": {"$in": ["weekly", "biweekly", "monthly", "annually"]},
+                 "start_at": {"$lte": until}},
+            ],
         }
 
         # If `church_id` provided, exact-match it. Otherwise prefer
@@ -219,12 +315,19 @@ def build_router(db: AsyncIOMotorDatabase, get_user) -> APIRouter:
 
         items = []
         for r in rows:
-            shaped = _shape(r, viewer_user_id=user.user_id)
-            if lat is not None and lng is not None and r.get("lat") and r.get("lng"):
-                shaped["distance_km"] = round(
-                    _haversine_km(lat, lng, float(r["lat"]), float(r["lng"])), 1
-                )
-            items.append(shaped)
+            occurrences = _expand_occurrences(r, window_start, until)
+            for occ in occurrences:
+                if not occ.get("start_at"):
+                    continue
+                shaped = _shape(r, viewer_user_id=user.user_id, occ=occ)
+                if lat is not None and lng is not None and r.get("lat") and r.get("lng"):
+                    shaped["distance_km"] = round(
+                        _haversine_km(lat, lng, float(r["lat"]), float(r["lng"])), 1
+                    )
+                items.append(shaped)
+        # Recurring occurrences interleave with one-time events, so sort.
+        items.sort(key=lambda e: e.get("start_at") or "")
+        items = items[:200]
         return {"items": items, "count": len(items)}
 
     # ------------------------- create --------------------------------------
@@ -265,6 +368,7 @@ def build_router(db: AsyncIOMotorDatabase, get_user) -> APIRouter:
             "address": (payload.address or "").strip() or None,
             "lat": float(payload.lat),
             "lng": float(payload.lng),
+            "recurrence": payload.recurrence,
             # GeoJSON for $geoWithin/$nearSphere on the 2dsphere index.
             "loc": {"type": "Point", "coordinates": [float(payload.lng), float(payload.lat)]},
             "organizer_user_id": user.user_id,
@@ -298,6 +402,39 @@ def build_router(db: AsyncIOMotorDatabase, get_user) -> APIRouter:
             {"id": event_id}, {"$set": {"removed": True, "removed_at": _now()}}
         )
         return {"ok": True}
+
+    # ------------------------- RSVP (I'm going) ----------------------------
+    @router.post("/{event_id}/rsvp")
+    async def rsvp(event_id: str, user=Depends(get_user)):
+        doc = await db.parish_events.find_one({"id": event_id, "removed": {"$ne": True}})
+        if not doc:
+            raise HTTPException(status_code=404, detail="event not found")
+        going = user.user_id in (doc.get("attendees") or [])
+        op = {"$pull": {"attendees": user.user_id}} if going else {"$addToSet": {"attendees": user.user_id}}
+        await db.parish_events.update_one({"id": event_id}, op)
+        fresh = await db.parish_events.find_one({"id": event_id})
+        attendees = fresh.get("attendees") or []
+        return {"going": user.user_id in attendees, "going_count": len(attendees)}
+
+    # --------------- events the user is attending (for calendar) -----------
+    @router.get("/mine/attending")
+    async def my_attending(days: int = Query(120, ge=1, le=400), user=Depends(get_user)):
+        now = _now()
+        until = now + timedelta(days=days)
+        window_start = now - timedelta(hours=2)
+        cursor = db.parish_events.find({
+            "removed": {"$ne": True},
+            "attendees": user.user_id,
+        }).limit(300)
+        rows = await cursor.to_list(length=300)
+        items = []
+        for r in rows:
+            for occ in _expand_occurrences(r, window_start, until):
+                if not occ.get("start_at"):
+                    continue
+                items.append(_shape(r, viewer_user_id=user.user_id, occ=occ))
+        items.sort(key=lambda e: e.get("start_at") or "")
+        return {"items": items[:300], "count": len(items)}
 
     # ------------------------- flag ----------------------------------------
     @router.post("/{event_id}/flag")

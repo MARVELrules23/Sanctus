@@ -43,7 +43,7 @@ import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import * as Calendar from "expo-calendar";
 import * as Location from "expo-location";
 
-import { api, ParishEvent, ParishEventType } from "@/src/api";
+import { api, ParishEvent, ParishEventType, rsvpEvent } from "@/src/api";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 
 const EVENT_TYPES: { value: ParishEventType; label: string; icon: string }[] = [
@@ -60,6 +60,14 @@ const EVENT_TYPES: { value: ParishEventType; label: string; icon: string }[] = [
 ];
 
 const TYPE_BY_VALUE = Object.fromEntries(EVENT_TYPES.map((t) => [t.value, t]));
+
+const RECURRENCE_OPTIONS: { value: ParishEvent["recurrence"]; label: string }[] = [
+  { value: "once", label: "Once" },
+  { value: "weekly", label: "Weekly" },
+  { value: "biweekly", label: "Bi-weekly" },
+  { value: "monthly", label: "Monthly" },
+  { value: "annually", label: "Annually" },
+];
 
 export default function ParishEventsScreen() {
   const router = useRouter();
@@ -189,6 +197,17 @@ export default function ParishEventsScreen() {
         },
       },
     ]);
+  };
+
+  const goingToggle = async (ev: ParishEvent) => {
+    try {
+      const r = await rsvpEvent(ev.id);
+      setEvents((prev) =>
+        prev.map((e) => (e.id === ev.id ? { ...e, going: r.going, going_count: r.going_count } : e))
+      );
+    } catch (e) {
+      Alert.alert("Could not update", (e as Error).message);
+    }
   };
 
   const addToCalendar = async (ev: ParishEvent) => {
@@ -352,11 +371,12 @@ export default function ParishEventsScreen() {
         ) : (
           events.map((ev) => (
             <EventCard
-              key={ev.id}
+              key={ev.occurrence_key || ev.id}
               ev={ev}
               onAddToCalendar={() => addToCalendar(ev)}
               onFlag={() => flag(ev)}
               onDelete={() => remove(ev)}
+              onGoing={() => goingToggle(ev)}
             />
           ))
         )}
@@ -426,11 +446,13 @@ function EventCard({
   onAddToCalendar,
   onFlag,
   onDelete,
+  onGoing,
 }: {
   ev: ParishEvent;
   onAddToCalendar: () => void;
   onFlag: () => void;
   onDelete: () => void;
+  onGoing: () => void;
 }) {
   const t = TYPE_BY_VALUE[ev.type] || EVENT_TYPES[EVENT_TYPES.length - 1];
   const start = new Date(ev.start_at);
@@ -455,6 +477,12 @@ function EventCard({
         </Text>
       </View>
       <Text style={styles.title}>{ev.title}</Text>
+      {ev.recurrence && ev.recurrence !== "once" ? (
+        <View style={styles.recurBadge}>
+          <Ionicons name="repeat" size={12} color={colors.gold} />
+          <Text style={styles.recurBadgeText}>{ev.recurrence_label || "Repeats"}</Text>
+        </View>
+      ) : null}
       {ev.church_name ? <Text style={styles.churchLine}>{ev.church_name}</Text> : null}
       {ev.address ? <Text style={styles.addressLine}>{ev.address}</Text> : null}
       {ev.description ? (
@@ -472,12 +500,29 @@ function EventCard({
       </View>
       <View style={styles.actionsRow}>
         <Pressable
+          testID={`event-going-${ev.id}`}
+          onPress={onGoing}
+          style={({ pressed }) => [
+            styles.primaryBtn,
+            ev.going && styles.goingBtnActive,
+            pressed && styles.pressed,
+          ]}
+        >
+          <Ionicons
+            name={ev.going ? "checkmark-circle" : "checkmark-circle-outline"}
+            size={16}
+            color={ev.going ? colors.surface : colors.gold}
+          />
+          <Text style={[styles.primaryBtnText, ev.going && styles.goingBtnTextActive]}>
+            {ev.going ? `Going${ev.going_count ? ` · ${ev.going_count}` : ""}` : "I'm going"}
+          </Text>
+        </Pressable>
+        <Pressable
           testID={`event-calendar-${ev.id}`}
           onPress={onAddToCalendar}
-          style={({ pressed }) => [styles.primaryBtn, pressed && styles.pressed]}
+          style={({ pressed }) => [styles.secondaryBtn, pressed && styles.pressed]}
         >
-          <Ionicons name="calendar-outline" size={16} color={colors.gold} />
-          <Text style={styles.primaryBtnText}>Add to Calendar</Text>
+          <Ionicons name="calendar-outline" size={16} color={colors.primary} />
         </Pressable>
         {ev.is_owner ? (
           <Pressable
@@ -532,6 +577,8 @@ function CreateEventModal({
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [endTime, setEndTime] = useState("");
+  const [recurrence, setRecurrence] = useState<ParishEvent["recurrence"]>("once");
+  const [activeQuick, setActiveQuick] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -551,12 +598,15 @@ function CreateEventModal({
       );
       setTime("19:00");
       setEndTime("");
+      setRecurrence("once");
+      setActiveQuick(null);
       setSubmitting(false);
       setErr(null);
     }
   }, [visible]);
 
   const quickSet = (label: string) => {
+    setActiveQuick(label);
     const now = new Date();
     if (label === "tonight") {
       now.setHours(19, 0, 0, 0);
@@ -622,6 +672,7 @@ function CreateEventModal({
           address: address.trim() || undefined,
           lat: origin.lat,
           lng: origin.lng,
+          recurrence,
         },
       });
       onCreated();
@@ -699,22 +750,25 @@ function CreateEventModal({
           <Text style={modalStyles.label}>When *</Text>
           <View style={modalStyles.quickRow}>
             <Pressable
+              testID="event-quick-tonight"
               onPress={() => quickSet("tonight")}
-              style={({ pressed }) => [styles.chip, pressed && styles.pressed]}
+              style={({ pressed }) => [styles.chip, activeQuick === "tonight" && styles.chipActive, pressed && styles.pressed]}
             >
-              <Text style={styles.chipText}>Tonight 7pm</Text>
+              <Text style={[styles.chipText, activeQuick === "tonight" && styles.chipTextActive]}>Tonight 7pm</Text>
             </Pressable>
             <Pressable
+              testID="event-quick-tomorrow"
               onPress={() => quickSet("tomorrow")}
-              style={({ pressed }) => [styles.chip, pressed && styles.pressed]}
+              style={({ pressed }) => [styles.chip, activeQuick === "tomorrow" && styles.chipActive, pressed && styles.pressed]}
             >
-              <Text style={styles.chipText}>Tomorrow 9am</Text>
+              <Text style={[styles.chipText, activeQuick === "tomorrow" && styles.chipTextActive]}>Tomorrow 9am</Text>
             </Pressable>
             <Pressable
+              testID="event-quick-sunday"
               onPress={() => quickSet("sunday")}
-              style={({ pressed }) => [styles.chip, pressed && styles.pressed]}
+              style={({ pressed }) => [styles.chip, activeQuick === "sunday" && styles.chipActive, pressed && styles.pressed]}
             >
-              <Text style={styles.chipText}>Next Sunday 10am</Text>
+              <Text style={[styles.chipText, activeQuick === "sunday" && styles.chipTextActive]}>Next Sunday 10am</Text>
             </Pressable>
           </View>
           <View style={modalStyles.dateRow}>
@@ -756,6 +810,25 @@ function CreateEventModal({
               />
             </View>
           </View>
+
+          <Text style={modalStyles.label}>Repeats</Text>
+          <View style={modalStyles.quickRow}>
+            {RECURRENCE_OPTIONS.map((r) => (
+              <Pressable
+                key={r.value}
+                testID={`event-recurrence-${r.value}`}
+                onPress={() => setRecurrence(r.value)}
+                style={({ pressed }) => [styles.chip, recurrence === r.value && styles.chipActive, pressed && styles.pressed]}
+              >
+                <Text style={[styles.chipText, recurrence === r.value && styles.chipTextActive]}>{r.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+          {recurrence !== "once" ? (
+            <Text style={modalStyles.recurHint}>
+              Repeats {RECURRENCE_OPTIONS.find((r) => r.value === recurrence)?.label.toLowerCase()} from the start date you chose.
+            </Text>
+          ) : null}
 
           <Text style={modalStyles.label}>Address (optional)</Text>
           <TextInput
@@ -1022,6 +1095,10 @@ const styles = StyleSheet.create({
     color: colors.gold,
     letterSpacing: 0.4,
   },
+  recurBadge: { flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "flex-start", paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.round, backgroundColor: colors.primary, marginBottom: spacing.sm },
+  recurBadgeText: { fontFamily: fonts.uiSemi, fontSize: 10, color: colors.gold, letterSpacing: 0.3 },
+  goingBtnActive: { backgroundColor: "#1E5631", borderColor: "#1E5631" },
+  goingBtnTextActive: { color: colors.surface },
   pressed: { opacity: 0.7 },
 });
 
@@ -1067,6 +1144,13 @@ const modalStyles = StyleSheet.create({
     gap: spacing.sm,
     marginBottom: spacing.sm,
     flexWrap: "wrap",
+  },
+  recurHint: {
+    fontFamily: fonts.bodyItalic,
+    fontStyle: "italic",
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
   },
   dateRow: {
     flexDirection: "row",

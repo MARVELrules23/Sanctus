@@ -320,6 +320,8 @@ export type ParishEventType =
   | "rosary"
   | "other";
 
+export type EventRecurrence = "once" | "weekly" | "biweekly" | "monthly" | "annually";
+
 export type ParishEvent = {
   id: string;
   type: ParishEventType;
@@ -328,6 +330,9 @@ export type ParishEvent = {
   description: string;
   start_at: string; // ISO
   end_at: string | null;
+  recurrence?: EventRecurrence;
+  recurrence_label?: string;
+  occurrence_key?: string;
   church_id: string | null;
   church_name: string | null;
   address: string;
@@ -337,10 +342,20 @@ export type ParishEvent = {
   organizer_name: string;
   created_at: string;
   flag_count: number;
+  going?: boolean;
+  going_count?: number;
   is_owner: boolean;
   has_flagged: boolean;
   distance_km?: number;
 };
+
+export async function rsvpEvent(id: string): Promise<{ going: boolean; going_count: number }> {
+  return await api(`/parish-events/${id}/rsvp`, { method: "POST", body: {} });
+}
+
+export async function listAttendingEvents(days = 120): Promise<{ items: ParishEvent[] }> {
+  return await api(`/parish-events/mine/attending?days=${days}`);
+}
 
 // ---- Community types ----
 export type CommunityTopic = { slug: string | null; label: string; icon: string };

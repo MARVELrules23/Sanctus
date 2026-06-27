@@ -1,0 +1,29 @@
+{
+  "summary": "Parish Events recurrence + RSVP + Calendar integration fully verified. Backend: 11/11 pytest tests pass (recurrence accepted {once,weekly,biweekly,monthly,annually}, invalid recurrence -> 422, weekly expands to >=4 occurrences in 30 days each with unique occurrence_key, RSVP toggles with {going, going_count}, /mine/attending expands per occurrence with going=true, _shape includes going + going_count, list scoped by viewer). Frontend (mobile viewport 390x844, philipwils13@gmail.com via pre-minted token): parish-events screen loads, event card shows Weekly recur badge, 'I'm going' toggles to 'Going · 1' and back (3 taps verified), create modal renders quick chips (event-quick-tonight/tomorrow/sunday) and recurrence chips (event-recurrence-{once,weekly,biweekly,monthly,annually}) — all tappable and adopt active styling (gold border rgb(212,175,55), navy bg rgb(28,40,65)). Calendar tab shows gold event-dot-<YYYY-MM-DD> on the RSVPed day, cal-events-section is rendered, cal-event-item-<id> appears for the selected day, and cal-events-browse navigates back to /parish-events. Test seed events were cleaned up.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_parish_events_recurrence_rsvp.py",
+    "/app/test_reports/pytest/iteration_72_parish_events.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "parish_events.py: /rsvp endpoint does not validate that start_at is in the future — past events could still accumulate RSVPs. Not a blocker but worth noting.",
+    "parish_events.py: _expand_occurrences has a 600-iteration guard which is fine for weekly/biweekly but for an annually-recurring event created decades ago the loop will still walk every year. Reasonable for current limits.",
+    "parish-events.tsx: file is ~1170 lines and could be split into EventCard/CreateEventModal sub-modules for maintainability."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_parish_events_recurrence_rsvp.py (new)"
+  ],
+  "success_rate": { "backend": "100%", "frontend": "100%" },
+  "seed_data_creation": "Created two ephemeral weekly parish_events via /api/parish-events using the test account (philipwils13). Both were deleted after the run (verified via /me/list).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Test token 'test_feat_aug25' for philipwils13@gmail.com works — but you MUST set localStorage and then reload the page before the AuthContext picks it up (the first navigation after injection still 401s). Use the test file backend/tests/test_parish_events_recurrence_rsvp.py for regression of recurrence/RSVP/attending.",
+  "rca_of_issue": "N/A — no defects found in this iteration."
+}

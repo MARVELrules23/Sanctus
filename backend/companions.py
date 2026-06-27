@@ -409,6 +409,139 @@ COMPANIONS: Dict[str, Dict[str, Any]] = {
             "End the day repeating, 'Lord, I trust You with the ones I love.'",
         ],
     },
+    "guardian-angel": {
+        "name": "Your Guardian Angel",
+        "feast": "October 2",
+        "novena_slug": "guardian-angel",
+        "linked": "padre-pio",
+        "do_not_name": True,
+        "note": ("Unlike every other companion on this list, this one has known you since before you were "
+                 "born — and will be with you until the moment you stand before God. The Catechism (336) "
+                 "teaches that 'from its beginning until death, human life is surrounded by their watchful "
+                 "care and intercession.'\n\nA gentle reminder: we do not name our guardian angel. The "
+                 "Church asks us not to give angels names of our own choosing — it is not our place to do so. "
+                 "Simply call on 'my Guardian Angel.'"),
+        "image_prompt": "a radiant guardian angel with large gentle feathered wings standing protectively, soft golden light, hands resting in blessing, " + _IMG_STYLE,
+        "importance": "Your guardian angel was given to you by God to guard, guide, and light your way home to Heaven. Devotion to your angel — like St. Padre Pio's — keeps you aware that you are never alone, and that an unseen friend constantly carries your prayers before the throne of God.",
+        "virtues": [
+            {"name": "Awareness of God's presence", "how": "Remember through the day that you are never alone — your angel is at your side."},
+            {"name": "Docility", "how": "Listen for the gentle promptings of grace and follow them."},
+            {"name": "Trust", "how": "Entrust your travels, decisions, and dangers to your angel's care."},
+            {"name": "Gratitude", "how": "Thank God for the unseen friend who has guarded you since birth."},
+        ],
+        "daily_acts": [
+            "Pray the 'Angel of God' prayer the moment you wake.",
+            "Ask your guardian angel to guide one decision today.",
+            "Before travelling, entrust your journey to your angel.",
+            "Pause and remember: 'I am never alone — my angel is here.'",
+            "Send your guardian angel to someone who needs help today (as Padre Pio did).",
+            "Thank your angel tonight for guarding you through the day.",
+            "Ask your angel to wake your soul to one temptation before it comes.",
+            "Pray for the conversion of someone, asking your angel to assist them.",
+            "Follow a gentle good prompting you would normally ignore.",
+            "Greet the guardian angels of the people you meet today.",
+            "Ask your angel to keep watch over your sleep tonight.",
+            "Offer a quiet 'thank you' each time you are kept from harm.",
+            "Call on your angel before a hard conversation.",
+            "Entrust a worry to your angel and let it go.",
+            "Be a 'guardian' to someone weaker today, imitating your angel.",
+            "End the day asking your angel to present your deeds to God.",
+        ],
+    },
+    "padre-pio": {
+        "name": "St. Padre Pio",
+        "feast": "September 23",
+        "novena_slug": "st-padre-pio",
+        "linked": "guardian-angel",
+        "image_prompt": "Saint Padre Pio, elderly Capuchin friar in brown habit with a white beard, fingerless gloves over his stigmata, kind serious face, " + _IMG_STYLE,
+        "importance": "Padre Pio bore the wounds of Christ for fifty years, spent endless hours hearing confessions, and was so close to his guardian angel that he sent it on errands of prayer. His motto — 'Pray, hope, and don't worry' — anchors a life of total trust in God.",
+        "virtues": [
+            {"name": "Trust ('don't worry')", "how": "Hand your anxieties to God and refuse to be ruled by worry."},
+            {"name": "Love of Confession", "how": "Go to Confession often and examine your conscience daily."},
+            {"name": "Perseverance in prayer", "how": "Pray the Rosary faithfully — his 'weapon.'"},
+            {"name": "Patient suffering", "how": "Offer your pains and trials in union with the Cross."},
+        ],
+        "daily_acts": [
+            "Repeat his motto today: 'Pray, hope, and don't worry.'",
+            "Pray the Rosary — Padre Pio called it his 'weapon.'",
+            "Ask your guardian angel to carry a prayer to someone, as Padre Pio did.",
+            "Examine your conscience tonight and resolve to go to Confession soon.",
+            "Offer a pain or annoyance in union with the wounds of Christ.",
+            "Spend a few minutes in thanksgiving after Communion, as he urged.",
+            "Refuse one worry today and entrust it entirely to God.",
+            "Pray for someone who has hurt you.",
+            "Do a hidden penance and tell no one.",
+            "Make a spiritual communion if you cannot receive today.",
+            "Pray, 'Stay with me, Lord,' as in his famous prayer.",
+            "Be patient with an interruption, offering it to God.",
+            "Encourage someone to return to the sacraments.",
+            "Ask the Holy Spirit for sorrow for your sins.",
+            "Send your guardian angel ahead to a difficult meeting.",
+            "End the day in trust: 'Jesus, I place everything in Your hands.'",
+        ],
+    },
+    "st-lucy": {
+        "name": "St. Lucy",
+        "feast": "December 13",
+        "novena_slug": "st-lucy",
+        "image_prompt": "Saint Lucy, young woman in a white and red robe holding a small dish with a palm branch, crown of light, " + _IMG_STYLE,
+        "importance": "Lucy ('light') is the virgin-martyr who kept her faith and her purity even unto death, and whose name means light. Patroness of eyes and of those in darkness, she helps us see by the light of faith and to give Christ first place in our hearts.",
+        "virtues": [
+            {"name": "Light of faith", "how": "Let the light of Christ guide your choices today."},
+            {"name": "Purity", "how": "Guard your heart, eyes, and mind for love of God."},
+            {"name": "Courage", "how": "Hold to the truth even when it is costly."},
+            {"name": "Generosity to the poor", "how": "Give from what you have, as Lucy gave her dowry."},
+        ],
+        "daily_acts": [
+            "Ask St. Lucy for the light to see what God asks of you today.",
+            "Guard your eyes from one thing that dims your soul.",
+            "Pray for those suffering with eye or sight troubles.",
+            "Give something of yours to the poor, as Lucy gave her dowry.",
+            "Bring the 'light' of a kind word into someone's dark day.",
+            "Hold to the truth in one situation, even if it costs you.",
+            "Light a candle and pray for someone walking in darkness.",
+            "Offer a small sacrifice for the gift of faith.",
+            "Choose purity in your words and screens today.",
+            "Thank God for the gift of sight and of the light of faith.",
+            "Pray for the persecuted who keep the faith in darkness.",
+            "Do one good deed quietly, letting your light shine unseen.",
+            "Ask for courage to witness to Christ today.",
+            "Spend a moment before the Light of the world in the Eucharist.",
+            "Encourage someone who feels they are in the dark.",
+            "End the day asking Christ, the true Light, to guard your night.",
+        ],
+    },
+    "st-faustina": {
+        "name": "St. Faustina",
+        "feast": "October 5",
+        "novena_slug": "st-faustina",
+        "image_prompt": "Saint Faustina Kowalska, young Polish nun in a black and white habit, gentle face, rays of red and white light nearby, " + _IMG_STYLE,
+        "importance": "Faustina was the humble sister chosen by Jesus to be the 'secretary' of His Mercy. Through her the Lord gave the world the Divine Mercy image, chaplet, and feast. She teaches childlike trust: 'Jesus, I trust in You,' and to be merciful in deed, word, and prayer.",
+        "virtues": [
+            {"name": "Trust in Divine Mercy", "how": "Say with all your heart, 'Jesus, I trust in You.'"},
+            {"name": "Mercy in action", "how": "Show mercy by a deed, a word, and a prayer each day."},
+            {"name": "Humility", "how": "Embrace the hidden, ordinary path as she did."},
+            {"name": "Confidence in prayer", "how": "Approach God as a trusting child, sure of His love."},
+        ],
+        "daily_acts": [
+            "Pray, 'Jesus, I trust in You,' especially when you are afraid.",
+            "Show mercy today by a deed, a word, AND a prayer.",
+            "Pray the Chaplet of Divine Mercy, especially at 3 o'clock.",
+            "Forgive someone, as the Father is merciful.",
+            "Do a hidden act of kindness for a difficult person.",
+            "Read a short passage of her 'Diary' (Divine Mercy in My Soul).",
+            "Pray for a sinner who needs God's mercy today.",
+            "Offer your weakness to Jesus with childlike trust.",
+            "Speak a merciful word instead of a critical one.",
+            "Pause at 3:00 PM to honour the Hour of Mercy.",
+            "Give an act of mercy to the poor or suffering.",
+            "Trust God with a fear you usually carry alone.",
+            "Pray for the dying, that they meet the Mercy of God.",
+            "Thank Jesus for His Mercy toward you, by name.",
+            "Be patient and gentle, mirroring the Mercy you've received.",
+            "End the day entrusting everyone you met to Divine Mercy.",
+        ],
+    },
 }
 
 
@@ -478,7 +611,62 @@ CHURCH_TRADITIONS: Dict[str, List[Dict[str, str]]] = {
         {"title": "Feast before St. Augustine", "body": "Her feast (Aug 27) precedes her son's (Aug 28) — honour them together."},
         {"title": "Patroness of mothers & wives", "body": "Mothers, wives, and those bearing family burdens entrust themselves to her."},
     ],
+    "guardian-angel": [
+        {"title": "The 'Angel of God' prayer", "body": "Pray it morning and night: 'Angel of God, my guardian dear…' — a treasured Catholic devotion."},
+        {"title": "Feast of the Guardian Angels", "body": "Honour your angel especially on October 2."},
+        {"title": "Send your angel on errands", "body": "Like St. Padre Pio, ask your angel to carry prayers and help others."},
+    ],
+    "padre-pio": [
+        {"title": "Pray the Rosary daily", "body": "His 'weapon' against evil — keep it always in hand."},
+        {"title": "Frequent Confession", "body": "Imitate the saint who spent his life in the confessional; examine your conscience daily."},
+        {"title": "Devotion to the guardian angel", "body": "Honour your angel as Padre Pio did, sending it to those in need."},
+        {"title": "'Stay with me, Lord' prayer", "body": "Pray his beloved prayer after Communion."},
+    ],
+    "st-lucy": [
+        {"title": "Festival of light", "body": "On her feast (Dec 13) candles and crowns of light honour Lucy, whose name means 'light.'"},
+        {"title": "Patroness of the eyes", "body": "Invoke her for eye troubles and for the light of faith."},
+        {"title": "Almsgiving", "body": "Give to the poor in her memory, as she gave away her dowry."},
+    ],
+    "st-faustina": [
+        {"title": "Chaplet of Divine Mercy", "body": "Pray it daily, especially at the 3 o'clock Hour of Mercy."},
+        {"title": "Divine Mercy image", "body": "Venerate the image inscribed 'Jesus, I trust in You.'"},
+        {"title": "Divine Mercy Sunday", "body": "Keep the feast on the Sunday after Easter, with its great graces."},
+    ],
 }
+
+# Day-focused prayer shown at the top of each companion's daily space.
+DAILY_PRAYERS: Dict[str, str] = {
+    "catherine-siena": "St. Catherine of Siena, set my heart on fire this day with love for Christ and His Church; let me dwell in the cell of self-knowledge and love. Pray for me today.",
+    "pier-giorgio": "Bl. Pier Giorgio, lift my heart 'verso l'alto' today; give me your joy, and let me serve Christ in the poor I meet this day. Pray for me.",
+    "john-paul-ii": "St. John Paul II, this day I say 'Totus Tuus' — I am totally yours, Mary. Help me be not afraid and to make a gift of myself today. Pray for me.",
+    "agnes": "St. Agnes, guard my heart this day in purity and courage, that I may belong wholly to Christ. Pray for me today.",
+    "therese-lisieux": "St. Thérèse, teach me your Little Way today: to do small things with great love and to trust like a child. Send me a rose. Pray for me.",
+    "benedict": "St. Benedict, order my day in prayer and work; let me listen for God with the ear of my heart and stay faithful in all things. Pray for me today.",
+    "francis-assisi": "St. Francis, make me an instrument of God's peace this day; give me your joyful simplicity and love for all God's creation. Pray for me.",
+    "teresa-avila": "St. Teresa, let nothing disturb me today, for God alone suffices. Draw me into prayer and friendship with Christ this day. Pray for me.",
+    "st-joseph": "St. Joseph, guardian of the Redeemer, watch over my work and my household this day; lead me, in silence and trust, closer to Jesus. Pray for me.",
+    "louis-zelie": "Sts. Louis and Zélie, bless my family this day; help me to love faithfully and to make our home a school of holiness. Pray for us.",
+    "gianna-molla": "St. Gianna, help me to love sacrificially today and to do my daily duties with a glad heart, reverencing every life. Pray for me.",
+    "monica": "St. Monica, give me perseverance this day to pray without losing heart for those I love, trusting God's timing. Pray for me.",
+    "guardian-angel": "Angel of God, my guardian dear, to whom God's love commits me here: ever this day be at my side, to light and guard, to rule and guide. Amen.",
+    "padre-pio": "St. Padre Pio, help me this day to 'pray, hope, and don't worry.' Carry my prayers to God and obtain for me trust in His Providence. Pray for me.",
+    "st-lucy": "St. Lucy, obtain for me the light of faith this day, that I may see clearly what God asks and walk in His light. Pray for me.",
+    "st-faustina": "St. Faustina, help me to say with my whole heart this day, 'Jesus, I trust in You,' and to be merciful in deed, word, and prayer. Pray for me.",
+}
+
+# Display order for the daily-companions hub.
+COMPANION_ORDER: List[str] = [
+    "guardian-angel", "padre-pio", "st-faustina", "st-lucy",
+    "therese-lisieux", "francis-assisi", "st-joseph", "teresa-avila",
+    "catherine-siena", "benedict", "john-paul-ii", "pier-giorgio",
+    "agnes", "gianna-molla", "louis-zelie", "monica",
+]
+
+
+def _tagline(c: Dict[str, Any]) -> str:
+    imp = c.get("importance", "")
+    first = imp.split(".")[0].strip()
+    return (first[:110] + "…") if len(first) > 110 else first
 
 # --------------------------------------------------------------------------- #
 # Vocation-tailored traditions to add to daily life (by vocation + state).     #
@@ -592,11 +780,16 @@ async def _get_or_make_image(db, slug: str, prompt: str, emergent_llm_key: str) 
 def _public(slug: str, c: Dict[str, Any], vocation: str = "", state: str = "") -> Dict[str, Any]:
     voc_key = f"{vocation}|{state}"
     voc_trad = VOCATION_TRADITIONS.get(voc_key)
+    linked_slug = c.get("linked")
+    linked = None
+    if linked_slug and linked_slug in COMPANIONS:
+        linked = {"slug": linked_slug, "name": COMPANIONS[linked_slug]["name"]}
     return {
         "slug": slug,
         "name": c["name"],
         "feast": c.get("feast"),
         "importance": c["importance"],
+        "daily_prayer": DAILY_PRAYERS.get(slug),
         "virtues": c["virtues"],
         "novena_slug": c.get("novena_slug"),
         "daily_act": _today_act(c["daily_acts"]),
@@ -604,11 +797,56 @@ def _public(slug: str, c: Dict[str, Any], vocation: str = "", state: str = "") -
         "vocation_traditions": voc_trad,
         "has_consecration": True,  # the St. Joseph consecration is open to all companions
         "is_joseph": slug == "st-joseph",
+        "note": c.get("note"),
+        "do_not_name": bool(c.get("do_not_name", False)),
+        "linked": linked,
     }
 
 
 def build_router(db: AsyncIOMotorDatabase, get_current_user, emergent_llm_key: str = "") -> APIRouter:
     router = APIRouter(prefix="/companions", tags=["companions"])
+
+    @router.get("")
+    async def list_companions(user=Depends(get_current_user)):
+        prefs = await db.preferences.find_one({"user_id": user.user_id}, {"_id": 0}) or {}
+        selected = prefs.get("daily_companions") or []
+        vocation_companion = (prefs.get("companion_saint") or "").strip()
+        items = []
+        for slug in COMPANION_ORDER:
+            c = COMPANIONS[slug]
+            items.append({
+                "slug": slug, "name": c["name"], "feast": c.get("feast"),
+                "tagline": _tagline(c),
+                "selected": slug in selected,
+                "is_vocation_companion": slug == vocation_companion,
+                "linked": c.get("linked"),
+            })
+        return {"companions": items, "selected": selected, "max": 3,
+                "vocation_companion": vocation_companion}
+
+    @router.post("/select")
+    async def select_companion(payload: Dict[str, Any], user=Depends(get_current_user)):
+        slug = (payload.get("slug") or "").strip()
+        action = (payload.get("action") or "toggle").strip()
+        if slug not in COMPANIONS:
+            raise HTTPException(status_code=404, detail="Companion not found")
+        prefs = await db.preferences.find_one({"user_id": user.user_id}, {"_id": 0}) or {}
+        selected: List[str] = list(prefs.get("daily_companions") or [])
+        if action == "remove" or (action == "toggle" and slug in selected):
+            selected = [s for s in selected if s != slug]
+        else:
+            if slug in selected:
+                pass
+            elif len(selected) >= 3:
+                raise HTTPException(status_code=400, detail="You can choose up to 3 daily companions")
+            else:
+                selected.append(slug)
+        await db.preferences.update_one(
+            {"user_id": user.user_id},
+            {"$set": {"user_id": user.user_id, "daily_companions": selected}},
+            upsert=True,
+        )
+        return {"selected": selected, "max": 3}
 
     @router.get("/{slug}")
     async def get_companion(slug: str, user=Depends(get_current_user)):

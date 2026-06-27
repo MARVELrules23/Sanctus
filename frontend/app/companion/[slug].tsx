@@ -107,6 +107,43 @@ export default function CompanionScreen() {
         <View style={styles.center}><ActivityIndicator color={colors.gold} /></View>
       ) : (
         <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} showsVerticalScrollIndicator={false}>
+          {/* Day-focused prayer at the very top */}
+          {data.daily_prayer ? (
+            <View style={styles.prayerCard} testID="companion-daily-prayer">
+              <View style={styles.cardHead}>
+                <Ionicons name="sunny-outline" size={16} color={colors.gold} />
+                <Text style={styles.cardHeadText}>Prayer for today</Text>
+              </View>
+              <Text style={styles.prayerText}>{data.daily_prayer}</Text>
+            </View>
+          ) : null}
+
+          {/* Special note (e.g. the Guardian Angel) */}
+          {data.note ? (
+            <View style={styles.noteCard} testID="companion-note">
+              <Text style={styles.noteText}>{data.note}</Text>
+              {data.do_not_name ? (
+                <View style={styles.warnRow}>
+                  <Ionicons name="alert-circle" size={15} color="#9A3324" />
+                  <Text style={styles.warnText}>Please do not give your guardian angel a name — it is not our place to do so.</Text>
+                </View>
+              ) : null}
+            </View>
+          ) : null}
+
+          {/* Loosely connected companion (Padre Pio ↔ Guardian Angel) */}
+          {data.linked ? (
+            <Pressable
+              testID="companion-linked"
+              onPress={() => router.push(`/companion/${data.linked!.slug}` as any)}
+              style={({ pressed }) => [styles.linkedBtn, pressed && { opacity: 0.85 }]}
+            >
+              <Ionicons name="link-outline" size={15} color={colors.primary} />
+              <Text style={styles.linkedText}>Closely connected with {data.linked.name}</Text>
+              <Ionicons name="chevron-forward" size={15} color={colors.textMuted} />
+            </Pressable>
+          ) : null}
+
           {/* Why this saint matters */}
           <View style={styles.cardHead}>
             <Ionicons name="sparkles-outline" size={16} color={colors.gold} />
@@ -250,6 +287,14 @@ const styles = StyleSheet.create({
   cardHead: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: spacing.lg, marginBottom: spacing.sm },
   cardHeadText: { fontFamily: fonts.uiSemi, fontSize: 12, letterSpacing: 0.6, textTransform: "uppercase", color: colors.gold },
   importance: { fontFamily: fonts.bodyRegular, fontSize: 15, color: colors.textSecondary, lineHeight: 23 },
+  prayerCard: { backgroundColor: "#FAF3E2", borderWidth: 1, borderColor: "#EBDDB4", borderRadius: radius.lg, padding: spacing.md, marginTop: spacing.md },
+  prayerText: { fontFamily: fonts.bodyRegular, fontSize: 15, color: colors.primary, lineHeight: 23, fontStyle: "italic" },
+  noteCard: { backgroundColor: "#F3EEFB", borderWidth: 1, borderColor: "#DED2F0", borderRadius: radius.lg, padding: spacing.md, marginTop: spacing.md },
+  noteText: { fontFamily: fonts.bodyRegular, fontSize: 14.5, color: colors.textSecondary, lineHeight: 22 },
+  warnRow: { flexDirection: "row", gap: 6, alignItems: "flex-start", marginTop: spacing.sm, backgroundColor: "#FBE9E6", borderRadius: radius.sm, padding: 10 },
+  warnText: { flex: 1, fontFamily: fonts.uiSemi, fontSize: 13, color: "#9A3324", lineHeight: 18 },
+  linkedBtn: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderSoft, borderRadius: radius.md, padding: spacing.md, marginTop: spacing.md },
+  linkedText: { flex: 1, fontFamily: fonts.uiSemi, fontSize: 14, color: colors.primary },
   actCard: { backgroundColor: "#FBF4DF", borderWidth: 1, borderColor: "#EBDDB4", borderRadius: radius.lg, padding: spacing.md, marginTop: spacing.lg },
   actText: { fontFamily: fonts.headingSemi, fontSize: 16, color: colors.primary, lineHeight: 23 },
   actMeta: { fontFamily: fonts.bodyItalic, fontSize: 12, color: colors.textMuted, marginTop: 6 },

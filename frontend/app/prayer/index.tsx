@@ -62,6 +62,16 @@ export default function PrayerHubScreen() {
       icon: "shield-half-outline",
       onPress: () => router.push("/consecration" as any),
     });
+    // Daily Companions — choose up to 3 saints to walk with
+    arr.push({
+      testID: "prayer-card-companions",
+      title: "Daily Companions",
+      subtitle: "Choose up to 3 saints to walk with each day",
+      meta: "SAINTS",
+      color: "#7A86C4",
+      icon: "people-outline",
+      onPress: () => router.push("/companions" as any),
+    });
     // Chaplets
     for (const key of CHAPLET_ORDER) {
       const c = CHAPLETS[key];

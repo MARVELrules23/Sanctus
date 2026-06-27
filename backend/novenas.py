@@ -243,6 +243,22 @@ NOVENAS: List[Dict[str, Any]] = [
         "intro": "Mother of St. Augustine, who wept and prayed for years for her son's conversion and never gave up. Ask her perseverance and trust.",
         "main_prayer": "St. Monica, model of mothers, by your tears and unceasing prayer you obtained the conversion of your son Augustine. Obtain for me perseverance in prayer, patience in waiting on God's timing, and unwavering hope for the loved ones I carry in my heart… (mention your intention). St. Monica, pray that I may never lose heart. Amen.",
     },
+    {
+        "slug": "st-padre-pio", "name": "St. Padre Pio Novena",
+        "patron": "St. Pio of Pietrelcina", "feast": "September 23",
+        "theme": "'Pray, hope, and don't worry'",
+        "color": "#6B4A2E", "icon": "flame-outline",
+        "intro": "The Capuchin friar who bore the wounds of Christ, spent hours in the confessional, and was devoted to his guardian angel. Ask his trust and abandonment to God.",
+        "main_prayer": "Dear St. Pio, you taught us to 'pray, hope, and don't worry.' By the wounds of Christ you bore in your body and your long hours of prayer, obtain for me a deeper trust in God's Providence, sorrow for my sins, and the grace I now ask… (mention your intention). St. Padre Pio, send your guardian angel to carry my prayer, as you so often did, and pray for me. Amen.",
+    },
+    {
+        "slug": "st-faustina", "name": "St. Faustina (Divine Mercy) Novena",
+        "patron": "St. Faustina Kowalska", "feast": "October 5",
+        "theme": "Apostle of Divine Mercy — 'Jesus, I trust in You'",
+        "color": "#3F7AC4", "icon": "water-outline",
+        "intro": "The humble Polish sister to whom Jesus revealed the riches of His Mercy. Ask her childlike trust and confidence in the Mercy of God.",
+        "main_prayer": "St. Faustina, secretary of Divine Mercy, you learned to trust Jesus completely and to proclaim His Mercy to the world. Obtain for me a heart that says with all confidence, 'Jesus, I trust in You,' especially in the matter I now bring before God… (mention your intention). St. Faustina, help me to trust in Jesus and to be merciful as the Father is merciful. Amen.",
+    },
 ]
 
 NOVENA_BY_SLUG = {n["slug"]: n for n in NOVENAS}

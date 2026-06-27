@@ -1932,6 +1932,7 @@ export type CompanionDetail = {
   name: string;
   feast?: string;
   importance: string;
+  daily_prayer?: string;
   virtues: CompanionVirtue[];
   novena_slug?: string;
   daily_act: { text: string; index: number; total: number };
@@ -1939,7 +1940,22 @@ export type CompanionDetail = {
   vocation_traditions: { label: string; items: CompanionTradition[] } | null;
   has_consecration: boolean;
   is_joseph: boolean;
+  note?: string | null;
+  do_not_name?: boolean;
+  linked?: { slug: string; name: string } | null;
 };
+export type CompanionListItem = {
+  slug: string; name: string; feast?: string; tagline: string;
+  selected: boolean; is_vocation_companion: boolean; linked?: string | null;
+};
+export async function listCompanions(): Promise<{
+  companions: CompanionListItem[]; selected: string[]; max: number; vocation_companion: string;
+}> {
+  return await api(`/companions`);
+}
+export async function selectCompanion(slug: string, action: "add" | "remove" | "toggle" = "toggle"): Promise<{ selected: string[]; max: number }> {
+  return await api(`/companions/select`, { method: "POST", body: { slug, action } });
+}
 export async function getCompanion(slug: string): Promise<CompanionDetail> {
   return await api(`/companions/${slug}`);
 }

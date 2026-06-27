@@ -24,7 +24,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
@@ -124,6 +124,80 @@ def _slugify(s: str) -> str:
     return (base or "claim")[:60] + "-" + uuid.uuid4().hex[:6]
 
 
+import unicodedata
+
+
+def _norm(s: Optional[str]) -> str:
+    """Lower-case and strip accents for accent-insensitive search."""
+    return "".join(
+        c for c in unicodedata.normalize("NFKD", s or "") if not unicodedata.combining(c)
+    ).lower()
+
+
+# --------------------------------------------------------------------------- #
+# Process ladders — the typical ecclesial process a claim travels, and where    #
+# the claim currently sits. Chosen by claim type; a claim may also store an     #
+# explicit process_stage / process_note that overrides the derived defaults.    #
+# --------------------------------------------------------------------------- #
+PROCESS_LADDERS: Dict[str, Dict[str, Any]] = {
+    "apparition": {
+        "name": "Discernment of an alleged apparition (2024 DDF Norms)",
+        "stages": ["Reported", "Diocesan investigation", "Reviewed by the Holy See (DDF)", "Conclusion (Nihil obstat / Declaration)"],
+    },
+    "eucharistic": {
+        "name": "Investigation of a Eucharistic claim",
+        "stages": ["Reported", "Diocesan inquiry", "Scientific examination", "Church judgment"],
+    },
+    "canonization": {
+        "name": "Toward canonization (miracle attributed to intercession)",
+        "stages": ["Servant of God", "Venerable", "Blessed (1 miracle)", "Saint (2 miracles)"],
+    },
+    "generic": {
+        "name": "Ecclesial discernment",
+        "stages": ["Reported", "Under investigation", "Examined by the Church", "Conclusion"],
+    },
+}
+_CURRENT_INDEX: Dict[str, Dict[str, int]] = {
+    "apparition": {"reported": 0, "investigating": 1, "approved": 3, "not_supernatural": 3},
+    "eucharistic": {"reported": 0, "investigating": 2, "approved": 3, "not_supernatural": 3},
+    "canonization": {"reported": 0, "investigating": 1, "approved": 3, "not_supernatural": 0},
+    "generic": {"reported": 0, "investigating": 1, "approved": 3, "not_supernatural": 3},
+}
+_DEFAULT_NOTE = {
+    "reported": "A claim has been reported. The local Church has not yet opened a formal investigation.",
+    "investigating": "The claim is being examined — usually by the local diocese, sometimes with scientific or theological review — before any judgment is given.",
+    "approved": "The Church has recognised this claim — e.g. approval of the cult, a nihil obstat, or recognition of a miracle for a cause of canonization.",
+    "not_supernatural": "After examination, the competent authority has declared this not to be of supernatural origin.",
+}
+
+
+def _ladder_key(t: str) -> str:
+    if t in ("marian", "apparition"):
+        return "apparition"
+    if t == "eucharistic":
+        return "eucharistic"
+    if t in ("healing", "incorruptible"):
+        return "canonization"
+    return "generic"
+
+
+def _process_for(doc: Dict[str, Any]) -> Dict[str, Any]:
+    t = doc.get("type") or "other"
+    verdict = doc.get("verdict") or "reported"
+    lk = _ladder_key(t)
+    ladder = PROCESS_LADDERS[lk]
+    cur = _CURRENT_INDEX[lk].get(verdict, 0)
+    stages = [
+        {"label": label, "done": i < cur, "current": i == cur}
+        for i, label in enumerate(ladder["stages"])
+    ]
+    note = (doc.get("process_note") or "").strip() or _DEFAULT_NOTE.get(verdict, "")
+    current_label = (doc.get("process_stage") or "").strip() or ladder["stages"][cur]
+    if verdict == "not_supernatural" and not (doc.get("process_stage") or "").strip():
+        current_label = "Declared not supernatural"
+    return {"name": ladder["name"], "stages": stages, "current_label": current_label, "note": note}
+
+
 def _public(doc: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "claim_id": doc.get("claim_id"),
@@ -136,6 +210,9 @@ def _public(doc: Dict[str, Any]) -> Dict[str, Any]:
         "reported_year": doc.get("reported_year"),
         "source_name": doc.get("source_name"),
         "source_url": doc.get("source_url"),
+        "process_stage": doc.get("process_stage"),
+        "process_note": doc.get("process_note"),
+        "process": _process_for(doc),
         "state": doc.get("state") or "published",
         "origin": doc.get("origin") or "seed",
         "created_at": doc.get("created_at"),
@@ -268,6 +345,8 @@ class PatchModel(BaseModel):
     reported_year: Optional[str] = None
     source_name: Optional[str] = None
     source_url: Optional[str] = None
+    process_stage: Optional[str] = None
+    process_note: Optional[str] = None
 
 
 class GenerateModel(BaseModel):
@@ -284,12 +363,32 @@ def build_router(db: AsyncIOMotorDatabase, get_current_user, emergent_llm_key: s
 
     # ----------------------------- Public ---------------------------------- #
     @router.get("")
-    async def list_published(user=Depends(get_current_user)):
+    async def list_published(
+        q: Optional[str] = Query(None, description="search text"),
+        type: Optional[str] = Query(None),
+        verdict: Optional[str] = Query(None),
+        user=Depends(get_current_user),
+    ):
         await _seed_if_missing(db)
-        cur = col.find({"state": "published"}, {"_id": 0}).sort([("created_at", -1)])
+        query: Dict[str, Any] = {"state": "published"}
+        if type in TYPES:
+            query["type"] = type
+        if verdict in VERDICTS:
+            query["verdict"] = verdict
+        cur = col.find(query, {"_id": 0}).sort([("created_at", -1)])
         items = [_public(d) async for d in cur]
+        if q and q.strip():
+            nq = _norm(q)
+            items = [
+                it for it in items
+                if nq in _norm(it.get("title")) or nq in _norm(it.get("summary")) or nq in _norm(it.get("location"))
+            ]
         await _localize(db, items, ["title", "summary", "location"])
-        return {"items": items, "total": len(items)}
+        return {
+            "items": items,
+            "total": len(items),
+            "server_time": datetime.now(timezone.utc).isoformat(),
+        }
 
     @router.get("/admin/all")
     async def list_all(user=Depends(get_current_user)):

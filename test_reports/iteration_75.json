@@ -1,0 +1,32 @@
+{
+  "summary": "Iter75 — Miracles Live Feed upgrade (search, live polling, process ladder) tested end-to-end. Backend: 12/12 pytest cases pass — q (accent-insensitive, e.g. 'fatima' matches 'Fátima'), type, verdict filters all work and combine correctly; response now includes server_time and every item has a well-formed process object (name, stages with done/current flags, current_label, note). Ladder selection verified: Lanciano (eucharistic+approved) → 'Church judgment' is current (final stage); Marian items use the 2024 DDF Norms apparition ladder; investigating items never mark the final stage current. Frontend (/community/miracles, mobile viewport): header shows 'Live · updated just now' with live dot; 7 cards render initially each with a miracle-process ladder, a 'now' tag on the current stage, the verdict badge using current_label ('Under investigation' etc.), and a 'How it's being handled' note (39 matches). miracle-search debounce filters to 1 card on 'fatima' (accent-insensitive proven), miracle-search-clear resets to 7, miracle-verdict-investigating → 3 cards, miracle-type-eucharistic → 2 cards, combined investigating+eucharistic → 1 card (Buenos Aires 1996), no-match search shows the 'No matching reports' empty state. miracle-source-<id> link present. No deprecated Expo packages found in miracles.tsx and no React Native red-screen errors.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_miracles_live_feed_iter75.py",
+    "/app/test_reports/pytest/iteration_75_miracles.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "miracles.py: SEED_CLAIMS list is fine, but consider also normalizing process_stage server-side when verdict is patched so the override reflects new lifecycle stages. Not blocking — current default-derivation in _process_for handles overrides correctly.",
+    "miracles.tsx: polling interval (45s) and tick (20s) hardcoded — acceptable per the spec but consider exposing via constants for future tuning.",
+    "Search query `q` in miracles.py is matched against title/summary/location only — not source_name, which would also be a useful match. Minor."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_miracles_live_feed_iter75.py (new)"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "None — relied on existing 6 seed claims + 1 prior AI-generated published draft (Padre Pio statue, 2026).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Miracles Live Feed feature is fully covered by /app/backend/tests/test_miracles_live_feed_iter75.py (12 tests, ~1.7s). Combine with test_miracles_iter60.py for full miracles coverage (lifecycle + i18n + admin perms). Frontend smoke uses testIDs: miracle-search, miracle-search-clear, miracle-verdict-{all|approved|investigating|reported|not_supernatural}, miracle-type-{all|eucharistic|marian|apparition|healing|incorruptible|other}, miracle-process, miracle-card-<id>, miracle-source-<id>.",
+  "rca_of_issue": ""
+}

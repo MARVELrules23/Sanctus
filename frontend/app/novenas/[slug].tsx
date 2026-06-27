@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -48,6 +48,7 @@ export default function NovenaDetailScreen() {
   const [journal, setJournal] = useState<JournalEntry[]>([]);
   const [journalText, setJournalText] = useState("");
   const [journalBusy, setJournalBusy] = useState(false);
+  const [confirm, setConfirm] = useState<{ title: string; message: string; cta: string; onConfirm: () => void } | null>(null);
 
   const load = useCallback(async () => {
     const res = await api<Detail>(`/novenas/${slug}`);
@@ -101,16 +102,29 @@ export default function NovenaDetailScreen() {
   };
 
   const restart = () => {
-    Alert.alert("Restart novena?", "This resets your progress and starts again.", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Restart", onPress: async () => { await api(`/novenas/${slug}/start`, { method: "POST", body: { start_date: todayISO() } }); await load(); } },
-    ]);
+    setConfirm({
+      title: "Restart novena?",
+      message: "This resets your progress and starts again from today.",
+      cta: "Restart",
+      onConfirm: async () => {
+        setConfirm(null);
+        await api(`/novenas/${slug}/start`, { method: "POST", body: { start_date: todayISO() } });
+        await load();
+      },
+    });
   };
   const stop = () => {
-    Alert.alert("Stop novena?", "Your progress will be cleared. Your journal entries are kept.", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Stop", style: "destructive", onPress: async () => { await api(`/novenas/${slug}/stop`, { method: "POST" }); await load(); } },
-    ]);
+    setConfirm({
+      title: "Stop novena?",
+      message: "Your progress will be cleared and it will be removed from your in-progress list. Your journal entries are kept.",
+      cta: "Stop novena",
+      onConfirm: async () => {
+        setConfirm(null);
+        await api(`/novenas/${slug}/stop`, { method: "POST" });
+        await load();
+        router.back();
+      },
+    });
   };
 
   const addJournal = async () => {
@@ -122,18 +136,21 @@ export default function NovenaDetailScreen() {
       setJournal((p) => [entry, ...p]);
       setJournalText("");
     } catch (e: any) {
-      Alert.alert("Could not save", String(e?.detail || e?.message || e));
+      setConfirm({ title: "Could not save", message: String(e?.detail || e?.message || e), cta: "OK", onConfirm: () => setConfirm(null) });
     } finally { setJournalBusy(false); }
   };
 
   const deleteJournal = (id: string) => {
-    Alert.alert("Delete entry?", "This intention will be removed.", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: async () => {
+    setConfirm({
+      title: "Delete entry?",
+      message: "This intention will be removed.",
+      cta: "Delete",
+      onConfirm: async () => {
+        setConfirm(null);
         await api(`/novenas/${slug}/journal/${id}`, { method: "DELETE" });
         setJournal((p) => p.filter((x) => x.id !== id));
-      } },
-    ]);
+      },
+    });
   };
 
   if (!d) {
@@ -288,6 +305,23 @@ export default function NovenaDetailScreen() {
           )}
         </View>
       </ScrollView>
+
+      <Modal visible={!!confirm} transparent animationType="fade" onRequestClose={() => setConfirm(null)}>
+        <Pressable style={styles.confirmBackdrop} onPress={() => setConfirm(null)}>
+          <Pressable style={styles.confirmCard} onPress={() => {}} testID="novena-confirm">
+            <AutoText style={styles.confirmTitle}>{confirm?.title || ""}</AutoText>
+            <AutoText style={styles.confirmMsg}>{confirm?.message || ""}</AutoText>
+            <View style={styles.confirmRow}>
+              <Pressable onPress={() => setConfirm(null)} style={({ pressed }) => [styles.confirmCancel, pressed && { opacity: 0.7 }]} testID="novena-confirm-cancel">
+                <AutoText style={styles.confirmCancelText}>Cancel</AutoText>
+              </Pressable>
+              <Pressable onPress={() => confirm?.onConfirm()} style={({ pressed }) => [styles.confirmOk, pressed && { opacity: 0.7 }]} testID="novena-confirm-ok">
+                <AutoText style={styles.confirmOkText}>{confirm?.cta || "OK"}</AutoText>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -339,4 +373,13 @@ const styles = StyleSheet.create({
   journalEntry: { flexDirection: "row", alignItems: "flex-start", gap: spacing.sm, paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.borderSoft },
   journalEntryText: { fontFamily: fonts.bodyRegular, fontSize: 14.5, color: colors.textPrimary, lineHeight: 21 },
   journalDate: { fontFamily: fonts.uiMedium, fontSize: 11, color: colors.textMuted, marginTop: 3 },
+  confirmBackdrop: { flex: 1, backgroundColor: "rgba(20,26,42,0.55)", alignItems: "center", justifyContent: "center", padding: spacing.lg },
+  confirmCard: { width: "100%", maxWidth: 360, backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg },
+  confirmTitle: { fontFamily: fonts.headingBold, fontSize: 19, color: colors.textPrimary },
+  confirmMsg: { fontFamily: fonts.bodyRegular, fontSize: 14, color: colors.textSecondary, lineHeight: 21, marginTop: spacing.sm },
+  confirmRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.lg, justifyContent: "flex-end" },
+  confirmCancel: { paddingHorizontal: spacing.lg, paddingVertical: 11, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border },
+  confirmCancelText: { fontFamily: fonts.uiSemi, fontSize: 14, color: colors.primary },
+  confirmOk: { paddingHorizontal: spacing.lg, paddingVertical: 11, borderRadius: radius.md, backgroundColor: "#9E1B1B" },
+  confirmOkText: { fontFamily: fonts.uiSemi, fontSize: 14, color: "#fff" },
 });

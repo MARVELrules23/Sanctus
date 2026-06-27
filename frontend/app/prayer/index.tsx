@@ -7,6 +7,7 @@ import { Stack, useRouter } from "expo-router";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 import { mysteryForDate, MYSTERY_SETS, MysterySet } from "@/src/rosary";
 import { CHAPLETS, CHAPLET_ORDER } from "@/src/prayers/chaplets";
+import { DEVOTIONS, DEVOTION_CATEGORIES } from "@/src/prayers/devotions";
 import { todayISO } from "@/src/date-utils";
 import { useI18n } from "@/src/i18n";
 import { useTranslator } from "@/src/translate";
@@ -95,6 +96,13 @@ export default function PrayerHubScreen() {
   const allStrings = useMemo(() => {
     const a: string[] = [introTitle, introBody];
     items.forEach((it) => { a.push(it.title, it.subtitle, it.meta || ""); });
+    DEVOTION_CATEGORIES.forEach((cat) => {
+      a.push(cat.label);
+      cat.keys.forEach((k) => {
+        const d = DEVOTIONS[k];
+        if (d) a.push(d.title, d.subtitle, d.duration);
+      });
+    });
     return a;
   }, [items]);
   const { tr } = useTranslator(allStrings);
@@ -149,6 +157,34 @@ export default function PrayerHubScreen() {
           </Pressable>
         ))}
 
+        {DEVOTION_CATEGORIES.map((cat) => (
+          <View key={cat.key} testID={`devotion-section-${cat.key}`}>
+            <Text style={styles.sectionHeader}>{tr(cat.label)}</Text>
+            {cat.keys.map((k) => {
+              const d = DEVOTIONS[k];
+              if (!d) return null;
+              return (
+                <Pressable
+                  key={k}
+                  testID={`prayer-card-${k}`}
+                  onPress={() => router.push({ pathname: "/prayer/[kind]", params: { kind: k } })}
+                  style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+                >
+                  <View style={[styles.iconWrap, { backgroundColor: d.color }]}>
+                    <Ionicons name={d.icon as any} size={22} color={"#FAF9F6"} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.cardTitle}>{tr(d.title)}</Text>
+                    <Text style={styles.cardSub}>{tr(d.subtitle)}</Text>
+                    <Text style={styles.cardMeta}>{tr(d.duration)}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+                </Pressable>
+              );
+            })}
+          </View>
+        ))}
+
         <View style={{ height: spacing.xxl }} />
       </ScrollView>
     </SafeAreaView>
@@ -175,6 +211,7 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.sm,
   },
   scroll: { padding: spacing.lg },
+  sectionHeader: { fontFamily: fonts.uiSemi, fontSize: 12, letterSpacing: 1.6, color: colors.gold, marginTop: spacing.md, marginBottom: spacing.sm, textTransform: "uppercase" },
   intro: { marginBottom: spacing.lg },
   eyebrow: {
     fontFamily: fonts.uiSemi,

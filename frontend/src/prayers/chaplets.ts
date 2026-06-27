@@ -22,6 +22,7 @@
 import { BeadStep } from "@/src/rosary";
 
 export type ChapletKey =
+  | "divine_mercy"
   | "st_michael"
   | "immaculate_heart"
   | "sacred_heart"
@@ -407,6 +408,36 @@ function buildPeterAndPaul(): BeadStep[] {
 }
 
 /* -------------------------------------------------------------------------- */
+/*                       CHAPLET OF DIVINE MERCY                              */
+/* -------------------------------------------------------------------------- */
+
+function buildDivineMercy(): BeadStep[] {
+  const OUR_FATHER = "Our Father, Who art in heaven, hallowed be Thy name; Thy kingdom come; Thy will be done on earth as it is in heaven. Give us this day our daily bread; and forgive us our trespasses, as we forgive those who trespass against us; and lead us not into temptation, but deliver us from evil. Amen.";
+  const HAIL_MARY = "Hail Mary, full of grace, the Lord is with thee. Blessed art thou amongst women, and blessed is the fruit of thy womb, Jesus. Holy Mary, Mother of God, pray for us sinners, now and at the hour of our death. Amen.";
+  const ETERNAL_FATHER = "Eternal Father, I offer You the Body and Blood, Soul and Divinity of Your dearly beloved Son, Our Lord Jesus Christ, in atonement for our sins and those of the whole world.";
+  const FOR_SAKE = "For the sake of His sorrowful Passion, have mercy on us and on the whole world.";
+
+  const steps: BeadStep[] = [];
+  steps.push({ label: "Sign of the Cross", prayer: "In the name of the Father, and of the Son, and of the Holy Spirit. Amen." });
+  steps.push({ label: "Optional Opening", prayer: "You expired, O Jesus, but the source of life gushed forth for souls, and an ocean of mercy opened up for the whole world. O Fount of Life, unfathomable Divine Mercy, envelop the whole world and empty Yourself out upon us.\n\n(3x) O Blood and Water, which gushed forth from the Heart of Jesus as a fount of Mercy for us, I trust in You!" });
+  steps.push({ label: "Our Father", prayer: OUR_FATHER });
+  steps.push({ label: "Hail Mary", prayer: HAIL_MARY });
+  steps.push({ label: "The Apostles' Creed", prayer: "I believe in God, the Father almighty, Creator of heaven and earth, and in Jesus Christ, His only Son, our Lord, who was conceived by the Holy Spirit, born of the Virgin Mary, suffered under Pontius Pilate, was crucified, died and was buried; He descended into hell; on the third day He rose again from the dead; He ascended into heaven, and is seated at the right hand of God the Father almighty; from there He will come to judge the living and the dead. I believe in the Holy Spirit, the holy catholic Church, the communion of saints, the forgiveness of sins, the resurrection of the body, and life everlasting. Amen." });
+
+  for (let d = 1; d <= 5; d++) {
+    steps.push({ label: `Decade ${d} — On the Our Father bead`, prayer: ETERNAL_FATHER });
+    for (let j = 1; j <= 10; j++) {
+      steps.push({ label: `Decade ${d} — ${j}/10`, prayer: FOR_SAKE });
+    }
+  }
+
+  steps.push({ label: "Conclusion (3×)", prayer: "Holy God, Holy Mighty One, Holy Immortal One, have mercy on us and on the whole world. (Repeat three times.)" });
+  steps.push({ label: "Closing Prayer", prayer: "Eternal God, in whom mercy is endless and the treasury of compassion inexhaustible, look kindly upon us and increase Your mercy in us, that in difficult moments we might not despair nor become despondent, but with great confidence submit ourselves to Your holy will, which is Love and Mercy itself. Amen." });
+  steps.push({ label: "Sign of the Cross", prayer: "In the name of the Father, and of the Son, and of the Holy Spirit. Amen." });
+  return steps;
+}
+
+/* -------------------------------------------------------------------------- */
 /*                                 REGISTRY                                    */
 /* -------------------------------------------------------------------------- */
 
@@ -421,6 +452,20 @@ function renewalSteps(prayer: string): BeadStep[] {
 }
 
 export const CHAPLETS: Record<ChapletKey, Chaplet> = {
+  divine_mercy: {
+    key: "divine_mercy",
+    title: "Chaplet of Divine Mercy",
+    subtitle: "Revealed to St. Faustina · prayed on rosary beads",
+    color: "#1E73BE",
+    icon: "water-outline",
+    duration: "~10 min",
+    steps: buildDivineMercy(),
+    good_work_for_today:
+      "Perform one work of mercy today — a kind deed, a merciful word, or a prayer for someone. Where you would judge, choose mercy instead.",
+    daily_motto: "Jesus, I trust in You.",
+    note:
+      "Prayed on ordinary rosary beads. It is especially powerful at 3:00 p.m., the Hour of Great Mercy, the hour of the Lord's death.",
+  },
   st_michael: {
     key: "st_michael",
     title: "Chaplet of St. Michael",
@@ -544,6 +589,7 @@ export const CHAPLETS: Record<ChapletKey, Chaplet> = {
 };
 
 export const CHAPLET_ORDER: ChapletKey[] = [
+  "divine_mercy",
   "st_michael",
   "immaculate_heart",
   "sacred_heart",

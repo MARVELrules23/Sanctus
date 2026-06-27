@@ -412,6 +412,136 @@ COMPANIONS: Dict[str, Dict[str, Any]] = {
 }
 
 
+# --------------------------------------------------------------------------- #
+# Traditions the Church holds for each saint (hand-curated, saint-specific).   #
+# --------------------------------------------------------------------------- #
+CHURCH_TRADITIONS: Dict[str, List[Dict[str, str]]] = {
+    "catherine-siena": [
+        {"title": "Pray for the Pope & the Church", "body": "As a Doctor and co-patroness of Europe who counselled popes, the faithful invoke her for the Holy Father and Church unity."},
+        {"title": "Read the 'Dialogue'", "body": "Her mystical 'Dialogue of Divine Providence' is treasured spiritual reading on her feast (April 29)."},
+        {"title": "Dominican devotion", "body": "A Third Order Dominican, she is honoured with the Dominican Rosary and a pilgrimage to her shrine in Siena."},
+    ],
+    "pier-giorgio": [
+        {"title": "'Verso l'alto' outing", "body": "Pilgrims climb a mountain or hike on his feast (July 4), offering the heights to God as he did."},
+        {"title": "Secret almsgiving", "body": "In his memory the faithful serve the poor quietly, the way he gave away his money and even his bus fare."},
+        {"title": "Eucharistic adoration", "body": "He drew his joy from daily Communion and adoration — a devotion encouraged in his honour."},
+    ],
+    "john-paul-ii": [
+        {"title": "Divine Mercy", "body": "He canonized St. Faustina and gave the Church Divine Mercy Sunday; the Chaplet of Divine Mercy is prayed in his memory."},
+        {"title": "Luminous Mysteries", "body": "He added the Mysteries of Light to the Rosary — pray them especially on his feast (Oct 22)."},
+        {"title": "Totus Tuus consecration", "body": "Renew Marian consecration ('Totus Tuus') as he did, entrusting everything to Our Lady."},
+    ],
+    "agnes": [
+        {"title": "Blessing of the lambs", "body": "On her feast (Jan 21) lambs are blessed in Rome; their wool weaves the pallia given to archbishops."},
+        {"title": "Patroness of purity", "body": "Young people consecrate their chastity to God under her protection."},
+        {"title": "Pilgrimage to her basilica", "body": "The faithful venerate her at Sant'Agnese fuori le mura in Rome."},
+    ],
+    "therese-lisieux": [
+        {"title": "The Little Way", "body": "Offer small acts of love and 'sacrifice beads' through the day, her path to holiness."},
+        {"title": "Shower of roses novena", "body": "Her famous novena trusts she will send a rose as a sign of intercession."},
+        {"title": "Relic veneration", "body": "Her relics travel the world; pilgrims honour the Doctor of the Little Way at Lisieux."},
+    ],
+    "benedict": [
+        {"title": "The St. Benedict medal", "body": "Worn and placed in homes for protection; often blessed with the special Jubilee blessing."},
+        {"title": "Liturgy of the Hours", "body": "Pray the Hours and practise 'ora et labora' after his Rule."},
+        {"title": "Blessing of the home", "body": "Homes and doorways are blessed under his patronage against evil."},
+    ],
+    "francis-assisi": [
+        {"title": "The Christmas crèche", "body": "St. Francis created the first Nativity scene at Greccio — set one up in your home at Christmas."},
+        {"title": "Blessing of animals", "body": "On his feast (Oct 4) pets and animals are brought to be blessed."},
+        {"title": "The Transitus & Franciscan Crown", "body": "Keep the vigil of his death (Oct 3) and pray the Seraphic Rosary (Franciscan Crown)."},
+        {"title": "Portiuncula indulgence", "body": "Visit a church on Aug 2 for the indulgence he obtained at the Portiuncula."},
+    ],
+    "teresa-avila": [
+        {"title": "Mental prayer", "body": "Keep a daily time of quiet prayer, the heart of her Carmelite teaching."},
+        {"title": "St. Teresa's bookmark", "body": "Pray her words: 'Let nothing disturb you… God alone suffices.'"},
+        {"title": "The Brown Scapular", "body": "Wear the Carmelite scapular and honour the Doctor of Prayer on her feast (Oct 15)."},
+    ],
+    "st-joseph": [
+        {"title": "St. Joseph's Table", "body": "On March 19 families set a St. Joseph altar of food and share it with the poor."},
+        {"title": "Wednesdays for St. Joseph", "body": "Dedicate Wednesdays to him and pray the Litany of St. Joseph."},
+        {"title": "'Go to Joseph'", "body": "Bring your needs to the Patron of the Universal Church and of a happy death."},
+        {"title": "33-day Consecration", "body": "Entrust yourself to Jesus through St. Joseph with the 33-day consecration."},
+    ],
+    "louis-zelie": [
+        {"title": "The family Rosary", "body": "Pray the Rosary together as a household, as the Martins did each evening."},
+        {"title": "Consecrate your family", "body": "Entrust your home to the Holy Family on their feast (July 12)."},
+        {"title": "Pilgrimage to Alençon/Lisieux", "body": "Families honour the first canonized spouses at their shrines."},
+    ],
+    "gianna-molla": [
+        {"title": "Prayer for mothers & the unborn", "body": "She is invoked for expectant mothers, difficult pregnancies, and the protection of life."},
+        {"title": "Patroness of physicians", "body": "Doctors and the sick seek her intercession on her feast (April 28)."},
+        {"title": "A glad heart in duty", "body": "Offer professional and family work joyfully, as she sanctified hers."},
+    ],
+    "monica": [
+        {"title": "Novena for conversions", "body": "Pray persistently for loved ones far from God, trusting her decades of tears for Augustine."},
+        {"title": "Feast before St. Augustine", "body": "Her feast (Aug 27) precedes her son's (Aug 28) — honour them together."},
+        {"title": "Patroness of mothers & wives", "body": "Mothers, wives, and those bearing family burdens entrust themselves to her."},
+    ],
+}
+
+# --------------------------------------------------------------------------- #
+# Vocation-tailored traditions to add to daily life (by vocation + state).     #
+# --------------------------------------------------------------------------- #
+VOCATION_TRADITIONS: Dict[str, Dict[str, Any]] = {
+    "marriage|discerning": {
+        "label": "Preparing for marriage",
+        "items": [
+            {"title": "Pray for your future spouse", "body": "Offer a daily decade of the Rosary for the person God may be preparing for you."},
+            {"title": "Grow in chaste self-mastery", "body": "Practise purity and self-gift now — the habits you build today will form a faithful marriage."},
+            {"title": "Study self-giving love", "body": "Read 'Introduction to the Devout Life' or the Theology of the Body, and seek good marriage prep (Pre-Cana)."},
+            {"title": "Entrust it to the Holy Family", "body": "Bring your discernment to Jesus, Mary and Joseph in adoration, asking clarity and peace."},
+        ],
+    },
+    "marriage|living": {
+        "label": "Growing a holier family",
+        "items": [
+            {"title": "Enthrone the home", "body": "Enthrone the Sacred Heart or an image of the Holy Family and consecrate your household to them."},
+            {"title": "The family Rosary", "body": "Gather to pray a decade or the full Rosary together each night."},
+            {"title": "Keep Sunday holy", "body": "Worship at Mass together, then share a family meal and true rest."},
+            {"title": "Live the liturgical year at home", "body": "Mark Advent (wreath), feast days and seasons; bless your children each night."},
+            {"title": "Frequent the sacraments", "body": "Go to Mass weekly and Confession regularly as a family."},
+        ],
+    },
+    "religious life|discerning": {
+        "label": "Preparing for religious life",
+        "items": [
+            {"title": "Pray the Liturgy of the Hours", "body": "Begin praying (part of) the Divine Office daily — the prayer of the Church and of religious."},
+            {"title": "Make a 'Come and See' visit", "body": "Spend time with a community and find a spiritual director to walk with you."},
+            {"title": "Practise the counsels in seed", "body": "Live small acts of poverty and obedience; simplify what you own."},
+            {"title": "Daily Holy Hour & silence", "body": "Keep a time of Eucharistic adoration and interior silence each day."},
+        ],
+    },
+    "religious life|living": {
+        "label": "Deepening religious life",
+        "items": [
+            {"title": "Faithful to the Hours & lectio", "body": "Guard fidelity to the Divine Office and daily lectio divina."},
+            {"title": "Examen & direction", "body": "Make the daily Examen and keep regular spiritual direction; renew your vows interiorly."},
+            {"title": "Live your charism", "body": "Embrace community life and the hidden acts of service your charism asks."},
+            {"title": "Adoration & Marian devotion", "body": "Anchor each day in adoration and the Rosary."},
+        ],
+    },
+    "singleness|discerning": {
+        "label": "Discerning in the single life",
+        "items": [
+            {"title": "Keep a discernment journal", "body": "Write what stirs your heart in prayer and review it with a spiritual director."},
+            {"title": "A daily prayer rule", "body": "Anchor your day with Mass or adoration when possible, and a fixed time of prayer."},
+            {"title": "Works of mercy", "body": "Let your freedom overflow in service to the poor, the lonely, and your parish."},
+            {"title": "Live simply and chastely", "body": "Practise the evangelical counsels in spirit while God reveals your path."},
+        ],
+    },
+    "singleness|living": {
+        "label": "Holiness in the single life",
+        "items": [
+            {"title": "Consecrate your singleness", "body": "Offer your single life to God as a gift, with a steady daily prayer rule."},
+            {"title": "Be generously available", "body": "Use your freedom to serve the Church, the poor, and those in need."},
+            {"title": "Spiritual friendship", "body": "Build holy friendships and accountability; frequent the sacraments often."},
+            {"title": "A rule of life", "body": "Balance prayer, work and rest so your days are ordered toward God."},
+        ],
+    },
+}
+
+
 def _today_act(acts: List[str]) -> Dict[str, Any]:
     idx = (date.today().toordinal()) % max(1, len(acts))
     return {"text": acts[idx], "index": idx, "total": len(acts)}
@@ -459,7 +589,9 @@ async def _get_or_make_image(db, slug: str, prompt: str, emergent_llm_key: str) 
     return None
 
 
-def _public(slug: str, c: Dict[str, Any]) -> Dict[str, Any]:
+def _public(slug: str, c: Dict[str, Any], vocation: str = "", state: str = "") -> Dict[str, Any]:
+    voc_key = f"{vocation}|{state}"
+    voc_trad = VOCATION_TRADITIONS.get(voc_key)
     return {
         "slug": slug,
         "name": c["name"],
@@ -468,6 +600,8 @@ def _public(slug: str, c: Dict[str, Any]) -> Dict[str, Any]:
         "virtues": c["virtues"],
         "novena_slug": c.get("novena_slug"),
         "daily_act": _today_act(c["daily_acts"]),
+        "church_traditions": CHURCH_TRADITIONS.get(slug, []),
+        "vocation_traditions": voc_trad,
         "has_consecration": True,  # the St. Joseph consecration is open to all companions
         "is_joseph": slug == "st-joseph",
     }
@@ -481,9 +615,12 @@ def build_router(db: AsyncIOMotorDatabase, get_current_user, emergent_llm_key: s
         c = COMPANIONS.get(slug)
         if not c:
             raise HTTPException(status_code=404, detail="Companion not found")
+        prefs = await db.preferences.find_one({"user_id": user.user_id}, {"_id": 0}) or {}
+        vocation = (prefs.get("vocation") or "").strip().lower()
+        state = (prefs.get("vocation_state") or "").strip().lower()
         # Warm the illustration in the background so the image endpoint is fast.
         asyncio.create_task(_get_or_make_image(db, slug, c["image_prompt"], emergent_llm_key))
-        return _public(slug, c)
+        return _public(slug, c, vocation, state)
 
     @router.get("/{slug}/image")
     async def get_companion_image(slug: str, user=Depends(get_current_user)):

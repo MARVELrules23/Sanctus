@@ -124,6 +124,25 @@ export default function CompanionScreen() {
             <Text style={styles.actMeta}>A different act each day · {data.daily_act.total} in the cycle</Text>
           </View>
 
+          {/* Traditions the Church holds for this saint */}
+          {data.church_traditions.length > 0 ? (
+            <>
+              <View style={styles.cardHead}>
+                <Ionicons name="library-outline" size={16} color={colors.gold} />
+                <Text style={styles.cardHeadText}>Traditions of the Church</Text>
+              </View>
+              {data.church_traditions.map((t, i) => (
+                <View key={i} style={styles.tradition}>
+                  <Ionicons name="bookmark-outline" size={15} color={colors.goldDark} style={{ marginTop: 2 }} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.tradName}>{t.title}</Text>
+                    <Text style={styles.tradBody}>{t.body}</Text>
+                  </View>
+                </View>
+              ))}
+            </>
+          ) : null}
+
           {/* Virtues to imitate */}
           <View style={styles.cardHead}>
             <Ionicons name="ribbon-outline" size={16} color={colors.gold} />
@@ -147,6 +166,35 @@ export default function CompanionScreen() {
             <Text style={styles.softBtnText}>Practice these in Virtus</Text>
             <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
           </Pressable>
+
+          {/* Vocation-tailored traditions to add to daily life */}
+          {data.vocation_traditions ? (
+            <View style={styles.vocBox} testID="companion-vocation-traditions">
+              <View style={styles.cardHead}>
+                <Ionicons name="compass-outline" size={16} color={colors.gold} />
+                <Text style={styles.cardHeadText}>For your walk · {data.vocation_traditions.label}</Text>
+              </View>
+              {data.vocation_traditions.items.map((t, i) => (
+                <View key={i} style={styles.tradition}>
+                  <Ionicons name="add-circle-outline" size={15} color={colors.primary} style={{ marginTop: 2 }} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.tradName}>{t.title}</Text>
+                    <Text style={styles.tradBody}>{t.body}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <Pressable
+              testID="companion-set-vocation"
+              onPress={() => router.push("/vocation" as any)}
+              style={({ pressed }) => [styles.softBtn, pressed && { opacity: 0.85 }]}
+            >
+              <Ionicons name="compass-outline" size={16} color={colors.primary} />
+              <Text style={styles.softBtnText}>Choose your vocation for tailored traditions</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+            </Pressable>
+          )}
 
           {/* Prayer actions */}
           <View style={styles.cardHead}>
@@ -208,6 +256,10 @@ const styles = StyleSheet.create({
   virtue: { flexDirection: "row", gap: 8, alignItems: "flex-start", marginBottom: spacing.sm },
   virtueName: { fontFamily: fonts.uiSemi, fontSize: 14.5, color: colors.primary },
   virtueHow: { fontFamily: fonts.bodyRegular, fontSize: 13.5, color: colors.textSecondary, lineHeight: 20, marginTop: 1 },
+  tradition: { flexDirection: "row", gap: 8, alignItems: "flex-start", marginBottom: spacing.sm },
+  tradName: { fontFamily: fonts.uiSemi, fontSize: 14.5, color: colors.primary },
+  tradBody: { fontFamily: fonts.bodyRegular, fontSize: 13.5, color: colors.textSecondary, lineHeight: 20, marginTop: 1 },
+  vocBox: { backgroundColor: "#F3EEFB", borderWidth: 1, borderColor: "#DED2F0", borderRadius: radius.lg, padding: spacing.md, marginTop: spacing.sm },
   softBtn: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderSoft, borderRadius: radius.md, padding: spacing.md, marginTop: spacing.xs },
   softBtnText: { flex: 1, fontFamily: fonts.uiSemi, fontSize: 14, color: colors.primary },
   primaryBtn: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: colors.primary, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.sm },

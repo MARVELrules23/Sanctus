@@ -1926,6 +1926,7 @@ export async function getVocationGuide(): Promise<VocationGuide> {
 
 // ---- Companion saints ----
 export type CompanionVirtue = { name: string; how: string };
+export type CompanionTradition = { title: string; body: string };
 export type CompanionDetail = {
   slug: string;
   name: string;
@@ -1934,6 +1935,8 @@ export type CompanionDetail = {
   virtues: CompanionVirtue[];
   novena_slug?: string;
   daily_act: { text: string; index: number; total: number };
+  church_traditions: CompanionTradition[];
+  vocation_traditions: { label: string; items: CompanionTradition[] } | null;
   has_consecration: boolean;
   is_joseph: boolean;
 };

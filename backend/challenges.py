@@ -509,6 +509,13 @@ class CheckinModel(BaseModel):
     completed: bool = True
 
 
+class EnrollModel(BaseModel):
+    # When to begin the personal walk through the challenge:
+    #   "today" | "tomorrow" | "liturgical" (the canonical liturgical window)
+    start_option: Optional[str] = Field(None, pattern="^(today|tomorrow|liturgical)$")
+    start_date: Optional[str] = None  # explicit YYYY-MM-DD (overrides option)
+
+
 class GenerateDaysModel(BaseModel):
     overwrite: bool = False
     days: Optional[List[str]] = None  # specific YYYY-MM-DD entries; default = all
@@ -869,12 +876,22 @@ def build_router(
         enr = await enrollments.find_one({"user_id": user.user_id, "challenge_id": doc["challenge_id"]})
         base["enrolled"] = bool(enr)
         if enr:
+            personal_start = enr.get("start_date")
             base["enrollment"] = {
                 "joined_at": _iso(enr.get("joined_at")),
+                "start_date": _iso(personal_start),
                 "current_streak": enr.get("current_streak", 0),
                 "total_days_completed": enr.get("total_days_completed", 0),
                 "last_checkin_date": _iso(enr.get("last_checkin_date")),
             }
+            # If the user chose a personal start date, re-anchor each day's
+            # calendar date to it so the walk runs from their chosen day.
+            if isinstance(personal_start, datetime):
+                ps = personal_start.date()
+                for d in base["days"]:
+                    di = d.get("day_index")
+                    if di:
+                        d["date"] = (ps + timedelta(days=int(di) - 1)).isoformat()
         # Today's check-in (if any).
         today = datetime.now(timezone.utc).date()
         chk = await checkins.find_one({
@@ -894,13 +911,33 @@ def build_router(
         return base
 
     @router.post("/{slug}/enroll")
-    async def enroll(slug: str, user=Depends(get_current_user)):
+    async def enroll(slug: str, payload: EnrollModel = EnrollModel(), user=Depends(get_current_user)):
         from premium import require_premium
         require_premium(user, feature="Liturgical Challenges")
         doc = await _get_challenge_or_404(slug)
+        # Resolve the personal start date.
+        canonical = doc.get("start_date")
+        canonical_date = canonical.date() if isinstance(canonical, datetime) else datetime.now(timezone.utc).date()
+        today = datetime.now(timezone.utc).date()
+        personal = canonical_date
+        if payload.start_date:
+            try:
+                personal = _parse_date(payload.start_date)
+            except Exception:
+                raise HTTPException(status_code=400, detail="bad start_date")
+        elif payload.start_option == "today":
+            personal = today
+        elif payload.start_option == "tomorrow":
+            personal = today + timedelta(days=1)
+        elif payload.start_option == "liturgical":
+            personal = canonical_date
+        start_dt = datetime.combine(personal, time.min, tzinfo=timezone.utc)
+
         existing = await enrollments.find_one({"user_id": user.user_id, "challenge_id": doc["challenge_id"]})
         if existing:
-            return {"ok": True, "already": True}
+            # Allow re-choosing the start date without losing check-ins.
+            await enrollments.update_one({"_id": existing["_id"]}, {"$set": {"start_date": start_dt}})
+            return {"ok": True, "already": True, "start_date": start_dt.isoformat()}
         now = datetime.now(timezone.utc)
         await enrollments.insert_one({
             "enrollment_id": f"enr_{uuid.uuid4().hex[:10]}",
@@ -908,12 +945,13 @@ def build_router(
             "challenge_id": doc["challenge_id"],
             "challenge_slug": slug,
             "joined_at": now,
+            "start_date": start_dt,
             "current_streak": 0,
             "longest_streak": 0,
             "total_days_completed": 0,
             "last_checkin_date": None,
         })
-        return {"ok": True, "already": False}
+        return {"ok": True, "already": False, "start_date": start_dt.isoformat()}
 
     @router.delete("/{slug}/enroll")
     async def unenroll(slug: str, user=Depends(get_current_user)):

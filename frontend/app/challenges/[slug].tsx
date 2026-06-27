@@ -31,6 +31,7 @@ import {
   checkinChallenge,
   createCommunityPost,
   enrollChallenge,
+  ChallengeStartOption,
   getChallenge,
   getChallengeCompanions,
   unenrollChallenge,
@@ -116,7 +117,7 @@ export default function ChallengeDetailScreen() {
   const enrolled = !!data?.enrolled;
   const accent = data?.color || colors.gold;
 
-  const onToggleEnroll = async (next: boolean) => {
+  const onToggleEnroll = async (next: boolean, startOption: ChallengeStartOption = "liturgical") => {
     if (!slug || toggling) return;
     if (next && isLocked) {
       router.push("/premium" as any);
@@ -124,7 +125,7 @@ export default function ChallengeDetailScreen() {
     }
     setToggling(true);
     try {
-      if (next) await enrollChallenge(slug);
+      if (next) await enrollChallenge(slug, startOption);
       else await unenrollChallenge(slug);
       await load();
     } catch (e: any) {
@@ -292,29 +293,70 @@ export default function ChallengeDetailScreen() {
               </Pressable>
             ) : null}
 
-            <View style={styles.enrollRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.enrollLabel}>
-                  {enrolled ? "Tracking your participation" : "Track my participation"}
-                </Text>
-                <Text style={styles.enrollSub}>
-                  {enrolled
-                    ? "Counts streaks and daily check-ins"
-                    : "Optional — calendar overlays use the master toggle on the Calendar tab"}
-                </Text>
+            {enrolled ? (
+              <View style={styles.enrollRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.enrollLabel}>Tracking your participation</Text>
+                  <Text style={styles.enrollSub}>
+                    {data.enrollment?.start_date
+                      ? `Began ${formatLongFromISO(iso(data.enrollment.start_date)!)}`
+                      : "Counts streaks and daily check-ins"}
+                  </Text>
+                </View>
+                {toggling ? (
+                  <ActivityIndicator size="small" color={accent} />
+                ) : (
+                  <Switch
+                    testID={`challenge-detail-toggle-${slug}`}
+                    value={enrolled}
+                    onValueChange={(v) => onToggleEnroll(v)}
+                    trackColor={{ false: colors.borderSoft, true: accent }}
+                    thumbColor={colors.gold}
+                  />
+                )}
               </View>
-              {toggling ? (
-                <ActivityIndicator size="small" color={accent} />
-              ) : (
-                <Switch
-                  testID={`challenge-detail-toggle-${slug}`}
-                  value={enrolled}
-                  onValueChange={onToggleEnroll}
-                  trackColor={{ false: colors.borderSoft, true: accent }}
-                  thumbColor={colors.gold}
-                />
-              )}
-            </View>
+            ) : (
+              <View style={styles.startBox} testID="challenge-start-box">
+                <Text style={styles.enrollLabel}>Begin this challenge</Text>
+                <Text style={styles.enrollSub}>
+                  Choose when to start your walk. Consecration challenges are timed to a feast — pick that day to have it land on the feast.
+                </Text>
+                {toggling ? (
+                  <ActivityIndicator size="small" color={accent} style={{ marginTop: spacing.sm }} />
+                ) : (
+                  <View style={styles.startChipRow}>
+                    <Pressable
+                      testID="challenge-start-today"
+                      onPress={() => onToggleEnroll(true, "today")}
+                      style={({ pressed }) => [styles.startChip, { borderColor: accent }, pressed && { opacity: 0.7 }]}
+                    >
+                      <Ionicons name="today-outline" size={15} color={accent} />
+                      <Text style={[styles.startChipText, { color: accent }]}>Start today</Text>
+                    </Pressable>
+                    <Pressable
+                      testID="challenge-start-tomorrow"
+                      onPress={() => onToggleEnroll(true, "tomorrow")}
+                      style={({ pressed }) => [styles.startChip, { borderColor: accent }, pressed && { opacity: 0.7 }]}
+                    >
+                      <Ionicons name="arrow-forward-circle-outline" size={15} color={accent} />
+                      <Text style={[styles.startChipText, { color: accent }]}>Start tomorrow</Text>
+                    </Pressable>
+                    {data.start_date ? (
+                      <Pressable
+                        testID="challenge-start-liturgical"
+                        onPress={() => onToggleEnroll(true, "liturgical")}
+                        style={({ pressed }) => [styles.startChip, styles.startChipPrimary, { backgroundColor: accent, borderColor: accent }, pressed && { opacity: 0.85 }]}
+                      >
+                        <Ionicons name="calendar" size={15} color={colors.gold} />
+                        <Text style={[styles.startChipText, { color: colors.gold }]}>
+                          On {formatLongFromISO(iso(data.start_date)!)}
+                        </Text>
+                      </Pressable>
+                    ) : null}
+                  </View>
+                )}
+              </View>
+            )}
 
             {enrolled && data.enrollment ? (
               <View style={styles.statRow}>
@@ -710,6 +752,11 @@ export default function ChallengeDetailScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
+  startBox: { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.borderSoft, padding: spacing.md, marginTop: spacing.sm },
+  startChipRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginTop: spacing.md },
+  startChip: { flexDirection: "row", alignItems: "center", gap: 6, borderWidth: 1.5, borderRadius: radius.round, paddingHorizontal: spacing.md, paddingVertical: 9 },
+  startChipPrimary: {},
+  startChipText: { fontFamily: fonts.uiSemi, fontSize: 13 },
   header: {
     flexDirection: "row",
     alignItems: "center",

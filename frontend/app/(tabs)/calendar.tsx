@@ -367,6 +367,46 @@ export default function CalendarScreen() {
               </View>
             ) : null}
 
+            {/* Full list of liturgical challenges — tap any to open it and
+                choose whether to begin today, tomorrow, or on its feast day. */}
+            {challenges.length > 0 ? (
+              <View style={styles.scheduleSection} testID="cal-all-challenges-section">
+                <View style={styles.journalHead}>
+                  <Text style={styles.journalTitle}>All Liturgical Challenges</Text>
+                </View>
+                <Text style={styles.scheduleEmpty}>
+                  Tap any challenge to read it and choose when to begin. Consecration challenges are
+                  timed to a feast — start on the feast day to fulfil the consecration if you wish.
+                </Text>
+                {challenges.map((ch) => (
+                  <Pressable
+                    key={ch.slug}
+                    testID={`cal-all-challenge-${ch.slug}`}
+                    onPress={() => router.push({ pathname: "/challenges/[slug]", params: { slug: ch.slug } })}
+                    style={({ pressed }) => [
+                      styles.challengeTile,
+                      { borderColor: ch.color || colors.gold, marginTop: spacing.sm },
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <Ionicons
+                      name={(ch.icon as keyof typeof Ionicons.glyphMap) || "flame-outline"}
+                      size={18}
+                      color={ch.color || colors.gold}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.challengeTileTitle}>{ch.name}</Text>
+                      <Text style={styles.challengeTileMeta}>
+                        {ch.total_days}-day walk · begins {formatLongFromISO(ch.start_date)}
+                        {ch.patron_saint ? ` · ${ch.patron_saint}` : ""}
+                      </Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
+
             {sel ? (
               <View style={styles.detail} testID="cal-detail-card">
                 <View style={styles.detailHeader}>

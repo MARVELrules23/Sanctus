@@ -1134,6 +1134,7 @@ export type ChallengeDay = {
 
 export type ChallengeEnrollment = {
   joined_at?: string | null;
+  start_date?: string | null;
   current_streak: number;
   total_days_completed: number;
   last_checkin_date?: string | null;
@@ -1187,8 +1188,16 @@ export async function getChallenge(slug: string): Promise<ChallengeDetail> {
   return await api(`/challenges/${encodeURIComponent(slug)}`);
 }
 
-export async function enrollChallenge(slug: string): Promise<{ ok: boolean; already?: boolean }> {
-  return await api(`/challenges/${encodeURIComponent(slug)}/enroll`, { method: "POST" });
+export type ChallengeStartOption = "today" | "tomorrow" | "liturgical";
+
+export async function enrollChallenge(
+  slug: string,
+  startOption: ChallengeStartOption = "liturgical",
+): Promise<{ ok: boolean; already?: boolean; start_date?: string }> {
+  return await api(`/challenges/${encodeURIComponent(slug)}/enroll`, {
+    method: "POST",
+    body: { start_option: startOption },
+  });
 }
 
 export async function unenrollChallenge(slug: string): Promise<{ ok: boolean; removed?: number }> {

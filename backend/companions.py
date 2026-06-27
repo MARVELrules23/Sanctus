@@ -635,6 +635,68 @@ COMPANIONS: Dict[str, Dict[str, Any]] = {
             "End the day: 'Lord, You know everything; You know that I love You.'",
         ],
     },
+    "carlo-acutis": {
+        "name": "St. Carlo Acutis",
+        "feast": "October 12",
+        "novena_slug": None,
+        "image_prompt": "Saint Carlo Acutis, smiling teenage boy with dark hair in a red polo shirt and backpack, holding a rosary, modern and youthful, gentle light, " + _IMG_STYLE,
+        "importance": "Carlo Acutis was an ordinary teenager who loved computers, programming, and football — yet he called the Eucharist 'my highway to heaven.' He used the internet to spread word of Eucharistic miracles and shows young people that holiness is possible now, with the very tools of modern life.",
+        "virtues": [
+            {"name": "Eucharistic love", "how": "Make the Eucharist your 'highway to heaven' — Mass and Communion at the centre of the day."},
+            {"name": "Purity in a digital age", "how": "Use your phone and the internet for good; guard your eyes and heart online."},
+            {"name": "Joyful ordinariness", "how": "Be yourself and be a saint — holiness in homework, friends, and hobbies."},
+            {"name": "Love of Our Lady", "how": "Pray the Rosary every day, as Carlo never missed his."},
+        ],
+        "daily_acts": [
+            "Make the Eucharist the centre of your day — attend Mass or make a spiritual Communion.",
+            "Pray a decade (or the whole) Rosary, as Carlo did every single day.",
+            "Use your phone or the internet today for one genuinely good purpose.",
+            "Guard your eyes online — turn away from one thing you shouldn't look at.",
+            "Make a short visit to the Blessed Sacrament: your 'highway to heaven.'",
+            "Do an ordinary duty (homework, chores, work) with great love.",
+            "Tell a friend about something beautiful in the faith.",
+            "Offer a small sacrifice for the souls in Purgatory.",
+            "Be kind to someone left out or bullied, as Carlo defended the weak.",
+            "Examine your conscience tonight and plan to go to Confession soon.",
+            "Give some pocket money or time to someone poor.",
+            "Choose to 'be original, not a photocopy' — resist one peer pressure today.",
+            "Thank God for the gift of the Eucharist in your own words.",
+            "Spend less time scrolling; give that time to prayer or family.",
+            "Pray, 'To always be close to Jesus, that's my life plan.'",
+            "End the day asking Our Lady to lead you to her Son.",
+        ],
+    },
+    "fulton-sheen": {
+        "name": "Ven. Fulton Sheen",
+        "feast": "December 9",
+        "novena_slug": None,
+        "image_prompt": "Venerable Fulton Sheen, dignified American bishop in black cassock with red zucchetto and pectoral cross, warm expressive face and piercing eyes, " + _IMG_STYLE,
+        "importance": "Venerable Fulton Sheen brought Christ to millions through radio and television, winning Emmy awards while preaching the Gospel. Yet the secret of his fruitfulness was the daily Holy Hour before the Blessed Sacrament, which he never missed for over sixty years.",
+        "virtues": [
+            {"name": "The daily Holy Hour", "how": "Spend time before the Blessed Sacrament each day, as he did for sixty years."},
+            {"name": "Bold evangelisation", "how": "Witness to Christ confidently and winsomely in your own world."},
+            {"name": "Wit and joy", "how": "Use humour and culture to draw others gently toward the truth."},
+            {"name": "Reparation", "how": "Offer small sacrifices and your work for the conversion of souls."},
+        ],
+        "daily_acts": [
+            "Make a Holy Hour — or at least a few minutes — before the Blessed Sacrament.",
+            "Begin your day by giving God the first thoughts of the morning.",
+            "Speak one confident, kind word about Christ to someone today.",
+            "Offer your work today for the conversion of a particular soul.",
+            "Read a few lines of Scripture or a Sheen reflection and ponder them.",
+            "Bring a touch of holy humour to lighten someone's burden.",
+            "Make a small sacrifice and unite it to the Mass for sinners.",
+            "Pray for priests, that they may be holy and bold.",
+            "Examine where the world has shaped you more than the Gospel — and adjust one thing.",
+            "Turn off the noise for a while and sit in silence with the Lord.",
+            "Encourage someone to take their faith seriously, without preaching at them.",
+            "Pray for those who have no one to pray for them.",
+            "Offer your suffering today; 'unless there is a Good Friday, there is no Easter Sunday.'",
+            "Give generously and quietly to someone in need.",
+            "Renew your love before the Eucharist: 'the Hour that makes my day.'",
+            "End the day thanking God for one way He used you to reach another.",
+        ],
+    },
 }
 
 
@@ -642,6 +704,16 @@ COMPANIONS: Dict[str, Dict[str, Any]] = {
 # Traditions the Church holds for each saint (hand-curated, saint-specific).   #
 # --------------------------------------------------------------------------- #
 CHURCH_TRADITIONS: Dict[str, List[Dict[str, str]]] = {
+    "carlo-acutis": [
+        {"title": "Pilgrimage to Assisi", "body": "His tomb in Assisi, where he is seen in jeans and trainers, has become a place of pilgrimage for the young."},
+        {"title": "The Eucharistic Miracles exhibition", "body": "His online catalogue of approved Eucharistic miracles travels the world in parishes and schools."},
+        {"title": "Patron of the internet & youth", "body": "Increasingly invoked by young people and for the right use of technology."},
+    ],
+    "fulton-sheen": [
+        {"title": "The daily Holy Hour", "body": "Sheen popularised the daily Holy Hour before the Blessed Sacrament, which he kept for over sixty years."},
+        {"title": "Catholic radio & television", "body": "His broadcasts ('The Catholic Hour,' 'Life Is Worth Living') are a model for evangelising through the media."},
+        {"title": "Prayer for his cause", "body": "The faithful pray for miracles through his intercession toward beatification."},
+    ],
     "catherine-siena": [
         {"title": "Pray for the Pope & the Church", "body": "As a Doctor and co-patroness of Europe who counselled popes, the faithful invoke her for the Holy Father and Church unity."},
         {"title": "Read the 'Dialogue'", "body": "Her mystical 'Dialogue of Divine Providence' is treasured spiritual reading on her feast (April 29)."},
@@ -749,6 +821,16 @@ CHURCH_TRADITIONS: Dict[str, List[Dict[str, str]]] = {
 # Distinct from CHURCH_TRADITIONS above (which lean to feasts & customs).       #
 # --------------------------------------------------------------------------- #
 DAILY_TRADITIONS: Dict[str, List[Dict[str, str]]] = {
+    "carlo-acutis": [
+        {"title": "Daily Mass & Communion", "body": "Make the Eucharist your 'highway to heaven' — receive or visit Jesus each day."},
+        {"title": "The daily Rosary", "body": "Carlo never missed his Rosary; pray at least a decade for Our Lady's protection."},
+        {"title": "Use technology for good", "body": "Spend a few minutes using your phone or the web to learn or share something of the faith."},
+    ],
+    "fulton-sheen": [
+        {"title": "Keep a Holy Hour", "body": "Spend time before the Blessed Sacrament daily — 'the Hour that makes my day.'"},
+        {"title": "Offer your work for souls", "body": "Dedicate today's tasks for the conversion of one person."},
+        {"title": "Witness with joy", "body": "Share the truth with confidence and good humour, as he did on the air."},
+    ],
     "catherine-siena": [
         {"title": "Enter the 'inner cell'", "body": "Pause once today in self-knowledge before God, the cell she said we carry within us."},
         {"title": "Pray for the Pope & the Church", "body": "Offer a short daily prayer for the Holy Father and the Church's unity, as she did."},
@@ -868,6 +950,8 @@ DAILY_PRAYERS: Dict[str, str] = {
     "blessed-virgin-mary": "Holy Mary, my Mother, take my hand this day; teach me to ponder, to say 'yes' to God, and to bring your gentle love to everyone I meet. Pray for me.",
     "sacred-heart": "Most Sacred Heart of Jesus, I give You my heart this day. Make it meek and humble like Yours, and let everything I do be an act of love for You. I trust in You.",
     "sts-peter-paul": "Sts. Peter and Paul, obtain for me this day a faith as firm as rock and a zeal as bold as fire, that I may follow Christ without fear. Pray for me.",
+    "carlo-acutis": "St. Carlo Acutis, help me today to make the Eucharist my 'highway to heaven,' to use all I have for Jesus, and to be original — not a photocopy. Pray for me.",
+    "fulton-sheen": "Ven. Fulton Sheen, help me to give God my daily Holy Hour and to witness to Christ with courage and joy in my own world this day. Pray for me.",
 }
 
 # The Guardian Angel is a permanent companion for everyone — always present,
@@ -876,7 +960,7 @@ PERMANENT_COMPANION = "guardian-angel"
 
 # Display order for the daily-companions hub.
 COMPANION_ORDER: List[str] = [ "blessed-virgin-mary", "sacred-heart", "guardian-angel", "sts-peter-paul",
-    "padre-pio", "st-faustina", "st-lucy",
+    "carlo-acutis", "padre-pio", "st-faustina", "fulton-sheen", "st-lucy",
     "therese-lisieux", "francis-assisi", "st-joseph", "teresa-avila",
     "catherine-siena", "benedict", "john-paul-ii", "pier-giorgio",
     "agnes", "gianna-molla", "louis-zelie", "monica",

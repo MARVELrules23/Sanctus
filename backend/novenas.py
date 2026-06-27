@@ -259,6 +259,14 @@ NOVENAS: List[Dict[str, Any]] = [
         "intro": "The humble Polish sister to whom Jesus revealed the riches of His Mercy. Ask her childlike trust and confidence in the Mercy of God.",
         "main_prayer": "St. Faustina, secretary of Divine Mercy, you learned to trust Jesus completely and to proclaim His Mercy to the world. Obtain for me a heart that says with all confidence, 'Jesus, I trust in You,' especially in the matter I now bring before God… (mention your intention). St. Faustina, help me to trust in Jesus and to be merciful as the Father is merciful. Amen.",
     },
+    {
+        "slug": "sts-peter-paul", "name": "Sts. Peter & Paul Novena",
+        "patron": "Sts. Peter & Paul, Apostles", "feast": "June 29",
+        "theme": "Faith and zeal — the pillars of the Church",
+        "color": "#8A6A2E", "icon": "key-outline",
+        "intro": "The rock on whom Christ built His Church and the tireless Apostle to the nations. Ask their steadfast faith and burning zeal for souls.",
+        "main_prayer": "Glorious Sts. Peter and Paul, pillars of the Church, Peter who confessed Jesus as the Christ and Paul who carried His name to the nations, obtain for me a faith as firm as rock and a love as bold as fire. Strengthen the Church and her shepherds, and grant me the favor I now ask… (mention your intention). Sts. Peter and Paul, pray for us. Amen.",
+    },
 ]
 
 NOVENA_BY_SLUG = {n["slug"]: n for n in NOVENAS}

@@ -63,9 +63,9 @@ export default function CompanionsHub() {
       ) : (
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <Text style={styles.intro}>
-            Choose up to 3 saints to walk with each day, alongside your vocation companion. Tap a name to enter their space.
+            Choose up to 3 daily companions to walk with — together with your vocation companion, that's 4 in total. Tap a name to enter their space.
           </Text>
-          <Text style={styles.counter}>{selected.length} / 3 chosen</Text>
+          <Text style={styles.counter}>{selected.length} / 3 daily chosen · + your vocation companion = {selected.length + (vocationItem ? 1 : 0)} total</Text>
 
           {vocationItem ? (
             <Pressable

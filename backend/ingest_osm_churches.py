@@ -23,7 +23,11 @@ from motor.motor_asyncio import AsyncIOMotorClient
 load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
 OVERPASS = [
+    "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+    "https://overpass.openstreetmap.fr/api/interpreter",
     "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://overpass.private.coffee/api/interpreter",
 ]
 
 # Half-size of each query box in degrees (~0.35° ≈ 35-40 km half-width).
@@ -119,21 +123,32 @@ def query(s: float, w: float, n: float, e: float) -> str:
 # Country-wide sweep — catches rural/village churches the metro boxes miss, so
 # we approach "every running Catholic church". ISO-3166-1 alpha-2 codes.
 COUNTRIES = [
-    "VA", "SM", "MT", "IE", "PL", "PT", "ES", "FR", "IT", "BE", "NL", "LU",
-    "DE", "AT", "CH", "LI", "GB", "HR", "SI", "SK", "CZ", "HU", "LT", "LV",
-    "RO", "UA", "RS", "BA", "AL", "MK", "ME", "GR", "BG", "NO", "SE", "FI",
-    "DK", "IS",
-    # Americas
-    "US", "CA", "MX", "GT", "SV", "HN", "NI", "CR", "PA", "CU", "DO", "HT",
-    "PR", "TT", "JM", "CO", "VE", "EC", "PE", "BO", "BR", "PY", "UY", "AR",
-    "CL",
-    # Africa
-    "NG", "CD", "AO", "UG", "TZ", "KE", "RW", "BI", "CM", "GH", "CI", "BJ",
-    "TG", "BF", "SN", "ZM", "ZW", "MZ", "MW", "ZA", "MG", "CF", "GA", "CG",
-    "ET", "SS", "GN",
-    # Asia / Oceania / Middle East
-    "PH", "TL", "IN", "LK", "KR", "VN", "ID", "MY", "SG", "JP", "CN", "PK",
-    "LB", "IL", "PS", "JO", "IQ", "SY", "AU", "NZ", "PG", "FJ", "WS",
+    # --- Europe ---
+    "VA", "SM", "MT", "AD", "MC", "LI", "IE", "GB", "PT", "ES", "FR", "IT",
+    "BE", "NL", "LU", "DE", "AT", "CH", "PL", "CZ", "SK", "HU", "SI", "HR",
+    "BA", "RS", "ME", "MK", "AL", "XK", "GR", "BG", "RO", "MD", "UA", "BY",
+    "LT", "LV", "EE", "FI", "SE", "NO", "DK", "IS", "RU", "CY", "TR", "GE",
+    "AM", "AZ",
+    # --- Americas ---
+    "US", "CA", "MX", "GT", "BZ", "SV", "HN", "NI", "CR", "PA", "CU", "DO",
+    "HT", "PR", "JM", "TT", "BS", "BB", "GD", "LC", "VC", "DM", "AG", "KN",
+    "CO", "VE", "GY", "SR", "EC", "PE", "BO", "BR", "PY", "UY", "AR", "CL",
+    # --- Africa ---
+    "MA", "DZ", "TN", "LY", "EG", "SD", "SS", "ER", "ET", "DJ", "SO", "KE",
+    "UG", "RW", "BI", "TZ", "MZ", "MW", "ZM", "ZW", "AO", "CD", "CG", "GA",
+    "GQ", "CM", "CF", "TD", "NE", "NG", "BJ", "TG", "GH", "CI", "BF", "ML",
+    "MR", "SN", "GM", "GW", "GN", "SL", "LR", "ST", "ZA", "NA", "BW", "LS",
+    "SZ", "MG", "MU", "SC", "KM", "CV",
+    # --- Middle East ---
+    "LB", "IL", "PS", "JO", "SY", "IQ", "IR", "SA", "YE", "OM", "AE", "QA",
+    "BH", "KW",
+    # --- Asia ---
+    "IN", "PK", "BD", "LK", "NP", "BT", "MV", "MM", "TH", "LA", "KH", "VN",
+    "MY", "SG", "BN", "ID", "TL", "PH", "CN", "HK", "MO", "TW", "JP", "KR",
+    "MN", "KZ", "KG", "TJ", "TM", "UZ",
+    # --- Oceania ---
+    "AU", "NZ", "PG", "FJ", "SB", "VU", "NC", "PF", "WS", "TO", "KI", "FM",
+    "MH", "PW", "GU",
 ]
 
 
@@ -243,68 +258,76 @@ async def main():
     await col.create_index("osm_id", unique=True)
     await col.create_index([("lat", 1), ("lng", 1)])
 
-    cities = CITIES[:]
-    random.shuffle(cities)  # broad global coverage early, not country-by-country
     start_total = await col.count_documents({})
-    print(f"START: {start_total} churches already stored. Sweeping {len(cities)} metros...")
+    print(f"START: {start_total} churches already stored.")
 
-    async with httpx.AsyncClient(timeout=50) as client:
-        failed = []
-        for i, (name, lat, lng) in enumerate(cities, 1):
-            t0 = time.time()
-            els = await fetch_box(client, lat - HALF, lng - HALF, lat + HALF, lng + HALF)
-            if els is None:
-                print(f"[{i}/{len(cities)}] {name}: FAILED")
-                failed.append((name, lat, lng))
-                await asyncio.sleep(2)
-                continue
-            docs = parse(els)
-            new = 0
-            for d in docs:
-                res = await col.update_one({"osm_id": d["osm_id"]}, {"$set": d}, upsert=True)
-                if res.upserted_id is not None:
-                    new += 1
-            total = await col.count_documents({})
-            print(f"[{i}/{len(cities)}] {name}: +{new} new ({len(docs)} found) | total={total} | {time.time()-t0:.1f}s")
-            await asyncio.sleep(1.5)  # be polite to Overpass
-
-        if failed:
-            print(f"--- retry pass: {len(failed)} cities ---")
-            await asyncio.sleep(15)
-            for name, lat, lng in failed:
+    # The metro city sweep is redundant once the whole-country sweep runs
+    # (countries include their metros). Enable only with RUN_CITIES=1.
+    if os.environ.get("RUN_CITIES") == "1":
+        cities = CITIES[:]
+        random.shuffle(cities)
+        print(f"Sweeping {len(cities)} metros...")
+        async with httpx.AsyncClient(timeout=50) as client:
+            for i, (name, lat, lng) in enumerate(cities, 1):
                 els = await fetch_box(client, lat - HALF, lng - HALF, lat + HALF, lng + HALF)
                 if els is None:
-                    print(f"  retry {name}: still failed")
-                    await asyncio.sleep(3)
+                    print(f"[{i}/{len(cities)}] {name}: FAILED")
+                    await asyncio.sleep(2)
                     continue
                 for d in parse(els):
                     await col.update_one({"osm_id": d["osm_id"]}, {"$set": d}, upsert=True)
-                print(f"  retry {name}: OK")
-                await asyncio.sleep(2)
+                await asyncio.sleep(1.0)
 
-    # --- Country-wide sweep — catches rural/village churches the metro boxes
-    # miss, so we approach "every running Catholic church" (with addresses). ---
-    print(f"=== COUNTRY SWEEP: {len(COUNTRIES)} nations ===")
+    # --- Country-wide sweep (resumable + continuous): pass after pass, skip
+    # ISO codes already completed and re-attempt failures, until every nation
+    # in COUNTRIES is covered. Progress persists in Mongo so a restart resumes
+    # instead of starting over. ---
+    prog = db["osm_ingest_progress"]
+    state = await prog.find_one({"_id": "country_sweep"}) or {}
+    done = set(state.get("done", []))
+    remaining = [iso for iso in COUNTRIES if iso not in done]
+    print(f"=== COUNTRY SWEEP: {len(remaining)} of {len(COUNTRIES)} nations remaining "
+          f"({len(done)} already done) ===")
+
+    MAX_PASSES = 12
+    pass_no = 0
     async with httpx.AsyncClient(timeout=660) as cclient:
-        for i, iso in enumerate(COUNTRIES, 1):
-            t0 = time.time()
-            els = await fetch_area(cclient, iso)
-            if els is None:
-                print(f"[C {i}/{len(COUNTRIES)}] {iso}: FAILED")
-                await asyncio.sleep(5)
-                continue
-            docs = parse(els)
-            new = 0
-            for d in docs:
-                res = await col.update_one({"osm_id": d["osm_id"]}, {"$set": d}, upsert=True)
-                if res.upserted_id is not None:
-                    new += 1
-            total = await col.count_documents({})
-            print(f"[C {i}/{len(COUNTRIES)}] {iso}: +{new} new ({len(docs)} found) | total={total} | {time.time()-t0:.1f}s")
-            await asyncio.sleep(3)  # be polite — these are heavy queries
+        while remaining and pass_no < MAX_PASSES:
+            pass_no += 1
+            still = []
+            for idx, iso in enumerate(remaining, 1):
+                t0 = time.time()
+                els = await fetch_area(cclient, iso)
+                if els is None:
+                    print(f"[pass {pass_no}] {iso} ({idx}/{len(remaining)}): FAILED — will retry")
+                    still.append(iso)
+                    await asyncio.sleep(5)
+                    continue
+                new = 0
+                for d in parse(els):
+                    res = await col.update_one({"osm_id": d["osm_id"]}, {"$set": d}, upsert=True)
+                    if res.upserted_id is not None:
+                        new += 1
+                done.add(iso)
+                await prog.update_one(
+                    {"_id": "country_sweep"},
+                    {"$set": {"done": sorted(done), "updated_at": time.time()}},
+                    upsert=True,
+                )
+                total = await col.count_documents({})
+                print(f"[pass {pass_no}] {iso} ({idx}/{len(remaining)}): +{new} new | total={total} | {time.time()-t0:.1f}s")
+                await asyncio.sleep(3)
+            remaining = still
+            if remaining:
+                print(f"--- pass {pass_no} done; {len(remaining)} still failing: {remaining}. Cooling 60s ---")
+                await asyncio.sleep(60)
 
     total = await col.count_documents({})
-    print(f"DONE. Total stored churches: {total} (added {total - start_total} this run).")
+    if remaining:
+        print(f"STOPPED after {pass_no} passes. Still unreachable: {remaining}")
+    else:
+        print(f"COMPLETE — all {len(COUNTRIES)} nations swept.")
+    print(f"Total stored churches: {total} (added {total - start_total} this run).")
 
 
 if __name__ == "__main__":

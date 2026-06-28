@@ -563,6 +563,20 @@ SEED_BOOKS: List[Dict[str, Any]] = [
     # St. Ignatius' Rules are public domain (Elder Mullan, 1914).
     # ============================================================
     {
+        "slug": "spiritual-exercises-ignatius",
+        "title": "The Spiritual Exercises",
+        "author": "St. Ignatius of Loyola",
+        "year": 1548,
+        "blurb": "The complete spiritual classic of St. Ignatius — a four-week retreat of prayer, meditation, and discernment, including the Rules for the Discernment of Spirits and the method of Election. Full 1914 Elder Mullan translation.",
+        "tradition": "catholic-classic",
+        "cover_color": "#1E3A5F",
+        "cover_icon": "book",
+        "type": "embedded",
+        "source_url": "https://ccel.org/ccel/ignatius/exercises",
+        # Full chapters are populated by scripts/load_spiritual_exercises.py
+        "chapters": [],
+    },
+    {
         "slug": "discernment-of-spirits-ignatius",
         "title": "Rules for the Discernment of Spirits",
         "author": "St. Ignatius of Loyola",

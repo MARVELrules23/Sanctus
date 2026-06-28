@@ -600,10 +600,31 @@ async def _fetch(url: str) -> str:
         return r.text
 
 
+def _strip_back_matter(paragraphs: List[str]) -> List[str]:
+    """Cut the document's trailing INDEX (table of contents) and copyright /
+    publisher footer so they aren't re-parsed as duplicate, near-empty
+    chapters. The Vatican exhortations print: BODY → 'INDEX' (TOC) → footer.
+    Footnotes [n] that precede the INDEX are kept as real content."""
+    cut = len(paragraphs)
+    for i, p in enumerate(paragraphs):
+        if i < 5:
+            continue
+        s = _clean(p).strip()
+        su = s.upper()
+        # Standalone INDEX heading, or a copyright/publisher footer line.
+        if su == "INDEX" or su.startswith("INDEX ") or su == "TABLE OF CONTENTS" \
+                or s.startswith("Copyright ©") or su.startswith("COPYRIGHT ©") \
+                or "© DICASTERY FOR COMMUNICATION" in su \
+                or "LIBRERIA EDITRICE VATICANA" in su:
+            cut = i
+            break
+    return paragraphs[:cut]
+
+
 async def _load(slug: str, meta: Dict, db) -> None:
-    print(f"→ {slug}  ({meta['url']})")
     html = await _fetch(meta["url"])
     paragraphs = _vatican_paragraphs(html)
+    paragraphs = _strip_back_matter(paragraphs)
 
     if slug in MANUAL_OUTLINES:
         chapters = _chunk_by_outline(paragraphs, MANUAL_OUTLINES[slug])

@@ -176,6 +176,61 @@ SUMMARY_CHAPTERS: Dict[str, Dict[str, str]] = {
             "and if he listens to teachers it is because they are witnesses."
         ),
     },
+    "gaudete-et-exsultate": {
+        "title": "Why This Matters",
+        "subtitle": "A reader's introduction",
+        "body_md": (
+            "Gaudete et Exsultate — 'Rejoice and Be Glad' — was issued by "
+            "Pope Francis on 19 March 2018. It is the Holy Father's call to "
+            "holiness for ordinary people: not heroic monks alone, but "
+            "parents, workers, the sick, and the young — 'the saints next "
+            "door.'\n\n"
+            "For anyone seeking spiritual discernment, the heart of this "
+            "document is Chapter Five: 'Spiritual Combat, Vigilance and "
+            "Discernment.' There Pope Francis gives one of the clearest "
+            "modern guides to discerning the movements of the heart — how to "
+            "tell the voice of the Lord from the voice of the world, our own "
+            "ego, or the evil one. He insists discernment is not for experts "
+            "only; it is 'a gift which we must implore,' a daily habit of "
+            "listening that keeps us docile to the Holy Spirit.\n\n"
+            "This document matters because it translates the great Ignatian "
+            "and mystical tradition of discernment into plain, pastoral "
+            "language for lay people. It teaches that God speaks in the "
+            "ordinary, that holiness grows in small steps, and that the "
+            "Christian must remain awake — neither paralysed by fear nor "
+            "naive about the real spiritual battle.\n\n"
+            "Read Chapter Five slowly. It is short, practical, and meant to "
+            "be returned to whenever you face a decision and ask, 'Lord, what "
+            "do you want of me?'"
+        ),
+    },
+    "christus-vivit": {
+        "title": "Why This Matters",
+        "subtitle": "A reader's introduction",
+        "body_md": (
+            "Christus Vivit — 'Christ is Alive' — was signed by Pope Francis "
+            "on 25 March 2019, the Solemnity of the Annunciation, as the "
+            "fruit of the Synod on Young People, Faith and Vocational "
+            "Discernment.\n\n"
+            "Though addressed to the young, its closing chapters are a gift "
+            "to anyone discerning their path in life. Chapter Eight, "
+            "'Vocation,' and Chapter Nine, 'Discernment,' lay out how to "
+            "recognise God's call: through prayer, the reading of one's own "
+            "interior movements, the counsel of a wise guide, and the "
+            "patient testing of where true and lasting peace is found. Pope "
+            "Francis warns against the noise and haste that smother the "
+            "voice of God, and teaches that every state of life — marriage, "
+            "priesthood, consecrated or single life, and one's daily work — "
+            "is a genuine vocation.\n\n"
+            "This document matters because it gives lay people a warm, "
+            "practical framework for the biggest decisions of life. It "
+            "presents discernment not as anxious self-analysis but as a "
+            "loving conversation with the God who already knows and wants "
+            "our happiness.\n\n"
+            "Read it whenever you stand at a crossroads and want to choose, "
+            "not merely what is good, but what God is asking of you in love."
+        ),
+    },
 }
 
 
@@ -233,6 +288,26 @@ BOOKS: Dict[str, Dict] = {
         "cover_color": "#365314",
         "cover_icon": "megaphone-outline",
         "url": "https://www.vatican.va/content/paul-vi/en/apost_exhortations/documents/hf_p-vi_exh_19751208_evangelii-nuntiandi.html",
+    },
+    "gaudete-et-exsultate": {
+        "title": "Gaudete et Exsultate",
+        "author": "Pope Francis",
+        "year": 2018,
+        "blurb": "Pope Francis' call to holiness in today's world — including a clear, practical guide to spiritual discernment for everyday Christians (Chapter 5).",
+        "tradition": "papal",
+        "cover_color": "#15803D",
+        "cover_icon": "compass-outline",
+        "url": "https://www.vatican.va/content/francesco/en/apost_exhortations/documents/papa-francesco_esortazione-ap_20180319_gaudete-et-exsultate.html",
+    },
+    "christus-vivit": {
+        "title": "Christus Vivit",
+        "author": "Pope Francis",
+        "year": 2019,
+        "blurb": "'Christ is Alive!' — Pope Francis on vocation and discernment, helping lay people recognise God's call and choose their path in life.",
+        "tradition": "papal",
+        "cover_color": "#B45309",
+        "cover_icon": "navigate-outline",
+        "url": "https://www.vatican.va/content/francesco/en/apost_exhortations/documents/papa-francesco_esortazione-ap_20190325_christus-vivit.html",
     },
 }
 

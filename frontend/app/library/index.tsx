@@ -125,9 +125,10 @@ export default function LibraryIndexScreen() {
     const inProgress = books.filter(
       (b) => b.progress && (b.progress.chapter_index > 0 || b.progress.scroll_pct > 0.01),
     );
-    const embedded = books.filter((b) => b.type === "embedded" && !inProgress.includes(b));
-    const external = books.filter((b) => b.type === "external");
-    return { inProgress, embedded, external };
+    const isEncyclical = (b: LibraryBook) => (b.tradition || "").toLowerCase() === "papal";
+    const encyclicals = books.filter((b) => isEncyclical(b) && !inProgress.includes(b));
+    const authored = books.filter((b) => !isEncyclical(b) && !inProgress.includes(b));
+    return { inProgress, encyclicals, authored };
   }, [books]);
 
   const filteredFilms = useMemo(() => {
@@ -371,15 +372,17 @@ export default function LibraryIndexScreen() {
                   {grouped.inProgress.map(renderBookCard)}
                 </>
               ) : null}
-              <Text style={styles.section}>In-App Reader</Text>
+              <Text style={styles.section}>Books</Text>
               <Text style={styles.sectionHint}>
-                Public-domain classics with full text inside Sanctus.
+                Spiritual classics & guides — including a discernment library. Reading included with Sanctus Premium.
               </Text>
-              {grouped.embedded.map(renderBookCard)}
+              {grouped.authored.map(renderBookCard)}
 
-              <Text style={styles.section}>External Library</Text>
-              <Text style={styles.sectionHint}>Opens the work in a clean in-app browser.</Text>
-              {grouped.external.map(renderBookCard)}
+              <Text style={styles.section}>Encyclicals</Text>
+              <Text style={styles.sectionHint}>
+                Papal letters & exhortations — always free. Several are practical guides to spiritual discernment.
+              </Text>
+              {grouped.encyclicals.map(renderBookCard)}
             </>
           )
         ) : null}

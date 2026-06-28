@@ -531,6 +531,280 @@ SEED_BOOKS: List[Dict[str, Any]] = [
         "source_url": "https://www.vatican.va/content/paul-vi/en/apost_exhortations/documents/hf_p-vi_exh_19751208_evangelii-nuntiandi.html",
         "chapters": [],
     },
+    {
+        "slug": "gaudete-et-exsultate",
+        "title": "Gaudete et Exsultate",
+        "author": "Pope Francis",
+        "year": 2018,
+        "blurb": "Pope Francis' call to holiness in today's world — including a clear, practical guide to spiritual discernment for everyday Christians (Chapter 5).",
+        "tradition": "papal",
+        "cover_color": "#15803D",
+        "cover_icon": "compass-outline",
+        "type": "embedded",
+        "source_url": "https://www.vatican.va/content/francesco/en/apost_exhortations/documents/papa-francesco_esortazione-ap_20180319_gaudete-et-exsultate.html",
+        "chapters": [],
+    },
+    {
+        "slug": "christus-vivit",
+        "title": "Christus Vivit",
+        "author": "Pope Francis",
+        "year": 2019,
+        "blurb": "'Christ is Alive!' — Pope Francis on vocation and discernment, helping lay people recognise God's call and choose their path in life.",
+        "tradition": "papal",
+        "cover_color": "#B45309",
+        "cover_icon": "navigate-outline",
+        "type": "embedded",
+        "source_url": "https://www.vatican.va/content/francesco/en/apost_exhortations/documents/papa-francesco_esortazione-ap_20190325_christus-vivit.html",
+        "chapters": [],
+    },
+
+    # ============================================================
+    # DISCERNMENT — authored classic (PREMIUM, embedded full text)
+    # St. Ignatius' Rules are public domain (Elder Mullan, 1914).
+    # ============================================================
+    {
+        "slug": "discernment-of-spirits-ignatius",
+        "title": "Rules for the Discernment of Spirits",
+        "author": "St. Ignatius of Loyola",
+        "year": 1548,
+        "blurb": "The foundational Catholic guide to discerning the movements of the heart — how to recognise the action of the good spirit from the enemy, drawn from the Spiritual Exercises. The bedrock of all later Catholic teaching on discernment.",
+        "tradition": "catholic-classic",
+        "cover_color": "#1E3A5F",
+        "cover_icon": "compass",
+        "type": "embedded",
+        "source_url": "https://www.gutenberg.org/ebooks/24522",
+        "chapters": [
+            {
+                "title": "Why This Matters",
+                "body_md": (
+                    "Every day the human heart is moved — toward hope or discouragement, "
+                    "peace or anxiety, generosity or fear. The Christian life is not only "
+                    "about *doing* good; it is about learning to read these interior "
+                    "movements and to recognise which of them come from God, which from "
+                    "our own wounded nature, and which from the enemy of our soul.\n\n"
+                    "St. Ignatius of Loyola (1491–1556), founder of the Jesuits, gave the "
+                    "Church the most influential set of guidelines ever written on this "
+                    "art. He placed them at the end of his *Spiritual Exercises* under a "
+                    "deceptively plain title: **Rules for Perceiving and Knowing in Some "
+                    "Manner the Different Movements Which Are Caused in the Soul** — the "
+                    "good, to be received, and the bad, to be rejected.\n\n"
+                    "Ignatius learned these rules the hard way. Recovering from a "
+                    "cannonball wound at Loyola, with nothing to read but a life of "
+                    "Christ and lives of the saints, he noticed something: daydreams of "
+                    "worldly glory left him dry and restless afterward, while thoughts of "
+                    "imitating St. Francis and St. Dominic left a lasting peace and joy. "
+                    "That single observation — *attending not only to the thought but to "
+                    "where it leaves you* — is the seed of everything that follows.\n\n"
+                    "Two key words appear throughout:\n\n"
+                    "- **Consolation** — any increase of faith, hope, and love; interior "
+                    "peace, tears of devotion, being drawn toward God and the things of "
+                    "God.\n"
+                    "- **Desolation** — darkness of soul, disturbance, restlessness, "
+                    "temptation toward what is low, a sense of being separated from God.\n\n"
+                    "Read these rules slowly and prayerfully. They are not theory; they "
+                    "are a field guide for the daily battle and the daily friendship with "
+                    "God."
+                ),
+            },
+            {
+                "title": "Rules for the First Week",
+                "body_md": (
+                    "These rules suit beginners in the spiritual life and times when the "
+                    "soul is being purified — when the basic struggle is between sin and "
+                    "the desire for God.\n\n"
+                    "**1. The two opposite tactics.** In persons going from mortal sin to "
+                    "mortal sin, the enemy commonly proposes apparent pleasures, filling "
+                    "the imagination with sensual delights, to hold and deepen them in "
+                    "their vices. The good spirit uses the opposite method, stinging and "
+                    "biting the conscience through reason.\n\n"
+                    "**2. In those earnestly purifying their sins and rising in God's "
+                    "service**, the method is reversed. Now it belongs to the evil spirit "
+                    "to bite, sadden, and put obstacles, disquieting with false reasons so "
+                    "the soul may not go forward. And it belongs to the good spirit to "
+                    "give courage and strength, consolations, tears, inspirations and "
+                    "quiet, easing and removing all obstacles, that the soul may go "
+                    "forward in doing good.\n\n"
+                    "**3. Of Spiritual Consolation.** I call it consolation when an "
+                    "interior movement is aroused in the soul, by which it is inflamed "
+                    "with love of its Creator and Lord; and when it can love no created "
+                    "thing on the face of the earth in itself, but only in the Creator of "
+                    "them all. Likewise when it sheds tears that move to the love of God, "
+                    "whether out of sorrow for sins, or for the Passion of Christ, or for "
+                    "other things directly connected with His service and praise. Finally, "
+                    "I call consolation every increase of hope, faith and charity, and all "
+                    "interior joy that calls and attracts to heavenly things and to the "
+                    "salvation of one's soul, quieting it and giving it peace in its "
+                    "Creator and Lord.\n\n"
+                    "**4. Of Spiritual Desolation.** I call desolation all the contrary of "
+                    "the third rule: darkness of soul, disturbance in it, movement to "
+                    "things low and earthly, restlessness from various agitations and "
+                    "temptations, moving to want of confidence, without hope, without "
+                    "love, finding oneself all lazy, tepid, sad, and as if separated from "
+                    "one's Creator and Lord.\n\n"
+                    "**5. In time of desolation never make a change**, but be firm and "
+                    "constant in the resolutions and determination in which one was the day "
+                    "preceding such desolation, or in the decision in which one was in the "
+                    "preceding consolation. Because, as in consolation the good spirit "
+                    "guides and counsels us more, so in desolation the bad spirit, with "
+                    "whose counsels we cannot find the way to a right decision.\n\n"
+                    "**6. Although in desolation we ought not to change our former "
+                    "resolutions, it is very helpful to change ourselves against the "
+                    "desolation**, as by insisting more on prayer, meditation, much "
+                    "examination, and giving ourselves more scope in some suitable way of "
+                    "doing penance.\n\n"
+                    "**7. Let one in desolation consider** that the Lord has left him to "
+                    "his natural powers to resist the agitations of the enemy, as a trial; "
+                    "for he can resist with the divine help, which always remains with "
+                    "him, though he does not clearly feel it.\n\n"
+                    "**8. Let him work to be patient**, which is contrary to the "
+                    "vexations that come to him, and let him think that he will soon be "
+                    "consoled, employing diligence against the desolation, as is said in "
+                    "the sixth rule.\n\n"
+                    "**9. There are three principal reasons why we find ourselves "
+                    "desolate.** The first is because we are tepid, lazy or negligent in "
+                    "our spiritual exercises. The second, to try us and see how much we "
+                    "are, and how much we extend ourselves in His service and praise "
+                    "without so much payment of consolation. The third, to give us a true "
+                    "knowledge that it is not ours to attain or keep great devotion — that "
+                    "all is the gift and grace of God.\n\n"
+                    "**10. Let one who is in consolation think how he will conduct himself "
+                    "in the desolation which will come after**, taking new strength for "
+                    "that time.\n\n"
+                    "**11. Let him who is consoled humble and abase himself as much as he "
+                    "can**, thinking how little he is able for in the time of desolation "
+                    "without such grace or consolation. On the contrary, let one in "
+                    "desolation think that he can do much with God's sufficient grace to "
+                    "resist all his enemies, taking strength in his Creator and Lord.\n\n"
+                    "**12. The enemy acts like a woman in a quarrel** — weak against a firm "
+                    "will, strong against one who gives way. If one shows much courage "
+                    "against the temptations, doing exactly the opposite of what the enemy "
+                    "suggests, the temptation loses strength.\n\n"
+                    "**13. The enemy acts like a false lover** who wants to remain hidden "
+                    "and not be revealed. So he wishes his deceits and suggestions to be "
+                    "received and kept in secret; but is much vexed when one reveals them "
+                    "to a good confessor or spiritual person. Therefore, **bring "
+                    "temptations into the light** — they wither when spoken aloud to a "
+                    "wise guide.\n\n"
+                    "**14. The enemy acts like a commander reconnoitring a fortress** — he "
+                    "examines our virtues and weaknesses, and attacks at our weakest "
+                    "point. Know your own vulnerable places, and there be especially on "
+                    "guard."
+                ),
+            },
+            {
+                "title": "Rules for the Second Week",
+                "body_md": (
+                    "These finer rules are for those already advancing, when the enemy no "
+                    "longer tempts crudely toward obvious sin, but disguises himself "
+                    "**'as an angel of light'** — proposing good and holy thoughts in "
+                    "order to draw the soul, little by little, toward his own hidden, "
+                    "harmful purpose.\n\n"
+                    "**1.** It is proper to God and His Angels, in their movements, to give "
+                    "true spiritual gladness and joy, taking away all sadness and "
+                    "disturbance which the enemy brings. It is proper to the enemy to "
+                    "fight against such gladness and spiritual consolation, bringing "
+                    "apparent reasons, subtleties and continual fallacies.\n\n"
+                    "**2. Consolation without preceding cause.** God alone can give "
+                    "consolation to the soul without any preceding cause — that is, "
+                    "without any prior perception or knowledge of some object through "
+                    "which such consolation would come, by the soul's own acts of "
+                    "understanding and will. For it belongs to the Creator alone to enter "
+                    "the soul, leave it, and act upon it, drawing it wholly into the love "
+                    "of His Divine Majesty. Such consolation, having no cause, **cannot "
+                    "deceive**, because it is from God our Lord only.\n\n"
+                    "**3. With preceding cause**, both the good Angel and the bad can "
+                    "console the soul, but for contrary ends: the good Angel for the "
+                    "profit of the soul, that it may grow and rise from good to better; "
+                    "the evil for the contrary, and onwards to his damnable intention.\n\n"
+                    "**4. The serpent's tail.** It is the way of the evil one, when he "
+                    "suggests good and holy thoughts conformable to a devout soul, to "
+                    "bring in afterwards, little by little, his own deceits and perverse "
+                    "intentions — leading the soul on to where he wants it. **Watch the "
+                    "whole course of our thoughts**: if the beginning, middle, and end are "
+                    "all good and directed entirely to what is right, it is a sign of the "
+                    "good Angel. But if the course of the thoughts ends in something bad, "
+                    "or distracting, or less good than the soul had proposed, or weakens "
+                    "or disquiets it, taking away its peace — this is a clear sign that it "
+                    "proceeds from the evil spirit.\n\n"
+                    "**5. When the enemy is detected** by his serpent's tail and the bad "
+                    "end to which he leads, it profits the soul to examine at once the "
+                    "whole course of the good thoughts he brought it — their beginning, "
+                    "and how, little by little, he tried to make it descend from the "
+                    "sweetness and joy in which it was, until he brought it to his "
+                    "depraved intention. By this experience, noted and observed, the soul "
+                    "guards itself for the future.\n\n"
+                    "**6.** When God consoles the soul without preceding cause, although "
+                    "there is no deception in the consolation itself, **the spiritual "
+                    "person ought to look very diligently at the time** that immediately "
+                    "follows it. In that time the soul often forms various resolutions and "
+                    "plans which are not given immediately by God — some are from our own "
+                    "reasoning, some from the good or evil spirit. These must be examined "
+                    "carefully before full belief or effect is given to them.\n\n"
+                    "**7.** In those going from good to better, the good Angel touches the "
+                    "soul sweetly, lightly and gently, like a drop of water entering a "
+                    "sponge; the evil spirit touches sharply, with noise and disturbance, "
+                    "like a drop of water falling on a stone. In those going from bad to "
+                    "worse, the spirits touch in the reverse way. The cause of this is the "
+                    "disposition of the soul: when contrary to the spirits, they enter "
+                    "with noise; when similar, they enter silently, as into one's own "
+                    "house through an open door.\n\n"
+                    "**8.** When consolation is without cause — though there is no "
+                    "deception in it, since it is of God alone — still the spiritual "
+                    "person to whom God gives such consolation ought, with much vigilance "
+                    "and attention, to distinguish the actual time of that consolation "
+                    "from the time after it, when the soul remains warm and favoured with "
+                    "the gift and the after-effects of the consolation now past. For in "
+                    "this latter time the soul frequently forms plans and resolutions that "
+                    "are not given directly by God, and so they must be well examined "
+                    "before being trusted."
+                ),
+            },
+            {
+                "title": "Discerning God's Will — The Three Times for Making a Choice",
+                "body_md": (
+                    "The rules above teach us to read the movements of the heart. But how "
+                    "do we use them to make an actual decision — a vocation, a change of "
+                    "life, a serious commitment? In the *Spiritual Exercises*, St. "
+                    "Ignatius describes **three 'times' in which a sound and good choice "
+                    "can be made.**\n\n"
+                    "**The First Time** is when God so moves and attracts the will that, "
+                    "without doubting or being able to doubt, the devout soul follows what "
+                    "is shown — as St. Paul and St. Matthew did in following Christ. This "
+                    "is rare and unmistakable: the certainty is given directly by God.\n\n"
+                    "**The Second Time** is when much light and knowledge are received "
+                    "through the experience of consolations and desolations, and through "
+                    "the discernment of different spirits. By noticing where God draws the "
+                    "heart with peace and where the enemy unsettles it, the path becomes "
+                    "clear. This is the ordinary, fruitful way for most souls, and it is "
+                    "exactly here that the Rules for Discernment do their work.\n\n"
+                    "**The Third Time** is one of tranquillity — when the soul is not "
+                    "agitated by different spirits and uses its natural powers freely and "
+                    "calmly. Ignatius gives two reliable methods for this time:\n\n"
+                    "*First method:* Set the matter before you. Keep as your one aim the "
+                    "end for which you were created — the praise of God and the salvation "
+                    "of your soul. Be indifferent, like a balance at equilibrium, wanting "
+                    "neither option more than the other except as it leads to that end. "
+                    "Ask God to move your will. Then weigh the advantages and "
+                    "disadvantages of each side reasonably; see to which the greater "
+                    "reasons incline; and make your choice, offering it to God and asking "
+                    "Him to confirm it if it is for His greater service and praise.\n\n"
+                    "*Second method:* Test the choice by three searching questions —\n"
+                    "1. What counsel would I give to a stranger I have never met, whom I "
+                    "wished only to do well? Follow that same counsel myself.\n"
+                    "2. Imagine yourself at the point of death: what choice would you then "
+                    "wish to have made? Make that choice now.\n"
+                    "3. Picture yourself on the Day of Judgement before God: how would you "
+                    "then wish to have decided? Choose now the rule of life you would "
+                    "then desire to have kept.\n\n"
+                    "Whatever is chosen, Ignatius adds, should be brought back to God in "
+                    "prayer, **offered to Him, and a sign sought that He receives and "
+                    "confirms it** — for the goal is never simply a wise decision, but a "
+                    "decision made in love, for the greater glory of God. *Ad maiorem Dei "
+                    "gloriam.*"
+                ),
+            },
+        ],
+    },
 ]
 
 

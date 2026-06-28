@@ -165,6 +165,24 @@ async def fetch_q(client: httpx.AsyncClient, q: str):
     return None
 
 
+async def fetch_area(client: httpx.AsyncClient, iso: str):
+    """Country-wide sweep (slow). Uses a generous timeout for big nations."""
+    q = area_query(iso)
+    for attempt in range(4):
+        for url in OVERPASS:
+            try:
+                r = await client.post(url, data={"data": q},
+                                      headers={"User-Agent": "SanctusApp/1.0 (church ingest)"})
+                if r.status_code == 200:
+                    return r.json().get("elements", [])
+                if r.status_code in (429, 504):
+                    break
+            except Exception as ex:  # noqa: BLE001
+                print("  err", repr(ex)[:70])
+        await asyncio.sleep(20 * (attempt + 1))  # heavier backoff for big queries
+    return None
+
+
 async def fetch_box(client: httpx.AsyncClient, s, w, n, e):
     q = query(s, w, n, e)
     for attempt in range(5):
@@ -263,6 +281,27 @@ async def main():
                     await col.update_one({"osm_id": d["osm_id"]}, {"$set": d}, upsert=True)
                 print(f"  retry {name}: OK")
                 await asyncio.sleep(2)
+
+    # --- Country-wide sweep — catches rural/village churches the metro boxes
+    # miss, so we approach "every running Catholic church" (with addresses). ---
+    print(f"=== COUNTRY SWEEP: {len(COUNTRIES)} nations ===")
+    async with httpx.AsyncClient(timeout=660) as cclient:
+        for i, iso in enumerate(COUNTRIES, 1):
+            t0 = time.time()
+            els = await fetch_area(cclient, iso)
+            if els is None:
+                print(f"[C {i}/{len(COUNTRIES)}] {iso}: FAILED")
+                await asyncio.sleep(5)
+                continue
+            docs = parse(els)
+            new = 0
+            for d in docs:
+                res = await col.update_one({"osm_id": d["osm_id"]}, {"$set": d}, upsert=True)
+                if res.upserted_id is not None:
+                    new += 1
+            total = await col.count_documents({})
+            print(f"[C {i}/{len(COUNTRIES)}] {iso}: +{new} new ({len(docs)} found) | total={total} | {time.time()-t0:.1f}s")
+            await asyncio.sleep(3)  # be polite — these are heavy queries
 
     total = await col.count_documents({})
     print(f"DONE. Total stored churches: {total} (added {total - start_total} this run).")

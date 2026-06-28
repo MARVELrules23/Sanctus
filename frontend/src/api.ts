@@ -1899,6 +1899,12 @@ export type CatholicSite = {
   persecution_note?: string;
   distance_km?: number;
   osm?: boolean;
+  address?: string;
+  street?: string;
+  state?: string;
+  postcode?: string;
+  website?: string;
+  phone?: string;
 };
 export async function listCatholicSites(): Promise<{ items: CatholicSite[]; total: number }> {
   return await api(`/sites`);
@@ -1922,6 +1928,14 @@ export type BboxMarker = {
   lng: number;
   persecuted?: boolean;
   osm?: boolean;
+  city?: string;
+  country?: string;
+  address?: string;
+  street?: string;
+  state?: string;
+  postcode?: string;
+  website?: string;
+  phone?: string;
 };
 export async function sitesInBbox(
   south: number, west: number, north: number, east: number, zoom: number,

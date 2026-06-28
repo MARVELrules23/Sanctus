@@ -220,6 +220,8 @@ export default function CatholicMapScreen() {
         setSelected({
           site_id: m.site_id, slug: m.slug, name: m.name, type: m.type,
           city: m.city || "", country: m.country || "", lat: m.lat, lng: m.lng,
+          address: m.address || "", street: m.street || "", state: m.state || "",
+          postcode: m.postcode || "", website: m.website || "", phone: m.phone || "",
           relics: [], saints: [], miracles: [], osm: true,
         } as CatholicSite);
       }
@@ -382,6 +384,13 @@ export default function CatholicMapScreen() {
                   </Text>
                 </View>
 
+                {selected.address ? (
+                  <View style={styles.addrRow}>
+                    <Ionicons name="navigate-outline" size={14} color={colors.gold} />
+                    <Text style={styles.addrText} testID="map-site-address">{selected.address}</Text>
+                  </View>
+                ) : null}
+
                 {selected.persecuted ? (
                   <View style={styles.persBanner} testID="map-persecution-banner">
                     <Ionicons name="alert-circle" size={18} color="#B3261E" />
@@ -502,6 +511,8 @@ const styles = StyleSheet.create({
   zoomHint: { backgroundColor: "rgba(255,255,255,0.92)", borderRadius: radius.round, paddingHorizontal: 12, paddingVertical: 5, fontFamily: fonts.uiMedium, fontSize: 11.5, color: colors.textSecondary, overflow: "hidden" },
   osmNote: { flexDirection: "row", alignItems: "flex-start", gap: 6, marginTop: 4, marginBottom: 2 },
   osmNoteText: { flex: 1, fontFamily: fonts.bodyItalic, fontSize: 12.5, color: colors.textMuted, lineHeight: 17 },
+  addrRow: { flexDirection: "row", alignItems: "flex-start", gap: 6, marginTop: 2, marginBottom: 2 },
+  addrText: { flex: 1, fontFamily: fonts.body, fontSize: 13.5, color: colors.text, lineHeight: 19 },
   legend: {
     position: "absolute",
     bottom: spacing.md,

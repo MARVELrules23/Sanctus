@@ -1494,6 +1494,9 @@ async def _bbox_ingest_bg(db, south: float, west: float, north: float, east: flo
                 {"$set": {
                     "osm_id": oid, "name": o.get("name"), "type": "church",
                     "city": o.get("city", ""), "country": o.get("country", ""),
+                    "street": o.get("street", ""), "state": o.get("state", ""),
+                    "postcode": o.get("postcode", ""), "address": o.get("address", ""),
+                    "website": o.get("website", ""), "phone": o.get("phone", ""),
                     "lat": o.get("lat"), "lng": o.get("lng"), "osm": True,
                 }},
                 upsert=True,
@@ -1663,6 +1666,18 @@ async def _osm_bbox_churches(db, south: float, west: float, north: float, east: 
                     "name": name, "type": "church",
                     "city": tags.get("addr:city") or tags.get("addr:town") or tags.get("addr:village") or "",
                     "country": tags.get("addr:country") or "",
+                    "street": " ".join(p for p in [(tags.get("addr:housenumber") or "").strip(), (tags.get("addr:street") or "").strip()] if p).strip(),
+                    "state": (tags.get("addr:state") or tags.get("addr:province") or "").strip(),
+                    "postcode": (tags.get("addr:postcode") or "").strip(),
+                    "address": ", ".join(p for p in [
+                        " ".join(x for x in [(tags.get("addr:housenumber") or "").strip(), (tags.get("addr:street") or "").strip()] if x).strip(),
+                        tags.get("addr:city") or tags.get("addr:town") or tags.get("addr:village") or "",
+                        (tags.get("addr:state") or tags.get("addr:province") or "").strip(),
+                        (tags.get("addr:postcode") or "").strip(),
+                        tags.get("addr:country") or "",
+                    ] if p),
+                    "website": (tags.get("website") or tags.get("contact:website") or "").strip(),
+                    "phone": (tags.get("phone") or tags.get("contact:phone") or "").strip(),
                     "lat": elat, "lng": elng, "osm": True,
                 })
             break
@@ -1729,7 +1744,9 @@ def build_router(db: AsyncIOMotorDatabase, get_current_user, emergent_llm_key: s
         if zoom >= 7 and span_ok:
             stored = db["osm_churches"].find(
                 {"lat": {"$gte": south, "$lte": north}, "lng": {"$gte": west, "$lte": east}},
-                {"_id": 0, "osm_id": 1, "name": 1, "lat": 1, "lng": 1, "city": 1, "country": 1},
+                {"_id": 0, "osm_id": 1, "name": 1, "lat": 1, "lng": 1, "city": 1,
+                 "country": 1, "address": 1, "street": 1, "state": 1, "postcode": 1,
+                 "website": 1, "phone": 1},
             ).limit(1500)
             async for o in stored:
                 key = (round(o.get("lat") or 0, 5), round(o.get("lng") or 0, 5))
@@ -1741,6 +1758,9 @@ def build_router(db: AsyncIOMotorDatabase, get_current_user, emergent_llm_key: s
                     "name": o.get("name"), "type": "church",
                     "lat": o.get("lat"), "lng": o.get("lng"), "persecuted": False, "osm": True,
                     "city": o.get("city", ""), "country": o.get("country", ""),
+                    "address": o.get("address", ""), "street": o.get("street", ""),
+                    "state": o.get("state", ""), "postcode": o.get("postcode", ""),
+                    "website": o.get("website", ""), "phone": o.get("phone", ""),
                 })
                 osm_count += 1
 

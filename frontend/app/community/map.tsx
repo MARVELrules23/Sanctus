@@ -162,8 +162,10 @@ export default function CatholicMapScreen() {
   }, []);
 
   const openInMaps = useCallback((s: CatholicSite) => {
-    const label = encodeURIComponent(s.name);
-    const url = `https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lng}(${label})`;
+    // Populate the Google Maps search bar with the full address when we have
+    // one, otherwise fall back to the church's name.
+    const query = (s.address && s.address.trim()) ? s.address.trim() : s.name;
+    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
     Linking.openURL(url).catch(() => {});
   }, []);
 

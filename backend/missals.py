@@ -53,6 +53,18 @@ from typing import Any, Callable, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
+from eastern_liturgies import (
+    BYZANTINE_CHRYSOSTOM,
+    BYZANTINE_BASIL,
+    MARONITE_QURBONO,
+    CHALDEAN_ADDAI_MARI,
+    SYRO_MALABAR,
+    SYRO_MALANKARA,
+    COPTIC_BASIL,
+    GEEZ_LITURGY,
+    ARMENIAN_PATARAG,
+)
+
 logger = logging.getLogger("sanctus.missals")
 
 
@@ -2190,6 +2202,156 @@ MISSALS: List[Dict[str, Any]] = [
             "pregare e meditare la Messa nella propria lingua."
         ),
         "sections": ITALIAN_NOVUS_ORDO_SECTIONS,
+    },
+
+    # ==== Eastern Catholic Divine Liturgies ====
+    {
+        "slug": "byzantine-chrysostom",
+        "name": "Divine Liturgy of St. John Chrysostom",
+        "subtitle": "Byzantine Rite · the most common Eastern liturgy",
+        "tradition": "Byzantine (Constantinopolitan) Rite",
+        "language_note": "English (Greek incipits)",
+        "accent_color": "#1F6FB2",  # byzantine blue
+        "icon": "diamond-outline",
+        "vernacular_label": "English",
+        "intro": (
+            "The Divine Liturgy of St. John Chrysostom is the principal liturgy of the "
+            "Byzantine tradition, served by the Ukrainian, Melkite, Ruthenian, Romanian, "
+            "Greek, and other Greek-Catholic Churches in communion with Rome. This is the "
+            "Order of the Divine Liturgy — the fixed parts — in English."
+        ),
+        "sections": BYZANTINE_CHRYSOSTOM,
+    },
+    {
+        "slug": "byzantine-basil",
+        "name": "Divine Liturgy of St. Basil the Great",
+        "subtitle": "Byzantine Rite · ten times a year",
+        "tradition": "Byzantine (Constantinopolitan) Rite",
+        "language_note": "English (Greek incipits)",
+        "accent_color": "#2C5F8A",  # deep byzantine
+        "icon": "diamond-outline",
+        "vernacular_label": "English",
+        "intro": (
+            "Served on the Sundays of Great Lent, on Holy Thursday and Holy Saturday, the "
+            "Vigils of the Nativity and Theophany, and the feast of St. Basil. Its outward "
+            "order matches the Liturgy of St. John Chrysostom; its glory is the long, "
+            "majestic Anaphora of St. Basil."
+        ),
+        "sections": BYZANTINE_BASIL,
+    },
+    {
+        "slug": "maronite-qurbono",
+        "name": "The Holy Qurbono",
+        "subtitle": "Maronite Church · West Syriac (Antiochene)",
+        "tradition": "Antiochene · West Syriac Rite",
+        "language_note": "English (Syriac-Aramaic heritage)",
+        "accent_color": "#7A4FB0",  # cedar violet
+        "icon": "flower-outline",
+        "vernacular_label": "English",
+        "intro": (
+            "The Maronite Church of Lebanon, never out of communion with Rome, celebrates "
+            "the Holy Qurbono ('Offering') in the Antiochene tradition, preserving the "
+            "Syriac-Aramaic tongue of Our Lord. It treasures the ancient Anaphora of St. "
+            "Peter (Sharar)."
+        ),
+        "sections": MARONITE_QURBONO,
+    },
+    {
+        "slug": "chaldean-addai-mari",
+        "name": "Holy Qurbana of Addai and Mari",
+        "subtitle": "Chaldean Church · East Syriac",
+        "tradition": "East Syriac (Chaldean) Rite",
+        "language_note": "English (Syriac heritage)",
+        "accent_color": "#1E8A7A",  # mesopotamian teal
+        "icon": "git-merge-outline",
+        "vernacular_label": "English",
+        "intro": (
+            "The Chaldean Catholic Church of Iraq and the East celebrates the Holy Qurbana "
+            "of the Apostles Addai and Mari — among the most ancient Eucharistic prayers in "
+            "all of Christendom, reaching back to the early Church of the East at Edessa."
+        ),
+        "sections": CHALDEAN_ADDAI_MARI,
+    },
+    {
+        "slug": "syro-malabar",
+        "name": "The Holy Qurbana",
+        "subtitle": "Syro-Malabar Church · East Syriac (India)",
+        "tradition": "East Syriac Rite · St. Thomas Christians",
+        "language_note": "English (Syriac / Malayalam heritage)",
+        "accent_color": "#C9802E",  # indian saffron
+        "icon": "git-merge-outline",
+        "vernacular_label": "English",
+        "intro": (
+            "The Syro-Malabar Church of India, of the St. Thomas Christians, celebrates the "
+            "Holy Qurbana in the East Syriac tradition — the faith planted, by tradition, "
+            "by the Apostle St. Thomas himself in A.D. 52."
+        ),
+        "sections": SYRO_MALABAR,
+    },
+    {
+        "slug": "syro-malankara",
+        "name": "Holy Qurbono of St. James",
+        "subtitle": "Syro-Malankara Church · West Syriac (India)",
+        "tradition": "Antiochene · West Syriac Rite",
+        "language_note": "English (Syriac heritage)",
+        "accent_color": "#9C4FB0",  # malankara amethyst
+        "icon": "flower-outline",
+        "vernacular_label": "English",
+        "intro": (
+            "The Syro-Malankara Catholic Church follows the West Syriac tradition and "
+            "celebrates the Liturgy of St. James — by tradition the oldest of all the "
+            "apostolic liturgies, ascribed to St. James, the Brother of the Lord and first "
+            "Bishop of Jerusalem."
+        ),
+        "sections": SYRO_MALANKARA,
+    },
+    {
+        "slug": "coptic-basil",
+        "name": "Divine Liturgy of St. Basil",
+        "subtitle": "Coptic Catholic Church · Alexandrian",
+        "tradition": "Alexandrian (Coptic) Rite",
+        "language_note": "English (Coptic / Arabic heritage)",
+        "accent_color": "#B5562E",  # nile clay
+        "icon": "triangle-outline",
+        "vernacular_label": "English",
+        "intro": (
+            "The Coptic Catholic Church of Egypt celebrates the Alexandrian rite — the "
+            "tradition of St. Mark the Evangelist — chiefly through the Divine Liturgy of "
+            "St. Basil, in Coptic, Arabic, and the vernacular."
+        ),
+        "sections": COPTIC_BASIL,
+    },
+    {
+        "slug": "geez",
+        "name": "The Divine Liturgy (Qǝddase)",
+        "subtitle": "Ethiopian & Eritrean Catholic · Ge'ez",
+        "tradition": "Alexandrian (Ge'ez) Rite",
+        "language_note": "English (Ge'ez heritage)",
+        "accent_color": "#3E8A4F",  # abyssinian green
+        "icon": "triangle-outline",
+        "vernacular_label": "English",
+        "intro": (
+            "The Ethiopian and Eritrean Catholic Churches worship in the ancient Ge'ez "
+            "language within the Alexandrian rite, renowned for sacred chant (zema). Their "
+            "principal anaphora is the Anaphora of the Apostles."
+        ),
+        "sections": GEEZ_LITURGY,
+    },
+    {
+        "slug": "armenian-patarag",
+        "name": "The Divine Liturgy (Patarag)",
+        "subtitle": "Armenian Catholic Church · Armenian Rite",
+        "tradition": "Armenian Rite",
+        "language_note": "English (Classical Armenian heritage)",
+        "accent_color": "#A33A4A",  # armenian carmine
+        "icon": "prism-outline",
+        "vernacular_label": "English",
+        "intro": (
+            "The Armenian Catholic Church preserves the distinctive Armenian rite. Its "
+            "Divine Liturgy, the Patarag (Badarak, 'the Offering'), centres on the Anaphora "
+            "of St. Athanasius and the great hymn of the Only-begotten Son."
+        ),
+        "sections": ARMENIAN_PATARAG,
     },
 ]
 

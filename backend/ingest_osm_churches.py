@@ -116,6 +116,55 @@ def query(s: float, w: float, n: float, e: float) -> str:
     )
 
 
+# Country-wide sweep — catches rural/village churches the metro boxes miss, so
+# we approach "every running Catholic church". ISO-3166-1 alpha-2 codes.
+COUNTRIES = [
+    "VA", "SM", "MT", "IE", "PL", "PT", "ES", "FR", "IT", "BE", "NL", "LU",
+    "DE", "AT", "CH", "LI", "GB", "HR", "SI", "SK", "CZ", "HU", "LT", "LV",
+    "RO", "UA", "RS", "BA", "AL", "MK", "ME", "GR", "BG", "NO", "SE", "FI",
+    "DK", "IS",
+    # Americas
+    "US", "CA", "MX", "GT", "SV", "HN", "NI", "CR", "PA", "CU", "DO", "HT",
+    "PR", "TT", "JM", "CO", "VE", "EC", "PE", "BO", "BR", "PY", "UY", "AR",
+    "CL",
+    # Africa
+    "NG", "CD", "AO", "UG", "TZ", "KE", "RW", "BI", "CM", "GH", "CI", "BJ",
+    "TG", "BF", "SN", "ZM", "ZW", "MZ", "MW", "ZA", "MG", "CF", "GA", "CG",
+    "ET", "SS", "GN",
+    # Asia / Oceania / Middle East
+    "PH", "TL", "IN", "LK", "KR", "VN", "ID", "MY", "SG", "JP", "CN", "PK",
+    "LB", "IL", "PS", "JO", "IQ", "SY", "AU", "NZ", "PG", "FJ", "WS",
+]
+
+
+def area_query(iso: str) -> str:
+    return (
+        "[out:json][timeout:600];"
+        f'area["ISO3166-1"="{iso}"][admin_level=2]->.a;'
+        "("
+        'node["amenity"="place_of_worship"]["religion"="christian"]["denomination"~"catholic",i](area.a);'
+        'way["amenity"="place_of_worship"]["religion"="christian"]["denomination"~"catholic",i](area.a);'
+        ");"
+        "out center;"
+    )
+
+
+async def fetch_q(client: httpx.AsyncClient, q: str):
+    for attempt in range(5):
+        for url in OVERPASS:
+            try:
+                r = await client.post(url, data={"data": q},
+                                      headers={"User-Agent": "SanctusApp/1.0 (church ingest)"})
+                if r.status_code == 200:
+                    return r.json().get("elements", [])
+                if r.status_code in (429, 504):
+                    break
+            except Exception as ex:  # noqa: BLE001
+                print("  err", repr(ex)[:70])
+        await asyncio.sleep(10 * (attempt + 1))
+    return None
+
+
 async def fetch_box(client: httpx.AsyncClient, s, w, n, e):
     q = query(s, w, n, e)
     for attempt in range(5):
@@ -147,11 +196,23 @@ def parse(elements):
             lat, lng = c.get("lat"), c.get("lon")
         if lat is None or lng is None:
             continue
+        # Build a human-readable address from OSM addr:* tags.
+        house = (tags.get("addr:housenumber") or "").strip()
+        street = (tags.get("addr:street") or "").strip()
+        city = (tags.get("addr:city") or tags.get("addr:town") or tags.get("addr:village") or "").strip()
+        state = (tags.get("addr:state") or tags.get("addr:province") or "").strip()
+        postcode = (tags.get("addr:postcode") or "").strip()
+        country = (tags.get("addr:country") or "").strip()
+        line1 = " ".join(p for p in [house, street] if p).strip()
+        address = ", ".join(p for p in [line1, city, state, postcode, country] if p)
         out.append({
             "osm_id": f"{el.get('type','n')[0]}{el.get('id')}",
             "name": name, "type": "church",
-            "city": tags.get("addr:city") or tags.get("addr:town") or tags.get("addr:village") or "",
-            "country": tags.get("addr:country") or "",
+            "city": city, "country": country,
+            "street": line1, "state": state, "postcode": postcode,
+            "address": address,
+            "website": (tags.get("website") or tags.get("contact:website") or "").strip(),
+            "phone": (tags.get("phone") or tags.get("contact:phone") or "").strip(),
             "lat": lat, "lng": lng, "osm": True,
         })
     return out

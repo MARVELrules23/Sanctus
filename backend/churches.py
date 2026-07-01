@@ -33,18 +33,7 @@ OVERPASS_ENDPOINTS = (
 
 USER_AGENT = "SanctusApp/1.0 (Catholic devotional app)"
 
-CATHOLIC_DENOMS = {
-    "catholic",
-    "roman_catholic",
-    "greek_catholic",
-    "ukrainian_catholic",
-    "melkite_catholic",
-    "maronite",
-    "chaldean_catholic",
-    "syro_malabar",
-    "syro_malankara",
-    "old_catholic",  # arguable but commonly searched
-}
+from catholic_filter import is_catholic_place  # noqa: E402
 
 
 def _haversine_km(a_lat: float, a_lng: float, b_lat: float, b_lng: float) -> float:
@@ -88,20 +77,7 @@ def _format_address(tags: dict) -> str:
 
 
 def _is_catholic(tags: dict) -> bool:
-    denom = (tags.get("denomination") or "").lower().strip()
-    if any(d in denom for d in CATHOLIC_DENOMS):
-        return True
-    religion = (tags.get("religion") or "").lower().strip()
-    if religion == "catholic":
-        return True
-    # name heuristic for nodes that lack denomination tag.
-    name = (tags.get("name") or "").lower()
-    if religion == "christian" and any(
-        kw in name
-        for kw in ("catholic", "st. ", "st ", "saint ", "basilica", "cathedral", "our lady")
-    ):
-        return True
-    return False
+    return is_catholic_place(tags)
 
 
 def _to_church_dict(element: dict, origin: tuple[float, float]) -> Optional[dict]:

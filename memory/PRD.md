@@ -198,3 +198,10 @@ Reverent & traditional aesthetic: cream/parchment background, deep stained-gl- C
   - Strict fast days always abstain: Exaltation of the Cross (Sep 14), Beheading of the Forerunner (Aug 29), Theophany Eve (Jan 5) — all +13-shifted on the Old calendar.
   - Great feasts lift only the weekly Wed/Fri rule, not the seasonal meat fasts.
 - Verified directly across edge cases (old Nativity fast Jan 1–6, afterfeast fast-free Jan 7–17, Theophany eve strict, Bright Week, ordinary Thursdays).
+
+## Session update 14 (July 2026) — Church finder: Catholic-only (in communion with Rome)
+- New shared `catholic_filter.py`: allowlist (roman/greek/ukrainian/melkite/maronite/chaldean/coptic/armenian/syriac catholic, syro-malabar/malankara, ruthenian, ordinariate) + blocklist (old/national/liberal/patriotic/independent/apostolic/reformed "catholic", orthodox, anglican, protestant, lutheran, evangelical).
+- churches.py (`/churches/nearby` + `/churches/search`, used by the Church finder section AND the Mass tab): replaced the loose name heuristic (matched any "St."/"Cathedral" → Orthodox/Anglican slipped in) and removed old_catholic; now uses strict `is_catholic_place` (denomination-first, narrow name fallback).
+- Map pipeline (catholic_sites.py `/sites/bbox` + `/sites/nearby`) and ingest_osm_churches.py: Overpass query tightened to positive Catholic + Eastern-rite denominations MINUS non-communion bodies; ingest now stores `denomination`.
+- Cleaned cached map data: purged 2,578 non-communion entries from `osm_churches` (277,109 → 274,531) by denomination + name signals.
+- Verified: /sites/bbox and /churches/nearby around Rome return only Catholic churches (no Orthodox/Anglican/Old-Catholic); unit tests on the filter all pass.

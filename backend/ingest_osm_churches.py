@@ -113,8 +113,8 @@ def query(s: float, w: float, n: float, e: float) -> str:
     return (
         "[out:json][timeout:60];"
         "("
-        f'node["amenity"="place_of_worship"]["religion"="christian"]["denomination"~"catholic",i]({s},{w},{n},{e});'
-        f'way["amenity"="place_of_worship"]["religion"="christian"]["denomination"~"catholic",i]({s},{w},{n},{e});'
+        f'node["amenity"="place_of_worship"]["religion"="christian"]["denomination"~"catholic|maronite|melkite|chaldean|ruthenian|syro_malabar|syro_malankara|syro-malabar|syro-malankara|ordinariate",i]["denomination"!~"old_catholic|old-catholic|altkatholisch|polish_national|national_catholic|liberal_catholic|chinese_patriotic|patriotic|independent_catholic|apostolic_catholic|reformed_catholic|orthodox|anglican|protestant|lutheran|evangelical",i]({s},{w},{n},{e});'
+        f'way["amenity"="place_of_worship"]["religion"="christian"]["denomination"~"catholic|maronite|melkite|chaldean|ruthenian|syro_malabar|syro_malankara|syro-malabar|syro-malankara|ordinariate",i]["denomination"!~"old_catholic|old-catholic|altkatholisch|polish_national|national_catholic|liberal_catholic|chinese_patriotic|patriotic|independent_catholic|apostolic_catholic|reformed_catholic|orthodox|anglican|protestant|lutheran|evangelical",i]({s},{w},{n},{e});'
         ");"
         "out center 2000;"
     )
@@ -157,8 +157,8 @@ def area_query(iso: str) -> str:
         "[out:json][timeout:600];"
         f'area["ISO3166-1"="{iso}"][admin_level=2]->.a;'
         "("
-        'node["amenity"="place_of_worship"]["religion"="christian"]["denomination"~"catholic",i](area.a);'
-        'way["amenity"="place_of_worship"]["religion"="christian"]["denomination"~"catholic",i](area.a);'
+        'node["amenity"="place_of_worship"]["religion"="christian"]["denomination"~"catholic|maronite|melkite|chaldean|ruthenian|syro_malabar|syro_malankara|syro-malabar|syro-malankara|ordinariate",i]["denomination"!~"old_catholic|old-catholic|altkatholisch|polish_national|national_catholic|liberal_catholic|chinese_patriotic|patriotic|independent_catholic|apostolic_catholic|reformed_catholic|orthodox|anglican|protestant|lutheran|evangelical",i](area.a);'
+        'way["amenity"="place_of_worship"]["religion"="christian"]["denomination"~"catholic|maronite|melkite|chaldean|ruthenian|syro_malabar|syro_malankara|syro-malabar|syro-malankara|ordinariate",i]["denomination"!~"old_catholic|old-catholic|altkatholisch|polish_national|national_catholic|liberal_catholic|chinese_patriotic|patriotic|independent_catholic|apostolic_catholic|reformed_catholic|orthodox|anglican|protestant|lutheran|evangelical",i](area.a);'
         ");"
         "out center;"
     )
@@ -247,6 +247,7 @@ def parse(elements):
             "website": (tags.get("website") or tags.get("contact:website") or "").strip(),
             "phone": (tags.get("phone") or tags.get("contact:phone") or "").strip(),
             "lat": lat, "lng": lng, "osm": True,
+            "denomination": (tags.get("denomination") or "").strip().lower(),
         })
     return out
 

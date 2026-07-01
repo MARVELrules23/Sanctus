@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  FlatList,
   Modal,
   NativeScrollEvent,
   NativeSyntheticEvent,
@@ -9,6 +10,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -17,7 +19,9 @@ import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import {
+  getLibraryBook,
   getLibraryChapter,
+  LibraryChapter,
   LibraryChapterDetail,
   saveLibraryProgress,
 } from "@/src/api";
@@ -61,6 +65,9 @@ export default function ReaderScreen() {
   const [fontSize, setFontSize] = useState<FontSize>("md");
   const [mode, setMode] = useState<Mode>("light");
   const [showSettings, setShowSettings] = useState(false);
+  const [toc, setToc] = useState<LibraryChapter[]>([]);
+  const [showToc, setShowToc] = useState(false);
+  const [tocQuery, setTocQuery] = useState("");
   const scrollRef = useRef<ScrollView>(null);
   const scrollPctRef = useRef(0);
   const lastSaveRef = useRef(0);
@@ -81,6 +88,19 @@ export default function ReaderScreen() {
       }
     })();
   }, []);
+
+  // Load the chapter list (Table of Contents) once.
+  useEffect(() => {
+    if (!slug) return;
+    (async () => {
+      try {
+        const book = await getLibraryBook(slug);
+        setToc(book.chapters || []);
+      } catch {
+        /* TOC is best-effort */
+      }
+    })();
+  }, [slug]);
 
   const persistPrefs = useCallback(async (fs: FontSize, m: Mode) => {
     try {
@@ -172,13 +192,24 @@ export default function ReaderScreen() {
         <Text style={[styles.headerTitle, { color: theme.text }]} numberOfLines={1}>
           {chapter?.title || "Reading"}
         </Text>
-        <Pressable
-          hitSlop={12}
-          onPress={() => setShowSettings(true)}
-          testID="reader-settings"
-        >
-          <Ionicons name="text" size={20} color={theme.text} />
-        </Pressable>
+        <View style={styles.headerActions}>
+          {toc.length > 1 ? (
+            <Pressable
+              hitSlop={12}
+              onPress={() => { setTocQuery(""); setShowToc(true); }}
+              testID="reader-toc"
+            >
+              <Ionicons name="list" size={22} color={theme.text} />
+            </Pressable>
+          ) : null}
+          <Pressable
+            hitSlop={12}
+            onPress={() => setShowSettings(true)}
+            testID="reader-settings"
+          >
+            <Ionicons name="text" size={20} color={theme.text} />
+          </Pressable>
+        </View>
       </View>
 
       {loading || !chapter ? (
@@ -330,6 +361,63 @@ export default function ReaderScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Table of Contents */}
+      <Modal
+        visible={showToc}
+        animationType="slide"
+        onRequestClose={() => setShowToc(false)}
+      >
+        <SafeAreaView style={[styles.safe, { backgroundColor: theme.bg }]} edges={["top"]}>
+          <View style={[styles.header, { borderBottomColor: theme.border }]}>
+            <Pressable hitSlop={12} onPress={() => setShowToc(false)} testID="reader-toc-close">
+              <Ionicons name="close" size={24} color={theme.text} />
+            </Pressable>
+            <Text style={[styles.headerTitle, { color: theme.text }]} numberOfLines={1}>
+              Contents
+            </Text>
+            <View style={{ width: 24 }} />
+          </View>
+          <View style={styles.tocSearchWrap}>
+            <Ionicons name="search" size={16} color={theme.muted} />
+            <TextInput
+              testID="reader-toc-search"
+              value={tocQuery}
+              onChangeText={setTocQuery}
+              placeholder="Search chapters or paragraphs…"
+              placeholderTextColor={theme.muted}
+              style={[styles.tocSearch, { color: theme.text }]}
+            />
+          </View>
+          <FlatList
+            data={tocQuery.trim()
+              ? toc.filter((c) => c.title.toLowerCase().includes(tocQuery.trim().toLowerCase()))
+              : toc}
+            keyExtractor={(item) => String(item.index)}
+            initialNumToRender={30}
+            windowSize={11}
+            renderItem={({ item }) => (
+              <Pressable
+                testID={`reader-toc-item-${item.index}`}
+                onPress={() => { setShowToc(false); void loadChapter(item.index); }}
+                style={({ pressed }) => [
+                  styles.tocRow,
+                  { borderBottomColor: theme.border },
+                  chapter?.chapter_index === item.index && { backgroundColor: "rgba(212,179,109,0.15)" },
+                  pressed && { opacity: 0.6 },
+                ]}
+              >
+                <Text style={[styles.tocRowText, { color: theme.text }]} numberOfLines={2}>
+                  {item.title}
+                </Text>
+                {chapter?.chapter_index === item.index ? (
+                  <Ionicons name="bookmark" size={14} color={colors.gold} />
+                ) : null}
+              </Pressable>
+            )}
+          />
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -346,6 +434,30 @@ const styles = StyleSheet.create({
     fontFamily: fonts.uiSemi, fontSize: 13,
   },
   centerFill: { flex: 1, alignItems: "center", justifyContent: "center" },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: spacing.lg },
+  tocSearchWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginHorizontal: spacing.lg,
+    marginVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    height: 44,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+  },
+  tocSearch: { flex: 1, fontFamily: fonts.bodyRegular, fontSize: 15, paddingVertical: 0 },
+  tocRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  tocRowText: { flex: 1, fontFamily: fonts.uiMedium, fontSize: 14 },
   body: { paddingHorizontal: spacing.lg, paddingVertical: spacing.lg },
   chapterTitle: { fontFamily: fonts.headingBold, marginBottom: spacing.lg },
   chapterSubtitle: {

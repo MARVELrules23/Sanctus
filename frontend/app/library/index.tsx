@@ -34,6 +34,7 @@ const TRADITION_LABEL: Record<string, string> = {
   doctor: "Doctor of the Church",
   mystic: "Mystic",
   apologist: "Apologist",
+  reference: "Reference",
 };
 
 const FILM_CATEGORIES: { value: LibraryFilmCategory | "all"; label: string; icon: any }[] = [

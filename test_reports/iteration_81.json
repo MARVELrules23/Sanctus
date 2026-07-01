@@ -1,0 +1,41 @@
+{
+  "summary": "Tested the full Catechism of the Catholic Church (CCC) ingest + new reader Table-of-Contents picker. Backend: 7/7 pytest tests PASSED (listing includes CCC as embedded/free/reference/374 chapters, detail returns 374 chapter metas without bodies, chapter 0 title is 'PROLOGUE', chapter 60 returns real body_md with subtitle breadcrumb, out-of-range 999 returns 404, patris-corde regression OK). Frontend on mobile viewport (390x844): opened /library/books/catechism-of-the-catholic-church → 'Start Reading' opens reader, PROLOGUE title renders, [reader-toc] icon is visible, [reader-toc-search] filters chapters (typing 'prologue' narrowed the list to a single row), tapping [reader-toc-item-60] closes the modal and loads chapter 60 (title 'Paragraph 3. JESUS CHRIST WAS BURIED', subtitle breadcrumb 'SECTION TWO I. THE CREEDS · CHAPTER TWO … · Article 4 …'), body renders as clean paragraphs, [reader-next] advances to Article 5. Regression: patris-corde detail returns multi-chapter (>1), chapter 0 has real body. One duplicate detected in Library — see below.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "Library books listing",
+        "issue": "DUPLICATE 'Catechism of the Catholic Church' entries visible side-by-side. Old placeholder slug 'catechism-catholic-church' (Roman Catholic Church · 1992, CLASSIC) has chapter_count=0 and is_premium=true, so users who tap it get a broken/paywalled empty book. The new full one slug 'catechism-of-the-catholic-church' (Catholic Church · 1997, REFERENCE) is the working one with 374 free chapters. Main agent should delete/hide the old placeholder from library_books (or from library_seed_data SEED_BOOKS) so only the full CCC shows.",
+        "testID": "n/a",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_catechism_ccc.py",
+    "/app/test_reports/pytest/iteration_81_ccc.xml"
+  ],
+  "action_items": [
+    "Remove the legacy duplicate book with slug 'catechism-catholic-church' (0 chapters, premium=true) from library_books collection AND from library_seed_data.SEED_BOOKS so the Library only shows the new full CCC (slug catechism-of-the-catholic-church).",
+    "Optional cleanup: delete any user reading_progress rows tied to the old book_id."
+  ],
+  "critical_code_review_comments": [
+    "library.py:186 _seed_books_if_missing does not touch is_premium/chapters when a slug already exists, so simply re-running the seeder cannot repair or upgrade a stale placeholder book. Consider a migration path or an admin cleanup step when the same conceptual work has been re-seeded under a new slug.",
+    "library.py:139 _public_book now correctly honors an explicit is_premium bool on the doc (falls back to tradition!='papal'), matching the CCC free-tier requirement."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_catechism_ccc.py (new)"
+  ],
+  "success_rate": { "backend": "100", "frontend": "95" },
+  "seed_data_creation": "None. Used the pre-minted 'test_feat_aug25' session and existing seeded/library data.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "After main agent removes the duplicate legacy 'catechism-catholic-church' book, re-run test_catechism_ccc.py plus a quick /library/books GET to confirm only one entry for the Catechism (slug catechism-of-the-catholic-church, chapter_count=374, is_premium=false, tradition=reference).",
+  "rca_of_issue": "Library seed already contained a stub 'catechism-catholic-church' placeholder book (0 chapters, premium=true). The new ingest script created a separate book under slug 'catechism-of-the-catholic-church' rather than upgrading the existing slug. Result: two Catechism cards render in the Library — the old one is a paywalled empty shell, the new one is the working full text. Fix: drop the old doc (db.library_books.delete_one({slug:'catechism-catholic-church'})) and remove the corresponding entry from library_seed_data.SEED_BOOKS."
+}

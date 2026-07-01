@@ -164,8 +164,9 @@ def _public_book(doc: Dict[str, Any], include_chapter_bodies: bool = False) -> D
         "status": doc.get("status") or "published",
         "chapter_count": len(chapters_out),
         "chapters": chapters_out,
-        # Encyclicals are free; everything else needs Sanctus Premium.
-        "is_premium": (doc.get("tradition") or "").lower() != "papal",
+        # Encyclicals & explicit references are free; else needs Sanctus Premium.
+        "is_premium": bool(doc["is_premium"]) if isinstance(doc.get("is_premium"), bool)
+        else ((doc.get("tradition") or "").lower() != "papal"),
     }
 
 

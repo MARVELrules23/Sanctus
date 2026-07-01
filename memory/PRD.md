@@ -150,3 +150,21 @@ Reverent & traditional aesthetic: cream/parchment background, deep stained-gl- C
 ## Session update 8 (June 2026)
 - **World Map → 270 sites / 84 countries** (added ~150 more cathedrals/basilicas/shrines worldwide across US states, Latin America, all of Europe, Asia/Middle East, Africa, Oceania).
 - **"Saint of the place near you" + mini pilgrimage**: new GET /api/sites/nearby?lat&lng (haversine sort; no-coords returns a daily rotating pick). Map screen shows a "Saint of the place near you" card (uses expo-location with permission flow; locate button + Plan). Detail sheet has "Plan a mini pilgrimage". Picking a preset date (Today/Tomorrow/This&Next Sat/Sun) creates a schedule item kind="pilgrimage" (icon footsteps, color #7A5CB0) via POST /api/schedule recurrence="once" — which renders on the existing Calendar. Added "pilgrimage" to schedule KINDS + ScheduleKind type. Verified backend (nearby + schedule create) and UI render.
+
+
+## Session update 9 (July 2026) — Navigation, Mass, Community & Bookmarks
+- **Journal delete fix**: web-safe `confirmAction` (src/confirm.ts) wired into journal.tsx + journal-list.tsx (Alert.alert was a no-op on RN Web). Verified (iter 76).
+- **Liturgy of the Hours moved** from the Bible hub into the **Prayer hub** (prayer-card-liturgy → /liturgy). Removed bible-liturgy-link.
+- **Mass tab (NEW)**: Home 'Grocery' quick-tile replaced with a **Mass** tile → new `/mass` hub. Hub cards: Today's Mass Readings (→/readings), Mass Missals (→/missals, moved out of Bible hub), Find a Mass Near You (→/churches). Grocery still lives inside Meals.
+- **Fully readable daily readings**: usccb.py now returns `*_full` fields (full scripture text from Universalis for today); server.py caches + translates them (es/it); /readings renders full text (falls back to excerpt for past dates/other sources). (iter 77)
+- **Community Prayer Journal (NEW)**: collections `community_prayers` + `community_prayer_prays`. Endpoints GET/POST /api/community/prayers, POST /api/community/prayers/{id}/pray (toggle), DELETE. Screen /community/prayers (composer + anonymous toggle + 'I prayed' + delete-own). Banner on Community tab. (iter 78)
+- **Friends list on Profile**: Profile 'Friends' section (accepted friends via /community/friends/list) with manage link → /community/people. (iter 78)
+- **App-wide Bookmarks (NEW)**: generic `bookmarks` collection (kinds prayer|bible|catechism|book|encyclical). Endpoints GET/POST /api/bookmarks, DELETE /api/bookmarks?kind=&ref_id= (idempotent upsert). App-wide `BookmarksProvider` + reusable `BookmarkButton`. Wired into prayer runner, Bible reader, library book/encyclical detail, and the home Catechism card. Profile shows a **Saved** section that deep-links back. (iter 79)
+
+### BACKLOG (Phase 5 — polish, not yet built)
+- Virtues home card "X/Z today" timezone consistency (P2, recurring).
+- RN Web deprecation warnings (shadow*, pointerEvents) cleanup (P3).
+- Admin miracles: bulk "Approve all complete drafts"; hand-match 15 remaining Saint draft photos.
+- Pilgrimage day-before reminder + "mark completed"; surface daily companion's "today's act" on Home; "+ Add to my practices" per tradition; deep-link certain traditions.
+- "Remember chant on/off" global pref; "Translation note" line on ES/IT liturgy screens; "Pray now" shortcut on Today.
+- Optional bookmark hardening: "see all" when >12 saved; toast on add failure.

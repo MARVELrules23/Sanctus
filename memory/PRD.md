@@ -225,3 +225,9 @@ Reverent & traditional aesthetic: cream/parchment background, deep stained-gl- C
 ## Session update 17 (July 2026) — Library paywall rule
 - `library.py`: new `_is_book_premium(doc)` is the single source of truth. FREE = papal encyclicals (tradition 'papal') + external-link books (type 'external') + the Catechism (slug catechism-of-the-catholic-church / tradition 'reference'). PREMIUM = every embedded full-text book with chapters. Used by both `_public_book.is_premium` and the `/books/{slug}/chapters/{idx}` 402 gate (stored is_premium bool no longer overrides the rule).
 - Verified via API: embedded books (Confessions, Orthodoxy, Spiritual Exercises) → is_premium True & 402 for non-premium; external books & all encyclicals & Catechism → is_premium False & 200. Admins bypass as before.
+
+## Session update 18 (July 2026) — Library "Free to read" filter + companion devotionals
+- Library (frontend `app/library/index.tsx`): added a Books-tab filter chip row (All books / Free to read, testID `library-book-filter-all|free`) that filters to `!is_premium` books; each free book card now shows a green "Free to read" tag (testID `library-free-tag-<slug>`).
+- Companions (backend `companions.py`): added `SAINT_DEVOTIONS` (per-slug recommended devotions for all 21 companions) and `VOCATION_DEVOTIONS` (per vocation|state). `_public` now returns `saint_devotions` and `vocation_devotions`.
+- Companion screen (`app/companion/[slug].tsx`): new "Recommended devotionals" section (saint-specific, testID `companion-saint-devotions`) plus a vocation-tailored devotions box (testID `companion-vocation-devotions`). `CompanionDetail` type extended in api.ts.
+- Verified: /companions/therese-lisieux returns 4 saint devotions + marriage|discerning vocation devotions; UI screenshots confirm both the library free filter/labels and the companion devotionals render.

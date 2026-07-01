@@ -2107,6 +2107,8 @@ export type CompanionDetail = {
   church_traditions: CompanionTradition[];
   daily_traditions: CompanionTradition[];
   vocation_traditions: { label: string; items: CompanionTradition[] } | null;
+  saint_devotions: CompanionTradition[];
+  vocation_devotions: { label: string; items: CompanionTradition[] } | null;
   has_consecration: boolean;
   is_joseph: boolean;
   note?: string | null;

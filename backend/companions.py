@@ -1034,6 +1034,201 @@ VOCATION_TRADITIONS: Dict[str, Dict[str, Any]] = {
 }
 
 
+# --------------------------------------------------------------------------- #
+# Recommended devotionals — classic Catholic devotions to take up, tailored to #
+# each companion saint. Rendered as a checklist of suggestions on the          #
+# companion page.                                                              #
+# --------------------------------------------------------------------------- #
+SAINT_DEVOTIONS: Dict[str, List[Dict[str, str]]] = {
+    "catherine-siena": [
+        {"title": "The Holy Rosary", "body": "Pray a daily Rosary, meditating on Christ crucified whom Catherine loved above all."},
+        {"title": "Eucharistic adoration", "body": "Visit the Blessed Sacrament — Catherine lived on the Eucharist."},
+        {"title": "The Precious Blood of Jesus", "body": "Honor His Precious Blood: pray, 'Blood of Christ, inebriate me.'"},
+        {"title": "Lectio on the 'Dialogue'", "body": "Read a short passage of her Dialogue prayerfully each day."},
+    ],
+    "pier-giorgio": [
+        {"title": "Daily Mass & Communion", "body": "Make the Eucharist the fuel of your day, as Frassati did."},
+        {"title": "The daily Rosary", "body": "Pray it faithfully — Frassati never missed it, even on the mountains."},
+        {"title": "Eucharistic (nocturnal) adoration", "body": "Keep holy hours before the Blessed Sacrament."},
+        {"title": "Works of mercy", "body": "Serve the poor quietly, as he did through the St. Vincent de Paul Society."},
+    ],
+    "john-paul-ii": [
+        {"title": "Totus Tuus — Marian consecration", "body": "Consecrate yourself totally to Jesus through Mary (St. Louis de Montfort)."},
+        {"title": "The Luminous Mysteries", "body": "Pray the Mysteries of Light he gave the Church."},
+        {"title": "Divine Mercy Chaplet", "body": "Pray the Chaplet at 3pm; he gave us Divine Mercy Sunday."},
+        {"title": "A daily Holy Hour", "body": "Keep a daily hour of adoration, the heartbeat of his priesthood."},
+    ],
+    "agnes": [
+        {"title": "Renew your consecration of purity", "body": "Offer your heart to Christ your Spouse each morning."},
+        {"title": "The Rosary (Joyful Mysteries)", "body": "Meditate on Christ's hidden life with childlike love."},
+        {"title": "Litany of the virgin-martyrs", "body": "Ask the prayers of the holy virgins who kept the faith."},
+        {"title": "Guardian Angel devotion", "body": "Entrust your purity to your angel each day."},
+    ],
+    "therese-lisieux": [
+        {"title": "The Little Way", "body": "Do small things with great love; offer tiny sacrifices all day."},
+        {"title": "Sacrifice beads", "body": "Count acts of love and self-denial on a set of sacrifice beads."},
+        {"title": "Devotion to the Holy Face", "body": "Honor the Holy Face of Jesus, Thérèse's beloved devotion."},
+        {"title": "Novena of the 'Shower of Roses'", "body": "Ask her intercession, trusting her promise of roses."},
+    ],
+    "benedict": [
+        {"title": "Liturgy of the Hours", "body": "Pray part of the Divine Office at fixed times — ora et labora."},
+        {"title": "The Medal & Cross of St. Benedict", "body": "Wear the Jubilee Medal for protection against evil."},
+        {"title": "Lectio divina", "body": "Read Scripture slowly and prayerfully each day."},
+        {"title": "Compline before sleep", "body": "End the day with Night Prayer and a brief examen."},
+    ],
+    "francis-assisi": [
+        {"title": "The Franciscan Crown", "body": "Pray the seven-decade rosary of Our Lady's Joys."},
+        {"title": "Stations of the Cross", "body": "Meditate on the Passion; Francis bore the stigmata for love of the Cross."},
+        {"title": "The Peace Prayer", "body": "Pray daily, 'Lord, make me an instrument of Your peace.'"},
+        {"title": "The Christmas crèche", "body": "Pray before a Nativity scene, a devotion Francis gave the Church."},
+    ],
+    "teresa-avila": [
+        {"title": "Mental prayer", "body": "Spend 15 minutes daily simply being with the God who loves you."},
+        {"title": "Read the 'Interior Castle'", "body": "Take a passage of her writings as a guide to deeper prayer."},
+        {"title": "Devotion to St. Joseph", "body": "Entrust your needs to St. Joseph, Teresa's great patron."},
+        {"title": "The Bookmark of St. Teresa", "body": "Pray, 'Let nothing disturb you… God alone suffices.'"},
+    ],
+    "st-joseph": [
+        {"title": "Consecration to St. Joseph", "body": "Make and renew the 33-day consecration to the foster-father of Jesus."},
+        {"title": "'To you, O blessed Joseph'", "body": "Pray this Leonine prayer daily for the Church and your family."},
+        {"title": "Wednesday devotion & Seven Sorrows and Joys", "body": "Honor Joseph on Wednesdays; pray his Seven Sorrows and Joys."},
+        {"title": "The Chaplet of St. Joseph", "body": "Pray the chaplet, entrusting your work and a holy death to him."},
+    ],
+    "louis-zelie": [
+        {"title": "The family Rosary", "body": "Pray the Rosary together as a household each evening."},
+        {"title": "Enthronement of the Sacred Heart", "body": "Consecrate your home to the Sacred Heart of Jesus."},
+        {"title": "Sunday Mass & rest together", "body": "Keep the Lord's Day holy as a family."},
+        {"title": "A morning offering as a couple", "body": "Offer the day, your work and children, to God each morning."},
+    ],
+    "gianna-molla": [
+        {"title": "Morning offering of your work", "body": "Offer your profession and duties to God with a glad heart."},
+        {"title": "Daily Mass when possible", "body": "Draw strength from the Eucharist as Gianna did."},
+        {"title": "A daily decade for your family", "body": "Pray the Rosary for your spouse and children."},
+        {"title": "Prayer for the unborn", "body": "Intercede for expectant mothers and the protection of life."},
+    ],
+    "monica": [
+        {"title": "Persevering intercession", "body": "Keep praying daily for one soul's conversion, never giving up."},
+        {"title": "The Rosary (Sorrowful Mysteries)", "body": "Unite your tears to Our Lady's for the one you love."},
+        {"title": "Novena to St. Monica", "body": "Pray her novena for wayward loved ones."},
+        {"title": "A Mass offered for them", "body": "Have Mass offered for the intention closest to your heart."},
+    ],
+    "guardian-angel": [
+        {"title": "The 'Angel of God' prayer", "body": "Pray it morning and night to your guardian angel."},
+        {"title": "Chaplet of the Guardian Angel", "body": "Pray the chaplet honoring the nine choirs of angels."},
+        {"title": "The St. Michael Prayer", "body": "Ask St. Michael's protection against the enemy."},
+        {"title": "Send your angel on errands", "body": "Ask your angel to carry prayers and help others, as Padre Pio taught."},
+    ],
+    "padre-pio": [
+        {"title": "'Pray, hope, and don't worry'", "body": "Make his motto a daily act of trust in Providence."},
+        {"title": "The Rosary — his 'weapon'", "body": "Pray it daily; Pio called the Rosary the weapon against evil."},
+        {"title": "Frequent Confession", "body": "Go to Confession regularly, as Padre Pio urged all souls."},
+        {"title": "Devotion to your Guardian Angel", "body": "Send your angel to those who need prayers."},
+    ],
+    "st-lucy": [
+        {"title": "Pray for the light of faith", "body": "Ask St. Lucy (whose name means 'light') for clear vision of soul."},
+        {"title": "The Rosary in Advent", "body": "Pray for Christ the Light around her December feast."},
+        {"title": "Litany of the virgin-martyrs", "body": "Honor the holy martyrs who kept the faith unto death."},
+        {"title": "Quiet almsgiving", "body": "Give secretly to the poor, as Lucy gave her dowry."},
+    ],
+    "st-faustina": [
+        {"title": "The Chaplet of Divine Mercy", "body": "Pray the Chaplet daily, especially at the 3 o'clock hour."},
+        {"title": "The Hour of Great Mercy (3pm)", "body": "Pause at 3pm to honor the hour of Jesus' death."},
+        {"title": "The Divine Mercy Image", "body": "Keep the 'Jesus, I trust in You' image and pray before it."},
+        {"title": "The Divine Mercy Novena", "body": "Pray the novena from Good Friday to Divine Mercy Sunday."},
+    ],
+    "blessed-virgin-mary": [
+        {"title": "The Holy Rosary", "body": "Pray the daily Rosary, meditating on the life of Christ with Mary."},
+        {"title": "Marian consecration (Totus Tuus)", "body": "Consecrate yourself to Jesus through Mary."},
+        {"title": "The Angelus", "body": "Pray the Angelus at 6am, noon, and 6pm."},
+        {"title": "The Brown Scapular or Miraculous Medal", "body": "Wear a Marian sacramental as a sign of her protection."},
+    ],
+    "sacred-heart": [
+        {"title": "The Nine First Fridays", "body": "Receive Communion on the first Friday of nine consecutive months."},
+        {"title": "Morning Offering", "body": "Offer your day to the Sacred Heart each morning."},
+        {"title": "Enthronement of the Sacred Heart", "body": "Consecrate your home and family to His Heart."},
+        {"title": "Holy Hour of reparation", "body": "Keep a Thursday or Friday holy hour of adoration."},
+    ],
+    "sts-peter-paul": [
+        {"title": "Pray for the Pope", "body": "Offer a daily prayer for Peter's successor and the unity of the Church."},
+        {"title": "Lectio on the Epistles", "body": "Read a passage of St. Paul's letters prayerfully."},
+        {"title": "Profess the Creed", "body": "Say the Creed daily — the faith for which they gave their lives."},
+        {"title": "Devotion to the Chair of St. Peter", "body": "Pray for fidelity to the Church's teaching."},
+    ],
+    "carlo-acutis": [
+        {"title": "Eucharistic adoration", "body": "Visit Jesus in the Blessed Sacrament — Carlo's 'highway to Heaven.'"},
+        {"title": "Frequent Communion & Confession", "body": "Receive the Eucharist often and confess regularly."},
+        {"title": "The daily Rosary", "body": "Pray the Rosary each day, as Carlo did."},
+        {"title": "Offer your screen time to God", "body": "Use technology for good; offer your online life to Christ."},
+    ],
+    "fulton-sheen": [
+        {"title": "The daily Holy Hour", "body": "Keep a daily hour of Eucharistic adoration, as Sheen did for decades."},
+        {"title": "The Rosary", "body": "Pray the daily Rosary; Sheen carried it everywhere."},
+        {"title": "Frequent Confession", "body": "Confess regularly to keep the soul bright."},
+        {"title": "Daily spiritual reading", "body": "Read a few pages of solid Catholic doctrine each day."},
+    ],
+}
+
+
+# Recommended devotionals tailored to the user's vocation + state.
+VOCATION_DEVOTIONS: Dict[str, Dict[str, Any]] = {
+    "marriage|discerning": {
+        "label": "Devotions for those preparing for marriage",
+        "items": [
+            {"title": "A daily decade for your future spouse", "body": "Offer one decade of the Rosary for the person God may be preparing for you."},
+            {"title": "Novena to Sts. Louis & Zélie Martin", "body": "Ask the patrons of spouses to guide your discernment."},
+            {"title": "Consecration to the Holy Family", "body": "Entrust your vocation to Jesus, Mary, and Joseph in adoration."},
+            {"title": "Study self-giving love", "body": "Pray with the Theology of the Body or the 'Introduction to the Devout Life.'"},
+        ],
+    },
+    "marriage|living": {
+        "label": "Devotions for a holier marriage & family",
+        "items": [
+            {"title": "The family Rosary", "body": "Gather to pray a decade or the full Rosary together each night."},
+            {"title": "Enthronement of the Sacred Heart", "body": "Consecrate your home to the Sacred Heart of Jesus."},
+            {"title": "Regular Confession as a couple", "body": "Go to Confession together each month."},
+            {"title": "Novena to St. Joseph", "body": "Ask the guardian of the Holy Family to protect your home."},
+        ],
+    },
+    "religious life|discerning": {
+        "label": "Devotions for those discerning religious life",
+        "items": [
+            {"title": "Liturgy of the Hours", "body": "Begin praying (part of) the Divine Office daily."},
+            {"title": "A daily Holy Hour", "body": "Keep Eucharistic adoration and interior silence each day."},
+            {"title": "Novena to the Holy Spirit for vocations", "body": "Ask for light to know God's call."},
+            {"title": "Lectio divina", "body": "Pray slowly with the day's Scriptures."},
+        ],
+    },
+    "religious life|living": {
+        "label": "Devotions for deepening religious life",
+        "items": [
+            {"title": "Faithful Divine Office & lectio", "body": "Guard fidelity to the Hours and daily lectio divina."},
+            {"title": "The daily Examen", "body": "Review your day with God and renew your vows interiorly."},
+            {"title": "Marian consecration & Rosary", "body": "Anchor each day in the Rosary and total consecration."},
+            {"title": "Eucharistic adoration", "body": "Keep a daily time before the Blessed Sacrament."},
+        ],
+    },
+    "singleness|discerning": {
+        "label": "Devotions for discerning the single life",
+        "items": [
+            {"title": "A fixed daily prayer rule", "body": "Anchor your day with Mass or adoration and a set time of prayer."},
+            {"title": "Novena to the Holy Spirit", "body": "Pray for guidance to know your path."},
+            {"title": "Eucharistic adoration", "body": "Bring your discernment to Jesus in the Blessed Sacrament."},
+            {"title": "A discernment journal", "body": "Write what stirs your heart in prayer; review it with a director."},
+        ],
+    },
+    "singleness|living": {
+        "label": "Devotions for holiness in the single life",
+        "items": [
+            {"title": "Consecrate your singleness", "body": "Offer your single life to God with a steady daily prayer rule."},
+            {"title": "The daily Rosary", "body": "Keep company with Our Lady each day."},
+            {"title": "Works of mercy", "body": "Let your freedom overflow in service to the poor and your parish."},
+            {"title": "Frequent the sacraments", "body": "Go to Mass and Confession often."},
+        ],
+    },
+}
+
+
+
 def _today_act(acts: List[str]) -> Dict[str, Any]:
     idx = (date.today().toordinal()) % max(1, len(acts))
     return {"text": acts[idx], "index": idx, "total": len(acts)}
@@ -1100,6 +1295,8 @@ def _public(slug: str, c: Dict[str, Any], vocation: str = "", state: str = "") -
         "church_traditions": CHURCH_TRADITIONS.get(slug, []),
         "daily_traditions": DAILY_TRADITIONS.get(slug, []),
         "vocation_traditions": voc_trad,
+        "saint_devotions": SAINT_DEVOTIONS.get(slug, []),
+        "vocation_devotions": VOCATION_DEVOTIONS.get(voc_key),
         "has_consecration": True,  # the St. Joseph consecration is open to all companions
         "is_joseph": slug == "st-joseph",
         "note": c.get("note"),

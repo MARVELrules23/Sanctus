@@ -199,6 +199,45 @@ export default function CompanionScreen() {
             </View>
           ) : null}
 
+          {/* Recommended devotionals — specific to the saint & to the user's vocation */}
+          {data.saint_devotions && data.saint_devotions.length > 0 ? (
+            <View style={styles.devotionBox} testID="companion-saint-devotions">
+              <View style={styles.cardHead}>
+                <Ionicons name="rose-outline" size={16} color={colors.gold} />
+                <Text style={styles.cardHeadText}>Recommended devotionals</Text>
+              </View>
+              <Text style={styles.devotionHint}>Devotions especially connected to {data.name}.</Text>
+              {data.saint_devotions.map((t, i) => (
+                <View key={i} style={styles.tradition}>
+                  <Ionicons name="flower" size={13} color={colors.goldDark} style={{ marginTop: 3 }} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.tradName}>{t.title}</Text>
+                    <Text style={styles.tradBody}>{t.body}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          ) : null}
+
+          {/* Devotionals tailored to the user's vocation */}
+          {data.vocation_devotions ? (
+            <View style={styles.vocDevotionBox} testID="companion-vocation-devotions">
+              <View style={styles.cardHead}>
+                <Ionicons name="heart-circle-outline" size={16} color={colors.primary} />
+                <Text style={styles.cardHeadText}>{data.vocation_devotions.label}</Text>
+              </View>
+              {data.vocation_devotions.items.map((t, i) => (
+                <View key={i} style={styles.tradition}>
+                  <Ionicons name="add-circle-outline" size={15} color={colors.primary} style={{ marginTop: 2 }} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.tradName}>{t.title}</Text>
+                    <Text style={styles.tradBody}>{t.body}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          ) : null}
+
           {/* Virtues to imitate */}
           <View style={styles.cardHead}>
             <Ionicons name="ribbon-outline" size={16} color={colors.gold} />
@@ -325,6 +364,9 @@ const styles = StyleSheet.create({
   tradBody: { fontFamily: fonts.bodyRegular, fontSize: 13.5, color: colors.textSecondary, lineHeight: 20, marginTop: 1 },
   vocBox: { backgroundColor: "#F3EEFB", borderWidth: 1, borderColor: "#DED2F0", borderRadius: radius.lg, padding: spacing.md, marginTop: spacing.sm },
   dailyTradBox: { backgroundColor: "#FBF6E8", borderWidth: 1, borderColor: "#EADfBE", borderRadius: radius.lg, padding: spacing.md, marginTop: spacing.sm, marginBottom: spacing.sm },
+  devotionBox: { backgroundColor: "#FBF6E8", borderWidth: 1, borderColor: "#EADfBE", borderRadius: radius.lg, padding: spacing.md, marginTop: spacing.sm, marginBottom: spacing.sm },
+  devotionHint: { fontFamily: fonts.bodyRegular, fontSize: 13, color: colors.textSecondary, marginBottom: spacing.sm, lineHeight: 19 },
+  vocDevotionBox: { backgroundColor: "#F3EEFB", borderWidth: 1, borderColor: "#DED2F0", borderRadius: radius.lg, padding: spacing.md, marginTop: spacing.sm, marginBottom: spacing.sm },
   softBtn: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderSoft, borderRadius: radius.md, padding: spacing.md, marginTop: spacing.xs },
   softBtnText: { flex: 1, fontFamily: fonts.uiSemi, fontSize: 14, color: colors.primary },
   primaryBtn: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: colors.primary, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.sm },

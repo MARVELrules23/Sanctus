@@ -62,6 +62,7 @@ export default function LibraryIndexScreen() {
   });
   const [refreshing, setRefreshing] = useState(false);
   const [filmCategory, setFilmCategory] = useState<LibraryFilmCategory | "all">("all");
+  const [bookFilter, setBookFilter] = useState<"all" | "free">("all");
 
   const radio = useRadioPlayer();
 
@@ -123,14 +124,15 @@ export default function LibraryIndexScreen() {
   }, [tab, loadBooks, loadStations, loadFilms]);
 
   const grouped = useMemo(() => {
-    const inProgress = books.filter(
+    const base = bookFilter === "free" ? books.filter((b) => !b.is_premium) : books;
+    const inProgress = base.filter(
       (b) => b.progress && (b.progress.chapter_index > 0 || b.progress.scroll_pct > 0.01),
     );
     const isEncyclical = (b: LibraryBook) => (b.tradition || "").toLowerCase() === "papal";
-    const encyclicals = books.filter((b) => isEncyclical(b) && !inProgress.includes(b));
-    const authored = books.filter((b) => !isEncyclical(b) && !inProgress.includes(b));
+    const encyclicals = base.filter((b) => isEncyclical(b) && !inProgress.includes(b));
+    const authored = base.filter((b) => !isEncyclical(b) && !inProgress.includes(b));
     return { inProgress, encyclicals, authored };
-  }, [books]);
+  }, [books, bookFilter]);
 
   const filteredFilms = useMemo(() => {
     if (filmCategory === "all") return films;
@@ -179,6 +181,12 @@ export default function LibraryIndexScreen() {
             <Text style={[styles.bookTrad, { color: accent }]} numberOfLines={1}>
               {TRADITION_LABEL[b.tradition]}
             </Text>
+          ) : null}
+          {!b.is_premium ? (
+            <View style={styles.freeTag} testID={`library-free-tag-${b.slug}`}>
+              <Ionicons name="gift-outline" size={10} color={colors.liturgical.green} />
+              <Text style={styles.freeTagText}>Free to read</Text>
+            </View>
           ) : null}
           {hasProgress ? (
             <View style={styles.progressTrack}>
@@ -367,6 +375,32 @@ export default function LibraryIndexScreen() {
             </View>
           ) : (
             <>
+              <View style={styles.bookFilterRow}>
+                {(["all", "free"] as const).map((f) => {
+                  const active = bookFilter === f;
+                  return (
+                    <Pressable
+                      key={f}
+                      testID={`library-book-filter-${f}`}
+                      onPress={() => setBookFilter(f)}
+                      style={[styles.bookFilterChip, active && styles.bookFilterChipActive]}
+                    >
+                      {f === "free" ? (
+                        <Ionicons
+                          name="gift-outline"
+                          size={12}
+                          color={active ? colors.surface : colors.liturgical.green}
+                        />
+                      ) : null}
+                      <Text
+                        style={[styles.bookFilterChipText, active && { color: colors.surface }]}
+                      >
+                        {f === "all" ? "All books" : "Free to read"}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
               {grouped.inProgress.length > 0 ? (
                 <>
                   <Text style={styles.section}>Continue Reading</Text>
@@ -672,6 +706,46 @@ const styles = StyleSheet.create({
     borderColor: colors.borderSoft,
   },
   filmCatChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  bookFilterRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    paddingBottom: spacing.sm,
+  },
+  bookFilterChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 7,
+    borderRadius: radius.round,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+  },
+  bookFilterChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  bookFilterChipText: {
+    fontFamily: fonts.uiSemi,
+    fontSize: 12,
+    color: colors.textSecondary,
+    letterSpacing: 0.3,
+  },
+  freeTag: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: 3,
+    marginTop: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: radius.round,
+    backgroundColor: colors.liturgical.green + "1A",
+  },
+  freeTagText: {
+    fontFamily: fonts.uiSemi,
+    fontSize: 10,
+    color: colors.liturgical.green,
+    letterSpacing: 0.3,
+  },
   filmCatChipText: {
     fontFamily: fonts.uiSemi,
     fontSize: 11,

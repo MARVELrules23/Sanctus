@@ -168,3 +168,11 @@ Reverent & traditional aesthetic: cream/parchment background, deep stained-gl- C
 - Pilgrimage day-before reminder + "mark completed"; surface daily companion's "today's act" on Home; "+ Add to my practices" per tradition; deep-link certain traditions.
 - "Remember chant on/off" global pref; "Translation note" line on ES/IT liturgy screens; "Pray now" shortcut on Today.
 - Optional bookmark hardening: "see all" when >12 saved; toast on add failure.
+
+## Session update 10 (July 2026) — Home tiles, Companion time prayers, Guardian Angel, new library content (iter 80, all pass)
+- **Home tile swap**: Self-Defense is now the large FeatureBox (feature-selfdefense → /self-defense); Schedule is now a QuickTile (quick-schedule → /schedule). Added i18n home.selfDefenseSub (en/es/it).
+- **Companion time-of-day prayer**: vocations.py now has morning/afternoon/night prayers per vocation; /api/vocation/guide returns all three; /vocation picks by DEVICE LOCAL TIME (Morning 3–12, Afternoon 12–20, Night 20–3).
+- **Guardian Angel Chaplet**: added key `guardian_angel` to src/prayers/chaplets.ts (build fn + CHAPLETS entry + CHAPLET_ORDER after st_michael).
+- **Encyclicals (embedded, papal, free)**: added Redemptoris Mater, Marialis Cultus, Rosarium Virginis Mariae, Redemptoris Custos, Patris Corde via `scripts/load_encyclicals.py` (BOOKS + SUMMARY_CHAPTERS). NOTE: no papal encyclical exists specifically on Guardian Angels.
+- **Devotional Books (external links, in-app browser)**: NEW `scripts/load_devotional_books.py` upserts 7 type=external books (Guardian Angels: Aquinas Treatise on the Angels, Catholic Encyclopedia, EWTN devotion; Blessed Mother: Glories of Mary, True Devotion to Mary; St Joseph: Life & Glories of St Joseph; Saints: Story of a Soul). Library total now 35 books.
+

@@ -26,6 +26,7 @@ import {
 } from "@/src/api";
 import LiturgicalBadge from "@/src/components/LiturgicalBadge";
 import { MOODS } from "@/src/journal-mood";
+import { confirmAction } from "@/src/confirm";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 import { formatLong, parseISO, todayISO } from "@/src/date-utils";
 
@@ -238,16 +239,9 @@ export default function JournalScreen() {
     }
   };
 
-  const confirmDelete = () => {
-    Alert.alert(
-      "Delete this entry?",
-      "This cannot be undone.",
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Delete", style: "destructive", onPress: doDelete },
-      ],
-      { cancelable: true },
-    );
+  const confirmDelete = async () => {
+    const ok = await confirmAction("Delete this entry?", "This cannot be undone.");
+    if (ok) doDelete();
   };
 
   const markConfessed = async () => {

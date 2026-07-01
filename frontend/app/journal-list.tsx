@@ -15,6 +15,7 @@ import { Stack, useFocusEffect, useRouter } from "expo-router";
 
 import { api, JournalEntry } from "@/src/api";
 import { moodFor } from "@/src/journal-mood";
+import { confirmAction } from "@/src/confirm";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 import { parseISO, todayISO } from "@/src/date-utils";
 
@@ -60,27 +61,15 @@ export default function JournalListScreen() {
     }
   };
 
-  const confirmDelete = (id: string) => {
-    Alert.alert(
-      "Delete this entry?",
-      "This cannot be undone.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await api<{ ok: boolean }>(`/journal/${id}`, { method: "DELETE" });
-              setItems((prev) => prev.filter((i) => i.entry_id !== id));
-            } catch (e) {
-              console.warn("delete failed", e);
-            }
-          },
-        },
-      ],
-      { cancelable: true },
-    );
+  const confirmDelete = async (id: string) => {
+    const ok = await confirmAction("Delete this entry?", "This cannot be undone.");
+    if (!ok) return;
+    try {
+      await api<{ ok: boolean }>(`/journal/${id}`, { method: "DELETE" });
+      setItems((prev) => prev.filter((i) => i.entry_id !== id));
+    } catch (e) {
+      console.warn("delete failed", e);
+    }
   };
 
   return (

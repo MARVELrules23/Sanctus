@@ -360,6 +360,22 @@ export default function CommunityScreen() {
         <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
       </Pressable>
 
+      {/* Prayer Journal banner */}
+      <Pressable
+        testID="community-prayers-banner"
+        onPress={() => router.push("/community/prayers")}
+        style={({ pressed }) => [styles.miracleBanner, pressed && styles.pressed]}
+      >
+        <View style={styles.miracleIcon}>
+          <Ionicons name="hand-left" size={18} color={colors.gold} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.miracleTitle}>Prayer Journal</Text>
+          <Text style={styles.miracleSub} numberOfLines={1}>Share intentions — the parish prays together</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+      </Pressable>
+
       <View style={styles.chipsWrap}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
           {topics.map((t) => {

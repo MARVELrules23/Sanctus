@@ -13,7 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
-import { api, User } from "@/src/api";
+import { api, User, Friendship, friendList } from "@/src/api";
 import { useAuth } from "@/src/auth-context";
 import { useI18n } from "@/src/i18n";
 import { AutoText } from "@/src/auto-text";
@@ -45,6 +45,25 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savedFlash, setSavedFlash] = useState(false);
+  const [friends, setFriends] = useState<Friendship[]>([]);
+  const [incomingCount, setIncomingCount] = useState(0);
+
+  const loadFriends = useCallback(async () => {
+    try {
+      const [acc, inc] = await Promise.all([
+        friendList("accepted"),
+        friendList("incoming"),
+      ]);
+      setFriends(acc.items);
+      setIncomingCount(inc.count);
+    } catch (e) {
+      console.warn("load friends failed", e);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadFriends();
+  }, [loadFriends]);
 
   const load = useCallback(async () => {
     const p = await api<Prefs>("/preferences");
@@ -136,6 +155,58 @@ export default function ProfileScreen() {
         </View>
 
         <Ornament />
+
+        {/* Friends */}
+        <View style={styles.friendsHeaderRow}>
+          <Text style={styles.section}>Friends</Text>
+          <Pressable
+            testID="profile-friends-manage"
+            onPress={() => router.push("/community/people")}
+            hitSlop={8}
+            style={({ pressed }) => [styles.manageBtn, pressed && styles.pressed]}
+          >
+            <Text style={styles.manageText}>
+              {incomingCount > 0 ? `${incomingCount} request${incomingCount > 1 ? "s" : ""}` : "Find friends"}
+            </Text>
+            <Ionicons name="chevron-forward" size={14} color={colors.gold} />
+          </Pressable>
+        </View>
+        {friends.length === 0 ? (
+          <Text style={styles.friendsEmpty} testID="profile-friends-empty">
+            No friends yet. Tap “Find friends” to connect with fellow faithful.
+          </Text>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.friendsRow}
+            testID="profile-friends-list"
+          >
+            {friends.map((f) =>
+              f.user ? (
+                <Pressable
+                  key={f.friendship_id}
+                  testID={`profile-friend-${f.user.user_id}`}
+                  onPress={() =>
+                    router.push({ pathname: "/community/user/[id]", params: { id: f.user!.user_id } })
+                  }
+                  style={({ pressed }) => [styles.friendChip, pressed && styles.pressed]}
+                >
+                  {f.user.picture ? (
+                    <Image source={{ uri: f.user.picture }} style={styles.friendAvatar} />
+                  ) : (
+                    <View style={[styles.friendAvatar, styles.avatarFallback]}>
+                      <Text style={styles.avatarInitial}>{f.user.name?.[0]?.toUpperCase() ?? "?"}</Text>
+                    </View>
+                  )}
+                  <Text style={styles.friendName} numberOfLines={1}>
+                    {f.user.name}
+                  </Text>
+                </Pressable>
+              ) : null,
+            )}
+          </ScrollView>
+        )}
 
         {loading || !prefs ? (
           <ActivityIndicator color={colors.gold} style={{ marginTop: spacing.xl }} />
@@ -509,6 +580,31 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginTop: spacing.lg,
     marginBottom: spacing.sm,
+  },
+  friendsHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  manageBtn: { flexDirection: "row", alignItems: "center", gap: 2 },
+  manageText: { fontFamily: fonts.uiSemi, fontSize: 13, color: colors.gold },
+  friendsEmpty: {
+    fontFamily: fonts.bodyRegular,
+    fontSize: 13,
+    color: colors.textSecondary,
+    lineHeight: 20,
+    marginBottom: spacing.sm,
+  },
+  friendsRow: { gap: spacing.md, paddingVertical: spacing.xs, paddingRight: spacing.lg },
+  friendChip: { alignItems: "center", width: 68 },
+  friendAvatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: colors.surface },
+  friendName: {
+    fontFamily: fonts.uiMedium,
+    fontSize: 11,
+    color: colors.textPrimary,
+    marginTop: 4,
+    textAlign: "center",
+    width: 68,
   },
   label: { fontFamily: fonts.uiSemi, fontSize: 12, letterSpacing: 1, color: colors.textMuted, marginTop: spacing.md, marginBottom: spacing.xs },
   optionRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },

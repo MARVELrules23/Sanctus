@@ -462,6 +462,35 @@ export async function friendList(status: "accepted" | "incoming" | "outgoing" = 
   return await api(`/community/friends/list?status=${status}`);
 }
 
+// ---- Community Prayer Journal (shared intentions) ----
+export type PrayerIntention = {
+  prayer_id: string;
+  body: string;
+  anonymous: boolean;
+  author: { user_id: string; name: string; picture?: string | null } | null;
+  created_at: string;
+  pray_count: number;
+  prayed_by_me: boolean;
+  is_mine: boolean;
+};
+
+export async function listPrayerIntentions(before?: string): Promise<{ items: PrayerIntention[]; next_cursor: string | null }> {
+  const q = before ? `?before=${encodeURIComponent(before)}` : "";
+  return await api(`/community/prayers${q}`);
+}
+
+export async function createPrayerIntention(body: string, anonymous = false): Promise<PrayerIntention> {
+  return await api(`/community/prayers`, { method: "POST", body: { body, anonymous } });
+}
+
+export async function togglePrayForIntention(prayerId: string): Promise<{ prayed: boolean; pray_count: number }> {
+  return await api(`/community/prayers/${encodeURIComponent(prayerId)}/pray`, { method: "POST" });
+}
+
+export async function deletePrayerIntention(prayerId: string): Promise<{ ok: boolean }> {
+  return await api(`/community/prayers/${encodeURIComponent(prayerId)}`, { method: "DELETE" });
+}
+
 // ---- Group DMs ----
 export async function dmCreateGroup(memberIds: string[], name?: string | null): Promise<CommunityDMThread> {
   return await api(`/community/dm/threads/group`, {

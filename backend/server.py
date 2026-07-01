@@ -190,6 +190,11 @@ async def ensure_indexes():
     await db.community_friendships.create_index("friendship_id", unique=True)
     await db.community_friendships.create_index([("members", 1), ("status", 1)])
     await db.community_friendships.create_index([("members", 1), ("created_at", -1)])
+    await db.community_prayers.create_index("prayer_id", unique=True)
+    await db.community_prayers.create_index([("created_at", -1)])
+    await db.community_prayers.create_index([("author_id", 1), ("created_at", -1)])
+    await db.community_prayer_prays.create_index([("prayer_id", 1), ("user_id", 1)], unique=True)
+    await db.community_prayer_prays.create_index("user_id")
     # Self-defense indexes
     await db.self_defense_sessions.create_index("session_id", unique=True)
     await db.self_defense_sessions.create_index([("user_id", 1), ("discipline_id", 1), ("generated_at", -1)])
@@ -2042,6 +2047,11 @@ class FriendActionRequest(BaseModel):
     user_id: str
 
 
+class PrayerIntentionRequest(BaseModel):
+    body: str
+    anonymous: bool = False
+
+
 class GroupDMCreateRequest(BaseModel):
     # All members the creator wants in the group. The creator is auto-added
     # if not present. Max community.MAX_GROUP_MEMBERS total (incl. creator).
@@ -2739,6 +2749,116 @@ async def friend_list(status: str = "accepted",
         other_id = next((m for m in (r.get("members") or []) if m != user.user_id), None)
         items.append(community_svc.friendship_public(r, others.get(other_id) if other_id else None))
     return {"items": items, "count": len(items)}
+
+
+# ---- Community Prayer Journal (shared intentions) ----
+def _prayer_public(p: Dict[str, Any], author: Optional[Dict[str, Any]],
+                   prayed_by_me: bool, is_mine: bool) -> Dict[str, Any]:
+    anon = bool(p.get("anonymous"))
+    return {
+        "prayer_id": p.get("prayer_id"),
+        "body": p.get("body", ""),
+        "anonymous": anon,
+        "author": None if anon else (community_svc.public_user(author) if author else None),
+        "created_at": community_svc.iso(p.get("created_at")),
+        "pray_count": max(0, int(p.get("pray_count") or 0)),
+        "prayed_by_me": prayed_by_me,
+        "is_mine": is_mine,
+    }
+
+
+@api.get("/community/prayers")
+async def community_prayers(
+    limit: int = 30,
+    before: Optional[str] = None,
+    user: User = Depends(get_current_user),
+):
+    q: Dict[str, Any] = {"hidden": {"$ne": True}}
+    if before:
+        try:
+            q["created_at"] = {"$lt": datetime.fromisoformat(before.replace("Z", "+00:00"))}
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid 'before' cursor")
+    limit = max(1, min(limit, 50))
+    rows = await db.community_prayers.find(q, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(length=limit)
+    author_ids = [r["author_id"] for r in rows]
+    authors = await _users_by_id(author_ids)
+    prayer_ids = [r["prayer_id"] for r in rows]
+    prayed_set = set()
+    if prayer_ids:
+        async for d in db.community_prayer_prays.find(
+            {"prayer_id": {"$in": prayer_ids}, "user_id": user.user_id}, {"_id": 0, "prayer_id": 1}
+        ):
+            prayed_set.add(d["prayer_id"])
+    items = [
+        _prayer_public(
+            r,
+            authors.get(r["author_id"]),
+            prayed_by_me=(r["prayer_id"] in prayed_set),
+            is_mine=(r["author_id"] == user.user_id),
+        )
+        for r in rows
+    ]
+    next_cursor = community_svc.iso(rows[-1]["created_at"]) if len(rows) == limit else None
+    return {"items": items, "next_cursor": next_cursor}
+
+
+@api.post("/community/prayers")
+async def community_create_prayer(payload: PrayerIntentionRequest,
+                                  user: User = Depends(get_current_user)):
+    body = community_svc.clean_body(payload.body, community_svc.MAX_POST_LEN)
+    if not body:
+        raise HTTPException(status_code=400, detail="Prayer intention cannot be empty")
+    prayer_id = f"pray_{uuid.uuid4().hex[:14]}"
+    doc = {
+        "prayer_id": prayer_id,
+        "author_id": user.user_id,
+        "body": body,
+        "anonymous": bool(payload.anonymous),
+        "created_at": community_svc.now_utc(),
+        "pray_count": 0,
+        "hidden": False,
+    }
+    await db.community_prayers.insert_one(doc)
+    return _prayer_public(
+        doc,
+        {"user_id": user.user_id, "name": user.name, "picture": user.picture},
+        prayed_by_me=False,
+        is_mine=True,
+    )
+
+
+@api.post("/community/prayers/{prayer_id}/pray")
+async def community_pray(prayer_id: str, user: User = Depends(get_current_user)):
+    p = await db.community_prayers.find_one({"prayer_id": prayer_id}, {"_id": 0})
+    if not p or p.get("hidden"):
+        raise HTTPException(status_code=404, detail="Prayer not found")
+    try:
+        await db.community_prayer_prays.insert_one({
+            "prayer_id": prayer_id,
+            "user_id": user.user_id,
+            "created_at": community_svc.now_utc(),
+        })
+        await db.community_prayers.update_one({"prayer_id": prayer_id}, {"$inc": {"pray_count": 1}})
+        prayed = True
+    except Exception:
+        await db.community_prayer_prays.delete_one({"prayer_id": prayer_id, "user_id": user.user_id})
+        await db.community_prayers.update_one({"prayer_id": prayer_id}, {"$inc": {"pray_count": -1}})
+        prayed = False
+    doc = await db.community_prayers.find_one({"prayer_id": prayer_id}, {"_id": 0, "pray_count": 1})
+    return {"prayed": prayed, "pray_count": max(0, int(doc.get("pray_count") or 0))}
+
+
+@api.delete("/community/prayers/{prayer_id}")
+async def community_delete_prayer(prayer_id: str, user: User = Depends(get_current_user)):
+    p = await db.community_prayers.find_one({"prayer_id": prayer_id}, {"_id": 0})
+    if not p:
+        raise HTTPException(status_code=404, detail="Prayer not found")
+    if p["author_id"] != user.user_id:
+        raise HTTPException(status_code=403, detail="Only the author can delete this intention")
+    await db.community_prayers.delete_one({"prayer_id": prayer_id})
+    await db.community_prayer_prays.delete_many({"prayer_id": prayer_id})
+    return {"ok": True}
 
 
 # ---- Reporting & Blocking ----

@@ -282,38 +282,4 @@ const styles = StyleSheet.create({
   chapText: { fontFamily: fonts.uiSemi, color: colors.textPrimary, fontSize: 14 },
   pressed: { opacity: 0.7 },
 
-  // Mass Missals callout (links to /missals)
-  missalsLink: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-    padding: spacing.md,
-    marginBottom: spacing.lg,
-    backgroundColor: colors.primary,
-    borderRadius: radius.lg,
-    ...shadow.card,
-  },
-  missalsIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(212,179,109,0.15)",
-    borderWidth: 1,
-    borderColor: colors.gold,
-  },
-  missalsTitle: {
-    fontFamily: fonts.headingSemi,
-    fontSize: 15,
-    color: colors.gold,
-    letterSpacing: 0.4,
-  },
-  missalsSub: {
-    fontFamily: fonts.bodyRegular,
-    fontSize: 12,
-    color: "#F4EAD0",
-    marginTop: 2,
-    lineHeight: 17,
-  },
 });

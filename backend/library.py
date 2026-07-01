@@ -136,6 +136,31 @@ class FilmPatchModel(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+def _is_book_premium(doc: Dict[str, Any]) -> bool:
+    """Single source of truth for the library paywall.
+
+    FREE:
+      * Papal encyclicals (tradition == 'papal').
+      * Books that only link out externally (type == 'external').
+      * The Catechism of the Catholic Church (reference).
+    PREMIUM:
+      * Every book whose full text is embedded chapter-by-chapter in the app.
+    """
+    tradition = (doc.get("tradition") or "").lower()
+    btype = (doc.get("type") or "embedded").lower()
+    slug = (doc.get("slug") or "").lower()
+    if tradition == "papal":
+        return False
+    if btype == "external":
+        return False
+    if slug == "catechism-of-the-catholic-church" or tradition == "reference":
+        return False
+    # Embedded full-text book — gate behind Sanctus Premium (only if it actually
+    # has readable chapters).
+    return bool(doc.get("chapters"))
+
+
+
 def _public_book(doc: Dict[str, Any], include_chapter_bodies: bool = False) -> Dict[str, Any]:
     """Project a book doc for public consumption."""
     chapters = doc.get("chapters") or []
@@ -164,9 +189,8 @@ def _public_book(doc: Dict[str, Any], include_chapter_bodies: bool = False) -> D
         "status": doc.get("status") or "published",
         "chapter_count": len(chapters_out),
         "chapters": chapters_out,
-        # Encyclicals & explicit references are free; else needs Sanctus Premium.
-        "is_premium": bool(doc["is_premium"]) if isinstance(doc.get("is_premium"), bool)
-        else ((doc.get("tradition") or "").lower() != "papal"),
+        # Free: encyclicals, external-link books & the Catechism; else Premium.
+        "is_premium": _is_book_premium(doc),
     }
 
 
@@ -405,9 +429,9 @@ def build_router(db: AsyncIOMotorDatabase, get_current_user) -> APIRouter:
     async def get_chapter(slug: str, idx: int, user=Depends(get_current_user)):
         is_admin = bool(getattr(user, "is_admin", False))
         doc = await _get_book_or_404(slug, allow_drafts=is_admin)
-        # Premium gate: all books require Sanctus Premium EXCEPT papal
-        # encyclicals (tradition == "papal"), which are always free.
-        if (doc.get("tradition") or "").lower() != "papal":
+        # Premium gate: embedded full-text books require Sanctus Premium.
+        # Encyclicals, external-link books and the Catechism are always free.
+        if _is_book_premium(doc):
             from premium import is_premium_user
             if not is_premium_user(user):
                 raise HTTPException(

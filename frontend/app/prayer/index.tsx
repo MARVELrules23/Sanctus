@@ -45,6 +45,16 @@ export default function PrayerHubScreen() {
         router.push({ pathname: "/prayer/[kind]", params: { kind: "rosary", date: today } }),
       featured: true,
     });
+    // Liturgy of the Hours — the Church's daily public prayer.
+    arr.push({
+      testID: "prayer-card-liturgy",
+      title: "Liturgy of the Hours",
+      subtitle: "Lauds, Daytime, Vespers & Compline — pray with the Church",
+      meta: "DIVINE OFFICE",
+      color: "#4A5D8A",
+      icon: "book-outline",
+      onPress: () => router.push("/liturgy" as any),
+    });
     // Category boxes — each opens a screen listing the prayers within.
     arr.push({
       testID: "prayer-cat-chaplets",

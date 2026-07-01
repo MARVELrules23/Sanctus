@@ -137,24 +137,6 @@ export default function BibleIndexScreen() {
             <Ionicons name="chevron-forward" size={18} color={colors.gold} />
           </Pressable>
 
-          {/* Liturgy of the Hours — Divine Office */}
-          <Pressable
-            testID="bible-liturgy-link"
-            onPress={() => router.push("/liturgy" as any)}
-            style={({ pressed }) => [styles.missalsLink, pressed && styles.pressed]}
-          >
-            <View style={styles.missalsIconWrap}>
-              <Ionicons name="time" size={22} color={colors.gold} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.missalsTitle}>Liturgy of the Hours</Text>
-              <Text style={styles.missalsSub}>
-                Lauds · Vespers · Compline — the Divine Office in Latin & English
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.gold} />
-          </Pressable>
-
           {SECTION_ORDER.map((sec) => {
             const list = grouped[sec];
             if (!list.length) return null;

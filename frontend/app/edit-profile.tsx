@@ -19,7 +19,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 
-import { updateMe } from "@/src/api";
+import { updateMe, RITE_OPTIONS, type RiteKey } from "@/src/api";
 import { useAuth } from "@/src/auth-context";
 import Ornament from "@/src/components/Ornament";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
@@ -36,6 +36,7 @@ export default function EditProfileScreen() {
   const [traditionPath, setTraditionPath] = useState<"convert" | "revert" | "cradle" | null>(
     (user?.tradition_path as any) ?? null,
   );
+  const [rite, setRite] = useState<RiteKey | null>((user?.rite as any) ?? null);
   const [ageText, setAgeText] = useState<string>(
     user?.age && user.age > 0 ? String(user.age) : "",
   );
@@ -50,6 +51,7 @@ export default function EditProfileScreen() {
       setPicture(user.picture ?? null);
       setDenomination((user.denomination as any) ?? null);
       setTraditionPath((user.tradition_path as any) ?? null);
+      setRite((user.rite as any) ?? null);
       setAgeText(user.age && user.age > 0 ? String(user.age) : "");
       setShowAttribution(!!user.show_attribution);
     }
@@ -133,6 +135,7 @@ export default function EditProfileScreen() {
         picture,
         denomination,
         tradition_path: traditionPath,
+        rite,
         age: ageText.trim() === "" ? 0 : ageNum,
         show_attribution: showAttribution,
       });
@@ -327,6 +330,30 @@ export default function EditProfileScreen() {
                 </Pressable>
               );
             })}
+          </View>
+
+          <Text style={styles.label}>Rite</Text>
+          <View style={styles.chipRow}>
+            {[{ key: null as RiteKey | null, label: "Prefer not to say" }, ...RITE_OPTIONS].map(
+              (opt) => {
+                const sel = rite === opt.key;
+                return (
+                  <Pressable
+                    key={opt.key ?? "none"}
+                    testID={`edit-profile-rite-${opt.key ?? "none"}`}
+                    onPress={() => {
+                      setRite(opt.key);
+                      setDirty(true);
+                    }}
+                    style={[styles.optionChip, sel && styles.optionChipSel]}
+                  >
+                    <Text style={[styles.optionText, sel && styles.optionTextSel]}>
+                      {opt.label}
+                    </Text>
+                  </Pressable>
+                );
+              },
+            )}
           </View>
 
           <Text style={styles.label}>Age</Text>

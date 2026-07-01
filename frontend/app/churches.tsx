@@ -17,7 +17,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useRouter } from "expo-router";
 import * as Location from "expo-location";
 
-import { api, ChurchItem } from "@/src/api";
+import { api, ChurchItem, riteLabel } from "@/src/api";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 
 type Tab = "nearby" | "saved";
@@ -494,6 +494,12 @@ function ChurchCard({
       <View style={styles.churchHeader}>
         <View style={{ flex: 1 }}>
           <Text style={styles.churchName}>{c.name}</Text>
+          {riteLabel(c.rite) ? (
+            <View style={styles.riteBadge} testID={`church-rite-${c.church_id}`}>
+              <Ionicons name="ribbon-outline" size={11} color={colors.gold} />
+              <Text style={styles.riteBadgeText}>{riteLabel(c.rite)} Rite</Text>
+            </View>
+          ) : null}
           {c.distance_km != null ? (
             <Text style={styles.churchMeta}>{c.distance_km.toFixed(1)} km away</Text>
           ) : null}
@@ -811,6 +817,25 @@ const styles = StyleSheet.create({
     fontFamily: fonts.uiSemi,
     fontSize: 10,
     color: colors.liturgical.purple,
+    letterSpacing: 0.4,
+  },
+  riteBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    alignSelf: "flex-start",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radius.round,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.gold,
+    marginTop: 4,
+  },
+  riteBadgeText: {
+    fontFamily: fonts.uiSemi,
+    fontSize: 10,
+    color: colors.gold,
     letterSpacing: 0.4,
   },
   pressed: { opacity: 0.7 },

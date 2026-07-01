@@ -1480,6 +1480,7 @@ def _community_to_shape(doc: dict, origin: Optional[Tuple[float, float]] = None)
         "lng": doc.get("lng"),
         "address": doc.get("address", "") or "",
         "denomination": "roman_catholic",
+        "rite": "latin",
         "website": doc.get("website", "") or "",
         "phone": doc.get("phone", "") or "",
         "mass_times_raw": "",

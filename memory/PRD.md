@@ -205,3 +205,11 @@ Reverent & traditional aesthetic: cream/parchment background, deep stained-gl- C
 - Map pipeline (catholic_sites.py `/sites/bbox` + `/sites/nearby`) and ingest_osm_churches.py: Overpass query tightened to positive Catholic + Eastern-rite denominations MINUS non-communion bodies; ingest now stores `denomination`.
 - Cleaned cached map data: purged 2,578 non-communion entries from `osm_churches` (277,109 → 274,531) by denomination + name signals.
 - Verified: /sites/bbox and /churches/nearby around Rome return only Catholic churches (no Orthodox/Anglican/Old-Catholic); unit tests on the filter all pass.
+
+
+## Session update 15 (July 2026) — Rite badges & Profile rite selection
+- `catholic_filter.py`: `RITE_LABELS`/`RITE_KEYS`, `rite_label()`, `rite_from_denomination()` (maps an OSM denomination → rite key: latin/byzantine/maronite/chaldean/syro_malabar/syro_malankara/coptic/armenian/syriac/ordinariate).
+- Backend: `User`/`UpdateMeRequest` carry `rite` (validated against RITE_KEYS; "" clears). Church payloads now include `rite` — `churches.py _to_church_dict` (nearby/search, defaults Catholic → "latin"), `server.py _community_to_shape` ("latin"), and `catholic_sites.py /sites/bbox` markers (from stored `denomination`).
+- Frontend `src/api.ts`: `RiteKey` type, `RITE_LABELS`, `RITE_OPTIONS`, `riteLabel()`; `User.rite`, `ChurchItem.rite`, `updateMe({rite})`.
+- Profile: edit-profile.tsx has a "Rite" chip selector (10 rites + Prefer not to say); profile FaithBioChips shows the chosen rite. churches.tsx church card shows a gold "<Rite> Rite" badge (testID `church-rite-<id>`).
+- Verified via curl: nearby returns rite=latin for Rome parishes; PUT /auth/me sets byzantine, rejects invalid (400), clears to null. UI verified: rite selector renders all options.

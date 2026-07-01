@@ -33,7 +33,7 @@ OVERPASS_ENDPOINTS = (
 
 USER_AGENT = "SanctusApp/1.0 (Catholic devotional app)"
 
-from catholic_filter import is_catholic_place  # noqa: E402
+from catholic_filter import is_catholic_place, rite_from_denomination  # noqa: E402
 
 
 def _haversine_km(a_lat: float, a_lng: float, b_lat: float, b_lng: float) -> float:
@@ -89,6 +89,10 @@ def _to_church_dict(element: dict, origin: tuple[float, float]) -> Optional[dict
         return None
     name = (tags.get("name") or "Unnamed Catholic church").strip()
     dist = round(_haversine_km(origin[0], origin[1], lat, lng), 2)
+    denom = tags.get("denomination", "") or ""
+    # Every church here already passed the Catholic-in-communion filter, so
+    # default an unknown/plain denomination to the Latin (Roman) rite.
+    rite = rite_from_denomination(denom) or "latin"
     return {
         "church_id": _church_id(element),
         "name": name,
@@ -96,7 +100,8 @@ def _to_church_dict(element: dict, origin: tuple[float, float]) -> Optional[dict
         "lng": lng,
         "distance_km": dist,
         "address": _format_address(tags),
-        "denomination": tags.get("denomination", ""),
+        "denomination": denom,
+        "rite": rite,
         "website": tags.get("website", "") or tags.get("contact:website", ""),
         "phone": tags.get("phone", "") or tags.get("contact:phone", ""),
         "mass_times_raw": tags.get("service_times", ""),

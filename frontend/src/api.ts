@@ -71,6 +71,54 @@ export type LiturgicalDay = {
   is_sunday: boolean;
 };
 
+export type RiteKey =
+  | "latin"
+  | "byzantine"
+  | "maronite"
+  | "chaldean"
+  | "syro_malabar"
+  | "syro_malankara"
+  | "coptic"
+  | "armenian"
+  | "syriac"
+  | "ordinariate";
+
+// Human-readable labels for each Catholic rite/particular Church in communion
+// with Rome. Keys mirror the backend catholic_filter.RITE_LABELS.
+export const RITE_LABELS: Record<RiteKey, string> = {
+  latin: "Latin (Roman)",
+  byzantine: "Byzantine",
+  maronite: "Maronite",
+  chaldean: "Chaldean",
+  syro_malabar: "Syro-Malabar",
+  syro_malankara: "Syro-Malankara",
+  coptic: "Coptic",
+  armenian: "Armenian",
+  syriac: "Syriac",
+  ordinariate: "Ordinariate",
+};
+
+// Ordered list for pickers (most common first).
+export const RITE_OPTIONS: { key: RiteKey; label: string }[] = (
+  [
+    "latin",
+    "byzantine",
+    "maronite",
+    "chaldean",
+    "syro_malabar",
+    "syro_malankara",
+    "coptic",
+    "armenian",
+    "syriac",
+    "ordinariate",
+  ] as RiteKey[]
+).map((key) => ({ key, label: RITE_LABELS[key] }));
+
+export function riteLabel(key?: string | null): string {
+  if (!key) return "";
+  return RITE_LABELS[key as RiteKey] ?? "";
+}
+
 export type User = {
   user_id: string;
   email: string;
@@ -78,6 +126,7 @@ export type User = {
   picture?: string | null;
   denomination?: "catholic" | "protestant" | "orthodox" | null;
   tradition_path?: "convert" | "revert" | "cradle" | null;
+  rite?: RiteKey | null;
   age?: number | null;
   show_attribution?: boolean | null;
   is_admin?: boolean | null;
@@ -133,6 +182,7 @@ export async function updateMe(patch: {
   picture?: string | null;
   denomination?: "catholic" | "protestant" | "orthodox" | null;
   tradition_path?: "convert" | "revert" | "cradle" | null;
+  rite?: RiteKey | null;
   age?: number | null;
   show_attribution?: boolean | null;
 }): Promise<User> {
@@ -142,6 +192,7 @@ export async function updateMe(patch: {
   if (patch.picture !== undefined) body.picture = patch.picture ?? "";
   if (patch.denomination !== undefined) body.denomination = patch.denomination ?? "";
   if (patch.tradition_path !== undefined) body.tradition_path = patch.tradition_path ?? "";
+  if (patch.rite !== undefined) body.rite = patch.rite ?? "";
   if (patch.age !== undefined) body.age = patch.age == null ? 0 : patch.age;
   if (patch.show_attribution !== undefined) body.show_attribution = !!patch.show_attribution;
   return await api<User>("/auth/me", { method: "PUT", body });
@@ -279,6 +330,7 @@ export type ChurchItem = {
   distance_km?: number;
   address?: string;
   denomination?: string;
+  rite?: RiteKey | string;
   website?: string;
   phone?: string;
   mass_times?: string[];

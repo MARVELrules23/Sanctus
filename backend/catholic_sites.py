@@ -22,6 +22,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from lang_ctx import get_lang
+from catholic_filter import rite_from_denomination
 
 # Site categories used for marker colours / filtering on the client.
 TYPES = {"basilica", "cathedral", "shrine", "apparition", "monastery", "church"}
@@ -1746,7 +1747,7 @@ def build_router(db: AsyncIOMotorDatabase, get_current_user, emergent_llm_key: s
                 {"lat": {"$gte": south, "$lte": north}, "lng": {"$gte": west, "$lte": east}},
                 {"_id": 0, "osm_id": 1, "name": 1, "lat": 1, "lng": 1, "city": 1,
                  "country": 1, "address": 1, "street": 1, "state": 1, "postcode": 1,
-                 "website": 1, "phone": 1},
+                 "website": 1, "phone": 1, "denomination": 1},
             ).limit(1500)
             async for o in stored:
                 key = (round(o.get("lat") or 0, 5), round(o.get("lng") or 0, 5))
@@ -1761,6 +1762,7 @@ def build_router(db: AsyncIOMotorDatabase, get_current_user, emergent_llm_key: s
                     "address": o.get("address", ""), "street": o.get("street", ""),
                     "state": o.get("state", ""), "postcode": o.get("postcode", ""),
                     "website": o.get("website", ""), "phone": o.get("phone", ""),
+                    "rite": rite_from_denomination(o.get("denomination", "") or "") or "latin",
                 })
                 osm_count += 1
 

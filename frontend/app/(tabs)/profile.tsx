@@ -13,7 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
-import { api, User, Friendship, friendList } from "@/src/api";
+import { api, User, Friendship, friendList, riteLabel } from "@/src/api";
 import { useBookmarks } from "@/src/bookmarks-context";
 import { useAuth } from "@/src/auth-context";
 import { useI18n } from "@/src/i18n";
@@ -577,8 +577,9 @@ function FaithBioChips({ user }: { user: User | null | undefined }) {
   };
   const denom = labelFor("denomination", user.denomination ?? null);
   const path = labelFor("path", user.tradition_path ?? null);
+  const rite = riteLabel(user.rite ?? null);
   const age = user.age && user.age > 0 ? `Age ${user.age}` : null;
-  const items: string[] = [denom, path, age].filter(Boolean) as string[];
+  const items: string[] = [denom, rite || null, path, age].filter(Boolean) as string[];
   if (items.length === 0) return null;
   return (
     <View style={styles.bioChipRow} testID="profile-bio-chips">

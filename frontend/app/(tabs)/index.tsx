@@ -173,10 +173,10 @@ export default function TodayScreen() {
             onPress={() => router.push("/journal-list")}
           />
           <QuickTile
-            testID="quick-grocery"
-            icon="cart-outline"
-            label={t("home.grocery")}
-            onPress={() => router.push("/grocery")}
+            testID="quick-mass"
+            icon="wine-outline"
+            label={t("home.mass")}
+            onPress={() => router.push("/mass")}
           />
         </View>
         <View style={styles.quickRow}>

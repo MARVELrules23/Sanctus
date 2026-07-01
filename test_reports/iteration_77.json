@@ -1,0 +1,28 @@
+{
+  "summary": "Phase 2 fully verified end-to-end. Backend: pytest 4/4 pass — GET /api/readings?date=<today> returns source='universalis' with gospel_full (883 chars typ.) and first_reading_full (644 chars typ.), returns 401 without Bearer, past date 2025-01-01 returns 200 with citations, and Accept-Language: es returns Spanish-translated full text. Frontend (Playwright on mobile 390x844): quick-mass tile is present and quick-grocery tile is GONE from Home; tapping quick-mass navigates to /mass (mass-hub-screen); the 3 hub cards (mass-readings-card / mass-missals-card / mass-nearby-card) all render and route correctly to /readings, /missals and /churches respectively; /readings shows the FULL scripture text (long paragraphs, not just 280-char excerpts); Meals tab still has meals-grocery-button linking to /grocery; Bible hub no longer contains bible-missals-link.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_readings_phase2_iter77.py",
+    "/app/test_reports/pytest/iteration_77.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "mass/index.tsx cleanly composed; SafeAreaView + Stack.Screen headerShown false and custom top-bar; testIDs on the back button and all 3 cards.",
+    "readings.tsx correctly prioritises `s.full` over `s.excerpt`, so past-date empty *_full still falls back to the excerpt path.",
+    "server.py caches i18n readings per (date, lang) in db.readings_i18n — good perf pattern; first ES call took ~15-20s (LLM), subsequent cached.",
+    "Pre-existing (non-blocking) RN Web deprecations still logging: 'shadow*' style props and props.pointerEvents. Same as iter76.",
+    "Minor: Bible hub styles (missalsLink, missalsIconWrap, missalsTitle, missalsSub) are defined in styles but no longer referenced after the missals link was removed — safe to prune in a future cleanup."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (4/4)", "frontend": "100% (7/7 flows: home tile swap, mass hub 3-cards, readings full text, missals nav, churches nav, meals grocery button, bible-missals removal)"},
+  "seed_data_creation": "None. Test only reads GET endpoints and navigates UI.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Phase 2 complete and green. For future changes touching /readings, the Playwright approach that worked reliably was: (1) set localStorage token, (2) reload, (3) wait for specific testID (not just today-screen), (4) sleep 5s after landing on /readings so Universalis-cached scripture text renders. Query rendered card text length (>400 chars indicates full text, ~280 chars indicates excerpt fallback). Backend test file lives at /app/backend/tests/test_readings_phase2_iter77.py."
+}

@@ -119,24 +119,6 @@ export default function BibleIndexScreen() {
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scroll}>
-          {/* Mass Missals Hub — link to side-by-side Latin/English Order of Mass */}
-          <Pressable
-            testID="bible-missals-link"
-            onPress={() => router.push("/missals" as any)}
-            style={({ pressed }) => [styles.missalsLink, pressed && styles.pressed]}
-          >
-            <View style={styles.missalsIconWrap}>
-              <Ionicons name="book" size={22} color={colors.gold} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.missalsTitle}>Mass Missals</Text>
-              <Text style={styles.missalsSub}>
-                Novus Ordo · Traditional Latin · Ordinariate · Latin & English side-by-side
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.gold} />
-          </Pressable>
-
           {SECTION_ORDER.map((sec) => {
             const list = grouped[sec];
             if (!list.length) return null;

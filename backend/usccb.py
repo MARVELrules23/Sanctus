@@ -86,20 +86,20 @@ async def _fetch_universalis_today() -> Optional[dict]:
         logger.warning("universalis JSON parse failed: %s", e)
         return None
 
-    def section(key: str) -> tuple[str, str]:
+    def section(key: str) -> tuple[str, str, str]:
         node = data.get(key) or {}
         if not isinstance(node, dict):
-            return "", ""
+            return "", "", ""
         src = _norm(_strip_html(str(node.get("source", "") or "")))
         body_html = str(node.get("text", "") or "")
         body_txt = _strip_html(body_html)
-        return src, _excerpt(body_txt)
+        return src, _excerpt(body_txt), body_txt
 
-    r1_src, r1_exc = section("Mass_R1")
-    ps_src, ps_exc = section("Mass_Ps")
-    r2_src, r2_exc = section("Mass_R2")
-    acc_src, acc_exc = section("Mass_GA")
-    gos_src, gos_exc = section("Mass_G")
+    r1_src, r1_exc, r1_full = section("Mass_R1")
+    ps_src, ps_exc, ps_full = section("Mass_Ps")
+    r2_src, r2_exc, r2_full = section("Mass_R2")
+    acc_src, acc_exc, acc_full = section("Mass_GA")
+    gos_src, gos_exc, gos_full = section("Mass_G")
 
     # 'day' field has HTML for the title (e.g. "Pentecost Sunday")
     day_title = _strip_html(str(data.get("day", "") or ""))
@@ -113,14 +113,19 @@ async def _fetch_universalis_today() -> Optional[dict]:
         "liturgical_title": day_title,
         "first_reading": r1_src,
         "first_reading_excerpt": r1_exc,
+        "first_reading_full": r1_full,
         "psalm": ps_src,
         "psalm_excerpt": ps_exc,
+        "psalm_full": ps_full,
         "second_reading": r2_src,
         "second_reading_excerpt": r2_exc,
+        "second_reading_full": r2_full,
         "gospel_acclamation": acc_src or "Alleluia",
         "gospel_acclamation_excerpt": acc_exc,
+        "gospel_acclamation_full": acc_full,
         "gospel": gos_src,
         "gospel_excerpt": gos_exc,
+        "gospel_full": gos_full,
     }
 
 

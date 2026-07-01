@@ -26,6 +26,7 @@ type Section = {
   icon: keyof typeof Ionicons.glyphMap;
   citation: string;
   excerpt: string;
+  full?: string;
   accent?: string;
 };
 
@@ -74,12 +75,12 @@ export default function ReadingsScreen() {
 
   const sections: Section[] = data
     ? ([
-        { label: "First Reading", icon: "book-outline" as const, citation: data.first_reading, excerpt: data.first_reading_excerpt },
-        { label: "Responsorial Psalm", icon: "musical-notes-outline" as const, citation: data.psalm, excerpt: data.psalm_excerpt, accent: colors.liturgical.purple },
-        { label: "Second Reading", icon: "book-outline" as const, citation: data.second_reading, excerpt: data.second_reading_excerpt },
-        { label: "Gospel Acclamation", icon: "flower-outline" as const, citation: data.gospel_acclamation, excerpt: data.gospel_acclamation_excerpt, accent: colors.gold },
-        { label: "Gospel", icon: "sparkles-outline" as const, citation: data.gospel, excerpt: data.gospel_excerpt, accent: colors.liturgical.red },
-      ] as Section[]).filter((s) => s.citation || s.excerpt)
+        { label: "First Reading", icon: "book-outline" as const, citation: data.first_reading, excerpt: data.first_reading_excerpt, full: data.first_reading_full },
+        { label: "Responsorial Psalm", icon: "musical-notes-outline" as const, citation: data.psalm, excerpt: data.psalm_excerpt, full: data.psalm_full, accent: colors.liturgical.purple },
+        { label: "Second Reading", icon: "book-outline" as const, citation: data.second_reading, excerpt: data.second_reading_excerpt, full: data.second_reading_full },
+        { label: "Gospel Acclamation", icon: "flower-outline" as const, citation: data.gospel_acclamation, excerpt: data.gospel_acclamation_excerpt, full: data.gospel_acclamation_full, accent: colors.gold },
+        { label: "Gospel", icon: "sparkles-outline" as const, citation: data.gospel, excerpt: data.gospel_excerpt, full: data.gospel_full, accent: colors.liturgical.red },
+      ] as Section[]).filter((s) => s.citation || s.excerpt || s.full)
     : [];
 
   const sourceLabel: Record<NonNullable<Readings["source"]>, string> = {
@@ -137,7 +138,11 @@ export default function ReadingsScreen() {
                   <AutoText style={[styles.cardHeaderText, { color: s.accent ?? colors.gold }]}>{s.label.toUpperCase()}</AutoText>
                 </View>
                 {s.citation ? <Text style={styles.citation}>{s.citation}</Text> : null}
-                {s.excerpt ? <Text style={styles.excerpt}>{s.excerpt}</Text> : null}
+                {s.full ? (
+                  <Text style={styles.fullText}>{s.full}</Text>
+                ) : s.excerpt ? (
+                  <Text style={styles.excerpt}>{s.excerpt}</Text>
+                ) : null}
               </View>
             ))}
 
@@ -205,6 +210,13 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     marginTop: spacing.sm,
     fontStyle: "italic",
+  },
+  fullText: {
+    fontFamily: fonts.bodyRegular,
+    fontSize: 16,
+    color: colors.textPrimary,
+    lineHeight: 27,
+    marginTop: spacing.sm,
   },
   reflectionCard: {
     backgroundColor: "#F6F2EB",

@@ -844,6 +844,8 @@ async def _translate_readings(base: dict, date: str, lang: str) -> tuple[dict, b
         "liturgical_title", "first_reading_excerpt", "psalm_excerpt",
         "second_reading_excerpt", "gospel_acclamation_excerpt",
         "gospel_excerpt", "reflection",
+        "first_reading_full", "psalm_full", "second_reading_full",
+        "gospel_acclamation_full", "gospel_full",
     ]
     out = dict(base)
     out.pop("_id", None)
@@ -914,6 +916,10 @@ async def _readings_en(date: str) -> dict:
                     cached = None
             except Exception:  # noqa: BLE001
                 pass
+            # Older cached docs predate full-text support — refetch so the
+            # reader can show the complete readings, not just excerpts.
+            if cached and not (cached.get("gospel_full") or cached.get("first_reading_full")):
+                cached = None
         if cached:
             return cached
     lit = get_liturgical_day(d)
@@ -929,14 +935,19 @@ async def _readings_en(date: str) -> dict:
             "liturgical_title": scraped["liturgical_title"] or (lit.get("feast") or lit.get("season") or ""),
             "first_reading": scraped["first_reading"],
             "first_reading_excerpt": scraped["first_reading_excerpt"],
+            "first_reading_full": scraped.get("first_reading_full", ""),
             "psalm": scraped["psalm"],
             "psalm_excerpt": scraped["psalm_excerpt"],
+            "psalm_full": scraped.get("psalm_full", ""),
             "second_reading": scraped["second_reading"],
             "second_reading_excerpt": scraped["second_reading_excerpt"],
+            "second_reading_full": scraped.get("second_reading_full", ""),
             "gospel_acclamation": scraped["gospel_acclamation"],
             "gospel_acclamation_excerpt": scraped["gospel_acclamation_excerpt"],
+            "gospel_acclamation_full": scraped.get("gospel_acclamation_full", ""),
             "gospel": scraped["gospel"],
             "gospel_excerpt": scraped["gospel_excerpt"],
+            "gospel_full": scraped.get("gospel_full", ""),
             "reflection": reflection,
             "cached_at": datetime.now(timezone.utc).isoformat(),
         }

@@ -24,6 +24,7 @@ import { BeadStep } from "@/src/rosary";
 export type ChapletKey =
   | "divine_mercy"
   | "st_michael"
+  | "guardian_angel"
   | "immaculate_heart"
   | "sacred_heart"
   | "st_lucy"
@@ -116,6 +117,61 @@ function buildStMichael(): BeadStep[] {
     label: "Closing Prayer",
     prayer:
       "O glorious prince St. Michael, chief and commander of the heavenly hosts, guardian of souls, vanquisher of rebel spirits, servant in the house of the Divine King — be our defender against the wickedness and snares of the devil, that we may not perish at the dreadful judgment. We humbly entreat thee. Amen.",
+  });
+  steps.push({
+    label: "Sign of the Cross",
+    prayer: "In the name of the Father, and of the Son, and of the Holy Spirit. Amen.",
+  });
+  return steps;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                     CHAPLET OF THE HOLY GUARDIAN ANGEL                     */
+/* -------------------------------------------------------------------------- */
+
+const GUARDIAN_ANGEL_OFFICES: { role: string; petition: string }[] = [
+  { role: "To Light", petition: "O holy Angel, given me by God to enlighten my mind, drive far from me the darkness of error and sin, and lead me always in the light of truth. Amen." },
+  { role: "To Guard", petition: "O faithful Angel, appointed to guard me, protect me this day from every harm of body and soul, and keep me under the shadow of your wings. Amen." },
+  { role: "To Rule", petition: "O loving Angel, sent to govern me, help me to master my passions and desires, that in all things I may seek only the will of God. Amen." },
+  { role: "To Guide", petition: "O watchful Angel, given to guide me, direct my every step in the way of holiness, and turn me back whenever I begin to stray. Amen." },
+  { role: "To Bring Me Home", petition: "O blessed Angel, my companion on the way, lead me safely through this life and bring me at last to the vision of God in heaven. Amen." },
+];
+
+function buildGuardianAngel(): BeadStep[] {
+  const steps: BeadStep[] = [];
+  steps.push({
+    label: "Sign of the Cross",
+    prayer: "In the name of the Father, and of the Son, and of the Holy Spirit. Amen.",
+  });
+  steps.push({
+    label: "Opening Invocation",
+    prayer:
+      "O God, come to my assistance. O Lord, make haste to help me.\n\nGlory be to the Father, and to the Son, and to the Holy Spirit, as it was in the beginning, is now, and ever shall be, world without end. Amen.",
+  });
+
+  GUARDIAN_ANGEL_OFFICES.forEach((o, i) => {
+    steps.push({ label: `${i + 1}. Salutation — ${o.role}`, prayer: o.petition });
+    steps.push({
+      label: "Angel of God",
+      prayer:
+        "Angel of God, my guardian dear, to whom God's love commits me here, ever this day (or night) be at my side, to light and guard, to rule and guide. Amen.",
+    });
+    steps.push({
+      label: "Glory Be",
+      prayer:
+        "Glory be to the Father, and to the Son, and to the Holy Spirit, as it was in the beginning, is now, and ever shall be, world without end. Amen.",
+    });
+  });
+
+  steps.push({
+    label: "Prayer to One's Guardian Angel",
+    prayer:
+      "O most holy Angel of God, appointed by Him to be my guardian, I give you thanks for all the benefits you have ever bestowed on me in body and in soul. I praise and glorify you that you condescended to assist me with such patient fidelity, and to defend me against all the assaults of my enemies. Blessed be the hour in which you were assigned me for my guardian, my defender, and my patron. Amen.",
+  });
+  steps.push({
+    label: "Collect — Feast of the Holy Guardian Angels (Oct 2)",
+    prayer:
+      "O God, who in your unfathomable providence are pleased to send your holy Angels to guard us, hear our supplication as we cry to you, that we may always be defended by their protection and rejoice eternally in their company. Through Christ our Lord. Amen.",
   });
   steps.push({
     label: "Sign of the Cross",
@@ -478,6 +534,18 @@ export const CHAPLETS: Record<ChapletKey, Chaplet> = {
       "Defend someone today who cannot defend themselves — speak well of an absent person who is being spoken ill of, or quietly intercede for someone facing trial.",
     daily_motto: "Quis ut Deus? — Who is like God?",
   },
+  guardian_angel: {
+    key: "guardian_angel",
+    title: "Chaplet of the Holy Guardian Angel",
+    subtitle: "To light and guard, to rule and guide",
+    color: "#4A7C8C",
+    icon: "sparkles-outline",
+    duration: "~10 min",
+    steps: buildGuardianAngel(),
+    good_work_for_today:
+      "Pause once today and thank your Guardian Angel by name of office — for lighting, guarding, ruling, and guiding you — then do one small kindness for someone who feels unseen.",
+    daily_motto: "Ever this day be at my side.",
+  },
   immaculate_heart: {
     key: "immaculate_heart",
     title: "Chaplet of the Immaculate Heart of Mary",
@@ -591,6 +659,7 @@ export const CHAPLETS: Record<ChapletKey, Chaplet> = {
 export const CHAPLET_ORDER: ChapletKey[] = [
   "divine_mercy",
   "st_michael",
+  "guardian_angel",
   "immaculate_heart",
   "sacred_heart",
   "st_lucy",

@@ -42,6 +42,20 @@ CONTENT: Dict[str, Dict[str, Any]] = {
             "and joyful, and use these years to make me wholly yours. Through Mary, my "
             "Mother, I offer all that I am. Amen.",
         },
+        "afternoon_prayer": {
+            "title": "Midday Prayer for the Single Heart",
+            "body": "Lord, in the middle of this day I pause and lift my heart to you. "
+            "Thank you for the freedom of this hour. Let my work and my rest, my words and "
+            "my silences, be a gift of love. Guard my heart in purity and fill my solitude "
+            "with your presence, that I may never be alone. Amen.",
+        },
+        "night_prayer": {
+            "title": "Night Prayer for the Single Heart",
+            "body": "Lord Jesus, as this day closes I return it to you. For the good I did, "
+            "I give you thanks; for what I failed to do, I ask your mercy. Keep watch over "
+            "me this night, and let me rest in the peace of one who is wholly yours. Mary, "
+            "my Mother, keep me under your mantle until morning. Amen.",
+        },
         "companions": [
             {"slug": "catherine-siena", "name": "St. Catherine of Siena",
              "why": "A consecrated virgin in the world who changed the Church through prayer and love.",
@@ -128,6 +142,20 @@ CONTENT: Dict[str, Dict[str, Any]] = {
             "my entire will — all that I have and call my own. You have given it all to me; to "
             "you, Lord, I return it. Do with it what you will. Give me only your love and your "
             "grace; that is enough for me. Amen.",
+        },
+        "afternoon_prayer": {
+            "title": "Midday Prayer of Consecrated Love",
+            "body": "Lord, at the turning of the day I renew my gift of self to you. In poverty, "
+            "let me be rich only in you; in chastity, let my heart be undivided; in obedience, "
+            "let me seek only your will. Sanctify this afternoon's labor and prayer, that my "
+            "hidden life may bear fruit for the world you love. Amen.",
+        },
+        "night_prayer": {
+            "title": "Compline for the Consecrated Heart",
+            "body": "Into your hands, O Lord, I commend my spirit. As the Church keeps vigil, "
+            "let my rest be prayer and my sleep be trust. Forgive whatever was unfaithful this "
+            "day, and keep me close to your Heart through the night, that I may rise again to "
+            "seek you before all else. Amen.",
         },
         "companions": [
             {"slug": "therese-lisieux", "name": "St. Thérèse of Lisieux",
@@ -220,6 +248,20 @@ CONTENT: Dict[str, Dict[str, Any]] = {
             "Make our home a domestic church, where love is patient and forgiveness quick. Holy "
             "Family of Nazareth — Jesus, Mary, and Joseph — pray for us, that we may love as you "
             "loved. Amen.",
+        },
+        "afternoon_prayer": {
+            "title": "Midday Prayer for the Home",
+            "body": "Lord, in the busyness of this day I lift up my spouse and family to you. "
+            "Where there is tiredness, give strength; where there is tension, give patience; "
+            "where there is distance, draw us near. Holy Family of Nazareth, keep our home in "
+            "your peace until we are gathered again this evening. Amen.",
+        },
+        "night_prayer": {
+            "title": "Night Prayer for the Family",
+            "body": "Father, we thank you for this day shared in love. Forgive the harsh word "
+            "and the missed kindness, and let us not sleep on our anger. Bless my spouse and "
+            "each one under this roof; send your holy angels to guard our rest. Jesus, Mary, "
+            "and Joseph, watch over our home this night. Amen.",
         },
         "companions": [
             {"slug": "st-joseph", "name": "St. Joseph",
@@ -330,6 +372,10 @@ async def _localize(db, payload: Dict[str, Any]) -> Dict[str, Any]:
     mp = payload.get("morning_prayer") or {}
     collect(lambda: mp.get("title"), lambda t: mp.__setitem__("title", t))
     collect(lambda: mp.get("body"), lambda t: mp.__setitem__("body", t))
+    for key in ("afternoon_prayer", "night_prayer"):
+        pr = payload.get(key) or {}
+        collect(lambda pr=pr: pr.get("title"), lambda t, pr=pr: pr.__setitem__("title", t))
+        collect(lambda pr=pr: pr.get("body"), lambda t, pr=pr: pr.__setitem__("body", t))
     for c in payload.get("companions") or []:
         collect(lambda c=c: c.get("why"), lambda t, c=c: c.__setitem__("why", t))
         collect(lambda c=c: c.get("prayer"), lambda t, c=c: c.__setitem__("prayer", t))
@@ -365,6 +411,8 @@ def _build_guide(vocation: str, state: str) -> Dict[str, Any]:
         "label": base["label"],
         "intro": base["intro"],
         "morning_prayer": copy.deepcopy(base["morning_prayer"]),
+        "afternoon_prayer": copy.deepcopy(base.get("afternoon_prayer") or base["morning_prayer"]),
+        "night_prayer": copy.deepcopy(base.get("night_prayer") or base["morning_prayer"]),
         "companions": copy.deepcopy(base["companions"]),
         "ideas": copy.deepcopy(base["ideas"]),
         "traditions": copy.deepcopy(traditions),

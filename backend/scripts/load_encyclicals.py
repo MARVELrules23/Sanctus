@@ -231,6 +231,101 @@ SUMMARY_CHAPTERS: Dict[str, Dict[str, str]] = {
             "not merely what is good, but what God is asking of you in love."
         ),
     },
+    "redemptoris-mater": {
+        "title": "Why This Matters",
+        "subtitle": "A reader's introduction",
+        "body_md": (
+            "Redemptoris Mater — 'Mother of the Redeemer' — is Pope St. John "
+            "Paul II's 1987 encyclical on the place of the Blessed Virgin Mary "
+            "in the life of the pilgrim Church. Its guiding image is Mary's "
+            "faith: she who believed at the Annunciation goes before us on the "
+            "'pilgrimage of faith,' walking the same road of trust we are asked "
+            "to walk.\n\n"
+            "The Holy Father contemplates Mary at Cana, at the foot of the "
+            "Cross, and in the upper room at Pentecost, showing how her "
+            "'Marian mediation' always leads to Christ and never away from Him. "
+            "He also opens the document toward Christian unity, presenting Mary "
+            "as the Mother who gathers a divided family.\n\n"
+            "Read it to rediscover Mary not as a distant figure of piety but as "
+            "the first and finest disciple, whose 'Let it be done' is the model "
+            "for every believer's yes to God."
+        ),
+    },
+    "marialis-cultus": {
+        "title": "Why This Matters",
+        "subtitle": "A reader's introduction",
+        "body_md": (
+            "Marialis Cultus — 'For the Right Ordering and Development of "
+            "Devotion to the Blessed Virgin Mary' — is Pope St. Paul VI's 1974 "
+            "exhortation renewing Marian devotion after the Second Vatican "
+            "Council. It sets out how authentic devotion to Mary is always "
+            "Trinitarian, Christ-centered, and rooted in the liturgy.\n\n"
+            "Paul VI offers clear guidelines so that Marian piety is biblical, "
+            "liturgical, ecumenically sensitive, and attentive to the dignity "
+            "of women — never sentimental or superstitious. He also gives one "
+            "of the Church's most beautiful reflections on the Angelus and the "
+            "Rosary as schools of Gospel contemplation.\n\n"
+            "Read it to learn how to honor the Mother of God in a way that is "
+            "both deeply traditional and fully alive to the renewal of the "
+            "Church's worship."
+        ),
+    },
+    "rosarium-virginis-mariae": {
+        "title": "Why This Matters",
+        "subtitle": "A reader's introduction",
+        "body_md": (
+            "Rosarium Virginis Mariae — 'The Rosary of the Virgin Mary' — is "
+            "Pope St. John Paul II's 2002 apostolic letter on the Rosary, "
+            "written to proclaim a Year of the Rosary. In it he calls the "
+            "Rosary his 'favorite prayer' and gives the Church a great gift: "
+            "the five Luminous Mysteries, the Mysteries of Light drawn from "
+            "Christ's public ministry.\n\n"
+            "The letter teaches that the Rosary is fundamentally a "
+            "Christ-centered prayer — with Mary we contemplate the face of "
+            "Jesus. John Paul II unfolds each set of mysteries and offers "
+            "practical counsel on praying the Rosary slowly, with Scripture, "
+            "silence, and love.\n\n"
+            "Read it to fall in love again with a prayer that is 'simple yet "
+            "profound,' and to learn to pray it as contemplation rather than "
+            "mere repetition."
+        ),
+    },
+    "redemptoris-custos": {
+        "title": "Why This Matters",
+        "subtitle": "A reader's introduction",
+        "body_md": (
+            "Redemptoris Custos — 'Guardian of the Redeemer' — is Pope St. John "
+            "Paul II's 1989 exhortation on St. Joseph and his mission in the "
+            "life of Christ and of the Church. It reflects on Joseph as the "
+            "just man who guarded Jesus and Mary, the silent servant whose "
+            "obedience made him a father in the order of grace.\n\n"
+            "The Holy Father draws out Joseph's interior life — his faith, his "
+            "chaste love for Mary, his hidden work — and presents him as patron "
+            "of the whole Church and model of the dignity of human labor.\n\n"
+            "Read it to know the man to whom God entrusted His own Son, and to "
+            "learn from a fatherhood expressed not in words but in faithful, "
+            "protective, self-forgetting love."
+        ),
+    },
+    "patris-corde": {
+        "title": "Why This Matters",
+        "subtitle": "A reader's introduction",
+        "body_md": (
+            "Patris Corde — 'With a Father's Heart' — is Pope Francis' 2020 "
+            "apostolic letter marking the 150th anniversary of St. Joseph's "
+            "proclamation as Patron of the Universal Church, opening a special "
+            "Year of St. Joseph.\n\n"
+            "Francis contemplates Joseph under seven tender titles: a beloved "
+            "father, a tender and loving father, an obedient father, an "
+            "accepting father, a creatively courageous father, a working "
+            "father, and a father in the shadows. Written during a time of "
+            "pandemic, it holds up Joseph as a model for all the hidden people "
+            "who quietly hold the world together.\n\n"
+            "Read it slowly, one title at a time — it is short, warm, and "
+            "deeply consoling for anyone learning what it means to love and to "
+            "serve without seeking to be seen."
+        ),
+    },
 }
 
 
@@ -308,6 +403,56 @@ BOOKS: Dict[str, Dict] = {
         "cover_color": "#B45309",
         "cover_icon": "navigate-outline",
         "url": "https://www.vatican.va/content/francesco/en/apost_exhortations/documents/papa-francesco_esortazione-ap_20190325_christus-vivit.html",
+    },
+    "redemptoris-mater": {
+        "title": "Redemptoris Mater",
+        "author": "Pope St. John Paul II",
+        "year": 1987,
+        "blurb": "The 1987 encyclical on the Blessed Virgin Mary in the life of the pilgrim Church — Mary who goes before us in the pilgrimage of faith.",
+        "tradition": "papal",
+        "cover_color": "#1E3A8A",
+        "cover_icon": "star-outline",
+        "url": "https://www.vatican.va/content/john-paul-ii/en/encyclicals/documents/hf_jp-ii_enc_25031987_redemptoris-mater.html",
+    },
+    "marialis-cultus": {
+        "title": "Marialis Cultus",
+        "author": "Pope St. Paul VI",
+        "year": 1974,
+        "blurb": "The 1974 exhortation for the right ordering and development of devotion to the Blessed Virgin Mary.",
+        "tradition": "papal",
+        "cover_color": "#3F62A8",
+        "cover_icon": "flower-outline",
+        "url": "https://www.vatican.va/content/paul-vi/en/apost_exhortations/documents/hf_p-vi_exh_19740202_marialis-cultus.html",
+    },
+    "rosarium-virginis-mariae": {
+        "title": "Rosarium Virginis Mariae",
+        "author": "Pope St. John Paul II",
+        "year": 2002,
+        "blurb": "The 2002 apostolic letter on the Most Holy Rosary — contemplating the face of Christ with Mary, and giving us the Luminous Mysteries.",
+        "tradition": "papal",
+        "cover_color": "#5B21B6",
+        "cover_icon": "ellipse-outline",
+        "url": "https://www.vatican.va/content/john-paul-ii/en/apost_letters/2002/documents/hf_jp-ii_apl_20021016_rosarium-virginis-mariae.html",
+    },
+    "redemptoris-custos": {
+        "title": "Redemptoris Custos",
+        "author": "Pope St. John Paul II",
+        "year": 1989,
+        "blurb": "The 1989 exhortation on St. Joseph, Guardian of the Redeemer, and his mission in the life of the Church.",
+        "tradition": "papal",
+        "cover_color": "#7A5C00",
+        "cover_icon": "shield-outline",
+        "url": "https://www.vatican.va/content/john-paul-ii/en/apost_exhortations/documents/hf_jp-ii_exh_15081989_redemptoris-custos.html",
+    },
+    "patris-corde": {
+        "title": "Patris Corde",
+        "author": "Pope Francis",
+        "year": 2020,
+        "blurb": "'With a Father's Heart' — Pope Francis' 2020 letter proclaiming a Year of St. Joseph, on the beloved, tender, obedient, and working father.",
+        "tradition": "papal",
+        "cover_color": "#166534",
+        "cover_icon": "hammer-outline",
+        "url": "https://www.vatican.va/content/francesco/en/apost_letters/documents/papa-francesco-lettera-ap_20201208_patris-corde.html",
     },
 }
 

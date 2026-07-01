@@ -68,17 +68,30 @@ export default function VocationScreen() {
           ) : null}
           {guide.intro ? <Text style={styles.intro}>{guide.intro}</Text> : null}
 
-          {/* Morning prayer */}
-          {guide.morning_prayer ? (
-            <View style={styles.prayerCard} testID="vocation-prayer">
-              <View style={styles.cardHead}>
-                <Ionicons name="sunny-outline" size={16} color={colors.gold} />
-                <Text style={styles.cardHeadText}>Morning Prayer</Text>
+          {/* Time-aware prayer (local device time): Morning 3–12, Afternoon 12–20, Night 20–3 */}
+          {(() => {
+            const h = new Date().getHours();
+            const slot = h >= 3 && h < 12 ? "morning" : h >= 12 && h < 20 ? "afternoon" : "night";
+            const pr =
+              slot === "morning"
+                ? guide.morning_prayer
+                : slot === "afternoon"
+                  ? guide.afternoon_prayer || guide.morning_prayer
+                  : guide.night_prayer || guide.morning_prayer;
+            if (!pr) return null;
+            const label = slot === "morning" ? "Morning Prayer" : slot === "afternoon" ? "Afternoon Prayer" : "Night Prayer";
+            const icon = slot === "morning" ? "sunny-outline" : slot === "afternoon" ? "partly-sunny-outline" : "moon-outline";
+            return (
+              <View style={styles.prayerCard} testID="vocation-prayer">
+                <View style={styles.cardHead}>
+                  <Ionicons name={icon as any} size={16} color={colors.gold} />
+                  <Text style={styles.cardHeadText}>{label}</Text>
+                </View>
+                <Text style={styles.prayerTitle}>{pr.title}</Text>
+                <Text style={styles.prayerBody}>{pr.body}</Text>
               </View>
-              <Text style={styles.prayerTitle}>{guide.morning_prayer.title}</Text>
-              <Text style={styles.prayerBody}>{guide.morning_prayer.body}</Text>
-            </View>
-          ) : null}
+            );
+          })()}
 
           {/* Companions */}
           {guide.companions && guide.companions.length > 0 ? (

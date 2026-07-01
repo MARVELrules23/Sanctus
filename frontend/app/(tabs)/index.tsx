@@ -207,10 +207,10 @@ export default function TodayScreen() {
             onPress={() => router.push({ pathname: "/journal", params: { date, mode: "examen" } })}
           />
           <QuickTile
-            testID="quick-selfdefense"
-            icon="shield-outline"
-            label={t("home.selfDefense")}
-            onPress={() => router.push("/self-defense")}
+            testID="quick-schedule"
+            icon="time-outline"
+            label={t("home.schedule")}
+            onPress={() => router.push("/schedule")}
           />
           <QuickTile
             testID="quick-charities"
@@ -282,12 +282,12 @@ export default function TodayScreen() {
         {/* Schedule + In the World — side by side */}
         <View style={styles.featureRow}>
           <FeatureBox
-            testID="feature-schedule"
-            icon="time-outline"
-            title={t("home.schedule")}
-            subtitle={t("home.scheduleSub")}
+            testID="feature-selfdefense"
+            icon="shield-outline"
+            title={t("home.selfDefense")}
+            subtitle={t("home.selfDefenseSub")}
             accent={colors.liturgical.purple}
-            onPress={() => router.push("/schedule")}
+            onPress={() => router.push("/self-defense")}
           />
           <FeatureBox
             testID="feature-world"

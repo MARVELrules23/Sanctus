@@ -2023,6 +2023,8 @@ export type VocationGuide = {
   label?: string;
   intro?: string;
   morning_prayer?: { title: string; body: string };
+  afternoon_prayer?: { title: string; body: string };
+  night_prayer?: { title: string; body: string };
   companions?: VocationCompanion[];
   ideas?: VocationItem[];
   traditions?: VocationItem[];

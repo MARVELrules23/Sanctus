@@ -108,18 +108,37 @@ def get_eastern_day(d: date, calendar: str = "new") -> dict:
     elif pascha <= d <= pentecost:
         season, color = "Pentecostarion (Paschal Season)", "white"
 
-    # Fixed-date fasts (feast day itself relaxes the fast).
-    nativity_fast_start = _shift(date(year, 11, 15), calendar)
-    nativity = _shift(date(year, 12, 25), calendar)
-    dormition_fast_start = _shift(date(year, 8, 1), calendar)
-    dormition = _shift(date(year, 8, 15), calendar)
-    if nativity_fast_start <= d < nativity:
-        season = "Nativity Fast (Philip's Fast)"
-    elif dormition_fast_start <= d < dormition:
-        season = "Dormition Fast"
-    apostles_start = pentecost + timedelta(days=8)   # Monday after All Saints
-    apostles_end = _shift(date(year, 6, 29), calendar)
+    # ---- Byzantine fasting seasons (abstinence from meat) ----
+    def _win(m1, d1, m2, d2):
+        """Civil-date membership in a shifted fixed window [start, end).
+
+        Wrap-safe across the civil new year — essential on the Old (Julian)
+        calendar, where e.g. the Nativity Fast runs civil Nov 28 → Jan 7.
+        """
+        for yy in (d.year, d.year - 1):
+            start = _shift(date(yy, m1, d1), calendar)
+            end = _shift(date(yy, m2, d2), calendar)
+            if end <= start:
+                end = _shift(date(yy + 1, m2, d2), calendar)
+            if start <= d < end:
+                return True
+        return False
+
+    in_nativity_fast = _win(11, 15, 12, 25)      # Philip's Fast → Nativity
+    in_dormition_fast = _win(8, 1, 8, 15)         # Dormition Fast
+    apostles_start = pentecost + timedelta(days=8)     # Monday after All Saints Sunday
+    apostles_end = _shift(date(year, 6, 29), calendar)  # eve of Sts Peter & Paul
     in_apostles_fast = apostles_start <= d < apostles_end
+    # Meat is set aside from the day after Meatfare Sunday (Cheesefare week)
+    # right through Great Lent and Holy Week to Pascha.
+    in_lenten_meat_fast = (pascha - timedelta(days=55)) <= d < pascha
+
+    if in_nativity_fast:
+        season = "Nativity Fast (Philip's Fast)"
+    elif in_dormition_fast:
+        season = "Dormition Fast"
+    elif (pascha - timedelta(days=55)) <= d < lent_start:
+        season = "Pre-Lent (Cheesefare Week)"
 
     feast_name: Optional[str] = None
     rank = "feria"
@@ -135,15 +154,34 @@ def get_eastern_day(d: date, calendar: str = "new") -> dict:
             if rank in ("greatfeast", "feast"):
                 color = fx.get("color", color)
 
-    # Fasting discipline: Great Lent + Holy Week; the great fasts; and the
-    # weekly Wednesday/Friday fast (relaxed on great feasts).
+    # Fasting discipline (abstinence from meat).
     is_greatfeast = rank == "greatfeast"
-    in_lent = lent_start <= d < pascha
-    weekly_fast_day = d.weekday() in (2, 4)  # Wed / Fri
-    in_fixed_fast = season in ("Nativity Fast (Philip's Fast)", "Dormition Fast")
-    is_abstinence = (in_lent or in_fixed_fast or in_apostles_fast or weekly_fast_day) and not is_greatfeast
-    # Strict fast days.
-    is_fast = d in (great_friday, lent_start) and not is_greatfeast
+
+    # Fast-free periods when the weekly Wednesday/Friday abstinence is lifted
+    # (meat is permitted even on Wed/Fri). Dates below are civil dates, so they
+    # already reflect the +13-day shift on the Old (Julian) calendar.
+    fast_free = (
+        (pascha <= d <= pascha + timedelta(days=6))                              # Bright Week
+        or (pentecost + timedelta(days=1) <= d <= pentecost + timedelta(days=6))  # week after Pentecost
+        or (pascha - timedelta(days=69) <= d <= pascha - timedelta(days=63))      # Publican & Pharisee week
+        or _win(12, 25, 1, 5)                                                     # Nativity → Theophany eve
+    )
+    # The Exaltation of the Cross (Sep 14), the Beheading of the Forerunner
+    # (Aug 29) and Theophany Eve (Jan 5) are strict fast days on which meat is
+    # abstained even though they fall outside the fasting seasons.
+    key = d if calendar == "new" else d - timedelta(days=JULIAN_OFFSET_DAYS)
+    strict_fixed = (key.month, key.day) in {(9, 14), (8, 29), (1, 5)}
+
+    # Seasonal fasts abstain from meat every day (a great feast permits fish/wine
+    # but not meat). The weekly Wed/Fri rule is lifted by a great feast or a
+    # fast-free week.
+    seasonal_meat = (
+        in_lenten_meat_fast or in_nativity_fast or in_dormition_fast or in_apostles_fast
+    )
+    weekly_meat = (d.weekday() in (2, 4)) and not fast_free and not is_greatfeast
+    is_abstinence = bool(seasonal_meat or weekly_meat or strict_fixed)
+    # Strict-fast days (in addition to daily Great-Lent discipline).
+    is_fast = bool(d in (lent_start, great_friday) or strict_fixed)
 
     return {
         "date": d.isoformat(),

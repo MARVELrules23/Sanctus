@@ -189,3 +189,12 @@ Reverent & traditional aesthetic: cream/parchment background, deep stained-gl- C
 - Endpoints: GET /api/eastern/month?year&month&calendar and GET /api/eastern/day?date&calendar (same LiturgicalDay shape as Roman).
 - Calendar tab: rite toggle (cal-rite-roman / cal-rite-eastern); when Eastern, a New/Old (Gregorian/Julian) toggle (cal-eastcal-new / cal-eastcal-old). Grid + detail reuse the existing renderer. Roman calendar unchanged.
 - Verified: Nativity Dec 25 (new) → Jan 7 (old); Theophany Jan 6 → Jan 19; Pascha 2026 Apr 5 (new) vs Apr 12 (old).
+
+## Session update 13 (July 2026) — Byzantine meat-abstinence correctness (Old/Julian)
+- Reworked fasting logic in eastern_calendar.py so abstinence from meat lands on the correct civil days for BOTH new and old calendars:
+  - Wrap-safe fixed-fast windows (`_win`) — fixes Nativity Fast crossing the civil-year boundary on the Old calendar (civil Nov 28 → Jan 6 now correctly abstinence).
+  - Meat abstained daily during Great Lent + Holy Week + Cheesefare week; Nativity, Dormition, and Apostles' Fasts; weekly Wed/Fri year-round.
+  - Fast-free periods lift the weekly Wed/Fri rule: Bright Week, week after Pentecost, Publican & Pharisee week, and the Nativity→Theophany-eve afterfeast.
+  - Strict fast days always abstain: Exaltation of the Cross (Sep 14), Beheading of the Forerunner (Aug 29), Theophany Eve (Jan 5) — all +13-shifted on the Old calendar.
+  - Great feasts lift only the weekly Wed/Fri rule, not the seasonal meat fasts.
+- Verified directly across edge cases (old Nativity fast Jan 1–6, afterfeast fast-free Jan 7–17, Theophany eve strict, Bright Week, ordinary Thursdays).

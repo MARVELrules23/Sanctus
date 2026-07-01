@@ -20,6 +20,7 @@ import { AuthProvider, useAuth } from "@/src/auth-context";
 import { LanguageProvider } from "@/src/i18n";
 import { NotificationsProvider } from "@/src/notifications-context";
 import { RadioPlayerProvider } from "@/src/audio/RadioPlayerContext";
+import { BookmarksProvider } from "@/src/bookmarks-context";
 import RadioMiniPlayer from "@/src/components/RadioMiniPlayer";
 
 // Keep the native splash visible from cold start until icon fonts register.
@@ -89,11 +90,13 @@ export default function RootLayout() {
       <StatusBar style="dark" />
       <LanguageProvider>
         <AuthProvider>
-          <NotificationsProvider>
-            <RadioPlayerProvider>
-              <AppShell />
-            </RadioPlayerProvider>
-          </NotificationsProvider>
+          <BookmarksProvider>
+            <NotificationsProvider>
+              <RadioPlayerProvider>
+                <AppShell />
+              </RadioPlayerProvider>
+            </NotificationsProvider>
+          </BookmarksProvider>
         </AuthProvider>
       </LanguageProvider>
     </SafeAreaProvider>

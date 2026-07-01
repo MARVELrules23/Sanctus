@@ -491,6 +491,42 @@ export async function deletePrayerIntention(prayerId: string): Promise<{ ok: boo
   return await api(`/community/prayers/${encodeURIComponent(prayerId)}`, { method: "DELETE" });
 }
 
+// ---- App-wide Bookmarks ----
+export type BookmarkKind = "prayer" | "bible" | "catechism" | "book" | "encyclical";
+
+export type Bookmark = {
+  bookmark_id: string;
+  kind: BookmarkKind;
+  ref_id: string;
+  title: string;
+  subtitle?: string | null;
+  route: string;
+  params: Record<string, string>;
+  created_at: string;
+};
+
+export type BookmarkInput = {
+  kind: BookmarkKind;
+  ref_id: string;
+  title: string;
+  subtitle?: string;
+  route: string;
+  params?: Record<string, string>;
+};
+
+export async function listBookmarks(kind?: BookmarkKind): Promise<{ items: Bookmark[] }> {
+  const q = kind ? `?kind=${kind}` : "";
+  return await api(`/bookmarks${q}`);
+}
+
+export async function addBookmark(input: BookmarkInput): Promise<Bookmark> {
+  return await api(`/bookmarks`, { method: "POST", body: input });
+}
+
+export async function removeBookmark(kind: BookmarkKind, refId: string): Promise<{ ok: boolean }> {
+  return await api(`/bookmarks?kind=${kind}&ref_id=${encodeURIComponent(refId)}`, { method: "DELETE" });
+}
+
 // ---- Group DMs ----
 export async function dmCreateGroup(memberIds: string[], name?: string | null): Promise<CommunityDMThread> {
   return await api(`/community/dm/threads/group`, {

@@ -14,6 +14,7 @@ import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 
 import { api, BibleBook, BibleChapter, BibleColor } from "@/src/api";
 import LiturgicalBadge from "@/src/components/LiturgicalBadge";
+import BookmarkButton from "@/src/components/BookmarkButton";
 import { HIGHLIGHT_SWATCHES, highlightHex } from "@/src/bible-colors";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 
@@ -133,6 +134,18 @@ export default function BibleReaderScreen() {
           </View>
         ) : null}
       </View>
+      {book ? (
+        <BookmarkButton
+          input={{
+            kind: "bible",
+            ref_id: `${book.slug}:${data?.chapter ?? chapter}`,
+            title: `${book.name} ${data?.chapter ?? chapter}`,
+            subtitle: "Bible",
+            route: "/bible/[book]/[chapter]",
+            params: { book: book.slug, chapter: String(data?.chapter ?? chapter) },
+          }}
+        />
+      ) : null}
       <Pressable
         testID="bible-reader-list"
         onPress={() => router.push("/bible")}

@@ -32,6 +32,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { api, CatechismReflectResponse, CatechismTeaching } from "@/src/api";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
+import BookmarkButton from "@/src/components/BookmarkButton";
 
 export default function CatechismCard({ date }: { date: string }) {
   const [teaching, setTeaching] = useState<CatechismTeaching | null>(null);
@@ -111,6 +112,18 @@ export default function CatechismCard({ date }: { date: string }) {
           <Text style={styles.refText}>{teaching.ccc_ref}</Text>
           <View style={styles.themePill}>
             <Text style={styles.themePillText}>{teaching.theme}</Text>
+          </View>
+          <View style={{ marginLeft: "auto" }}>
+            <BookmarkButton
+              input={{
+                kind: "catechism",
+                ref_id: teaching.ccc_ref,
+                title: teaching.title,
+                subtitle: teaching.ccc_ref,
+                route: "/",
+              }}
+              size={20}
+            />
           </View>
         </View>
 

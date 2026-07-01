@@ -1,0 +1,35 @@
+{
+  "summary": "Phase 4 (App-wide Bookmarks) verified end-to-end. Backend /api/bookmarks CRUD (auth Bearer test_feat_aug25): POST creates and upserts idempotently on (kind, ref_id) — second POST returns same bookmark_id and updated fields with no duplicate row; GET lists all and ?kind= filters correctly; DELETE returns {ok:true, deleted:1|0}; invalid kind → 400 'invalid bookmark kind'; empty ref_id/title/route → 400 'ref_id, title and route are required'; missing Authorization → 403 (FastAPI default for HTTPBearer). 10/10 pytest passing. Frontend (mobile viewport 390x844, philipwils13@gmail.com admin) exercised all four kinds via BookmarkButton: prayer/rosary (testID bookmark-prayer-rosary), bible/genesis/1 (bookmark-bible-genesis:1), library/books/imitation-of-christ (bookmark-book-imitation-of-christ, kind='book' since tradition=catholic-classic non-papal), and Home CCC card (bookmark-catechism-CCC 1458). All four surfaced under Profile → Saved (profile-bookmarks-list with rows profile-bookmark-<bookmark_id>); tapping the Holy Rosary row deep-linked to /prayer/rosary and the header icon was filled (aria-label='Remove bookmark') confirming cross-screen persistence via BookmarksProvider. Toggling OFF in the reader removed both the icon fill and the backend row; the Saved section disappeared after all bookmarks were cleared. Profile Friends section (profile-friends-list with 1 accepted friend) still renders — Phase 3 regression clean. No React Native red screens; only harmless expo-web deprecation warnings (shadow* props, props.pointerEvents, expo-notifications not supported on web).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/bookmarks", "issue": "Missing keys (kind/ref_id/title/route entirely absent from body) yield 422 from Pydantic rather than 400. Passing empty strings correctly returns 400 with 'ref_id, title and route are required'. Not a bug per spec (spec says 'Missing ref_id/title/route → 400') — could add explicit min_length=1 validators to unify to 400 for empty-string too, but current behavior meets the requirement."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_bookmarks_iter79.py",
+    "/app/test_reports/pytest/iteration_79_bookmarks.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "bookmarks-context.tsx optimistic add: after POST it prepends the created bookmark and filters by bookmark_id to avoid duplicates. Fine, but on failure only warns + refreshes; consider surfacing a toast for user feedback (silent failure is invisible on mobile).",
+    "server.py add_bookmark relies on a unique index on (user_id,kind,ref_id) plus a manual find→update/insert. Under race conditions (double-tap during network latency) the insert path could still race and raise DuplicateKeyError. Wrapping the insert in a try/except with a re-read on 11000 would harden it.",
+    "profile.tsx caps Saved list at bookmarks.slice(0, 12) with no 'View all' link. Users with >12 bookmarks lose access to the rest from Profile — worth surfacing a see-all screen or increasing the cap."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_bookmarks_iter79.py",
+    "/app/test_reports/iteration_79.json"
+  ],
+  "success_rate": {"backend": "100% (10/10)", "frontend": "100% (all Phase 4 flows + Phase 3 friends regression)"},
+  "seed_data_creation": "Test bookmarks were created via UI (prayer:rosary, bible:genesis:1, book:imitation-of-christ, catechism:CCC 1458) and deleted at the end of the UI run through the backend DELETE endpoint. Pytest suite also cleans all TEST_* entries before and after its module.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Phase 4 fully passing. Bookmarks endpoints stable, BookmarksProvider is app-wide and correctly reactive across screens. TestIDs to reuse: bookmark-prayer-<ref>, bookmark-bible-<book:chapter>, bookmark-book-<slug>, bookmark-encyclical-<slug>, bookmark-catechism-<ref>, profile-bookmarks-list, profile-bookmark-<bookmark_id>. Encyclical (papal tradition) library book bookmark path was not exercised because the /library/books listing did not surface a tradition=papal book in the first page; if E1 later needs coverage for kind='encyclical', pick an encyclical slug from /api/encyclicals or filter library by a papal tradition.",
+  "rca_of_issue": "N/A — no bugs found."
+}

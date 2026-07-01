@@ -15,6 +15,7 @@ import * as WebBrowser from "expo-web-browser";
 
 import { getLibraryBook, LibraryBook } from "@/src/api";
 import { useAuth } from "@/src/auth-context";
+import BookmarkButton from "@/src/components/BookmarkButton";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 
 const TRADITION_LABEL: Record<string, string> = {
@@ -92,7 +93,17 @@ export default function BookDetailScreen() {
           <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
         </Pressable>
         <Text style={styles.headerTitle} numberOfLines={1}>{book.title}</Text>
-        <View style={{ width: 22 }} />
+        <BookmarkButton
+          input={{
+            kind: book.tradition === "papal" ? "encyclical" : "book",
+            ref_id: book.slug,
+            title: book.title,
+            subtitle: book.author || undefined,
+            route: "/library/books/[slug]",
+            params: { slug: book.slug },
+          }}
+          size={22}
+        />
       </View>
 
       <ScrollView contentContainerStyle={styles.body}>

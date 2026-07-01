@@ -14,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
 import { api, User, Friendship, friendList } from "@/src/api";
+import { useBookmarks } from "@/src/bookmarks-context";
 import { useAuth } from "@/src/auth-context";
 import { useI18n } from "@/src/i18n";
 import { AutoText } from "@/src/auto-text";
@@ -64,6 +65,8 @@ export default function ProfileScreen() {
   useEffect(() => {
     loadFriends();
   }, [loadFriends]);
+
+  const { items: bookmarks } = useBookmarks();
 
   const load = useCallback(async () => {
     const p = await api<Prefs>("/preferences");
@@ -207,6 +210,49 @@ export default function ProfileScreen() {
             )}
           </ScrollView>
         )}
+
+        {/* Saved / Bookmarks */}
+        {bookmarks.length > 0 ? (
+          <>
+            <Text style={styles.section}>Saved</Text>
+            <View testID="profile-bookmarks-list">
+              {bookmarks.slice(0, 12).map((b) => {
+                const icon =
+                  b.kind === "prayer"
+                    ? "flower-outline"
+                    : b.kind === "bible"
+                      ? "book-outline"
+                      : b.kind === "catechism"
+                        ? "school-outline"
+                        : b.kind === "encyclical"
+                          ? "document-text-outline"
+                          : "bookmark-outline";
+                return (
+                  <Pressable
+                    key={b.bookmark_id}
+                    testID={`profile-bookmark-${b.bookmark_id}`}
+                    onPress={() =>
+                      router.push({ pathname: b.route as any, params: b.params })
+                    }
+                    style={({ pressed }) => [styles.bookmarkRow, pressed && styles.pressed]}
+                  >
+                    <View style={styles.bookmarkIcon}>
+                      <Ionicons name={icon as any} size={18} color={colors.gold} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.bookmarkTitle} numberOfLines={1}>{b.title}</Text>
+                      {b.subtitle ? (
+                        <Text style={styles.bookmarkSub} numberOfLines={1}>{b.subtitle}</Text>
+                      ) : null}
+                    </View>
+                    <Text style={styles.bookmarkKind}>{b.kind}</Text>
+                    <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                  </Pressable>
+                );
+              })}
+            </View>
+          </>
+        ) : null}
 
         {loading || !prefs ? (
           <ActivityIndicator color={colors.gold} style={{ marginTop: spacing.xl }} />
@@ -597,6 +643,31 @@ const styles = StyleSheet.create({
   },
   friendsRow: { gap: spacing.md, paddingVertical: spacing.xs, paddingRight: spacing.lg },
   friendChip: { alignItems: "center", width: 68 },
+  bookmarkRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.borderSoft,
+  },
+  bookmarkIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(212,179,109,0.12)",
+  },
+  bookmarkTitle: { fontFamily: fonts.uiSemi, fontSize: 14, color: colors.textPrimary },
+  bookmarkSub: { fontFamily: fonts.bodyRegular, fontSize: 12, color: colors.textSecondary, marginTop: 1 },
+  bookmarkKind: {
+    fontFamily: fonts.uiMedium,
+    fontSize: 10,
+    color: colors.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+  },
   friendAvatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: colors.surface },
   friendName: {
     fontFamily: fonts.uiMedium,

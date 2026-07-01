@@ -195,6 +195,8 @@ async def ensure_indexes():
     await db.community_prayers.create_index([("author_id", 1), ("created_at", -1)])
     await db.community_prayer_prays.create_index([("prayer_id", 1), ("user_id", 1)], unique=True)
     await db.community_prayer_prays.create_index("user_id")
+    await db.bookmarks.create_index([("user_id", 1), ("kind", 1), ("ref_id", 1)], unique=True)
+    await db.bookmarks.create_index([("user_id", 1), ("created_at", -1)])
     # Self-defense indexes
     await db.self_defense_sessions.create_index("session_id", unique=True)
     await db.self_defense_sessions.create_index([("user_id", 1), ("discipline_id", 1), ("generated_at", -1)])
@@ -2052,6 +2054,15 @@ class PrayerIntentionRequest(BaseModel):
     anonymous: bool = False
 
 
+class BookmarkRequest(BaseModel):
+    kind: str            # prayer | bible | catechism | book | encyclical
+    ref_id: str
+    title: str
+    subtitle: Optional[str] = None
+    route: str           # expo-router pathname to deep-link back
+    params: Optional[Dict[str, Any]] = None
+
+
 class GroupDMCreateRequest(BaseModel):
     # All members the creator wants in the group. The creator is auto-added
     # if not present. Max community.MAX_GROUP_MEMBERS total (incl. creator).
@@ -2859,6 +2870,77 @@ async def community_delete_prayer(prayer_id: str, user: User = Depends(get_curre
     await db.community_prayers.delete_one({"prayer_id": prayer_id})
     await db.community_prayer_prays.delete_many({"prayer_id": prayer_id})
     return {"ok": True}
+
+
+# ---- App-wide Bookmarks (favorite prayers & reading positions) ----
+def _bookmark_public(b: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "bookmark_id": b.get("bookmark_id"),
+        "kind": b.get("kind"),
+        "ref_id": b.get("ref_id"),
+        "title": b.get("title", ""),
+        "subtitle": b.get("subtitle"),
+        "route": b.get("route", ""),
+        "params": b.get("params") or {},
+        "created_at": community_svc.iso(b.get("created_at")),
+    }
+
+
+_BOOKMARK_KINDS = {"prayer", "bible", "catechism", "book", "encyclical"}
+
+
+@api.get("/bookmarks")
+async def list_bookmarks(kind: Optional[str] = None, user: User = Depends(get_current_user)):
+    q: Dict[str, Any] = {"user_id": user.user_id}
+    if kind:
+        q["kind"] = kind
+    rows = await db.bookmarks.find(q, {"_id": 0}).sort("created_at", -1).to_list(length=1000)
+    return {"items": [_bookmark_public(r) for r in rows]}
+
+
+@api.post("/bookmarks")
+async def add_bookmark(payload: BookmarkRequest, user: User = Depends(get_current_user)):
+    if payload.kind not in _BOOKMARK_KINDS:
+        raise HTTPException(status_code=400, detail="invalid bookmark kind")
+    ref_id = (payload.ref_id or "").strip()
+    title = (payload.title or "").strip()
+    route = (payload.route or "").strip()
+    if not ref_id or not title or not route:
+        raise HTTPException(status_code=400, detail="ref_id, title and route are required")
+    now = community_svc.now_utc()
+    set_doc = {
+        "kind": payload.kind,
+        "ref_id": ref_id,
+        "title": title[:200],
+        "subtitle": (payload.subtitle or "").strip()[:300] or None,
+        "route": route,
+        "params": payload.params or {},
+        "updated_at": now,
+    }
+    existing = await db.bookmarks.find_one(
+        {"user_id": user.user_id, "kind": payload.kind, "ref_id": ref_id}, {"_id": 0, "bookmark_id": 1}
+    )
+    if existing:
+        await db.bookmarks.update_one(
+            {"user_id": user.user_id, "kind": payload.kind, "ref_id": ref_id}, {"$set": set_doc}
+        )
+        bookmark_id = existing["bookmark_id"]
+    else:
+        bookmark_id = f"bmk_{uuid.uuid4().hex[:14]}"
+        await db.bookmarks.insert_one({
+            "bookmark_id": bookmark_id,
+            "user_id": user.user_id,
+            "created_at": now,
+            **set_doc,
+        })
+    doc = await db.bookmarks.find_one({"bookmark_id": bookmark_id}, {"_id": 0})
+    return _bookmark_public(doc)
+
+
+@api.delete("/bookmarks")
+async def remove_bookmark(kind: str, ref_id: str, user: User = Depends(get_current_user)):
+    res = await db.bookmarks.delete_one({"user_id": user.user_id, "kind": kind, "ref_id": ref_id})
+    return {"ok": True, "deleted": res.deleted_count}
 
 
 # ---- Reporting & Blocking ----

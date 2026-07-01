@@ -11,6 +11,7 @@ import { DEVOTIONS } from "@/src/prayers/devotions";
 import { parseISO, todayISO } from "@/src/date-utils";
 import { useI18n } from "@/src/i18n";
 import { useTranslator } from "@/src/translate";
+import BookmarkButton from "@/src/components/BookmarkButton";
 
 type PrayerMeta = {
   title: string;
@@ -204,7 +205,22 @@ export default function PrayerRunnerScreen() {
             <Ionicons name="close" size={26} color={colors.gold} />
           </Pressable>
           <Text style={styles.headerTitle} numberOfLines={1}>{tr(meta.title)}</Text>
-          <View style={{ width: 26 }} />
+          {kind !== "custom" && meta.steps.length > 0 ? (
+            <BookmarkButton
+              input={{
+                kind: "prayer",
+                ref_id: kind,
+                title: meta.title,
+                subtitle: meta.motto || undefined,
+                route: "/prayer/[kind]",
+                params: { kind },
+              }}
+              activeColor={colors.gold}
+              inactiveColor="rgba(212,179,109,0.65)"
+            />
+          ) : (
+            <View style={{ width: 26 }} />
+          )}
         </View>
 
         {meta.note && idx === 0 && !onClosing ? (

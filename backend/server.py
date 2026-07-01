@@ -19,6 +19,7 @@ from pydantic import BaseModel, Field
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 
 from liturgical import get_liturgical_day
+from eastern_calendar import get_eastern_day, get_eastern_month
 from lang_ctx import current_lang, resolve_lang, lang_instruction, get_lang
 from usccb import fetch_readings, usccb_url_for
 from churches import nearby_churches, enrich_with_masstimes, search_churches
@@ -396,6 +397,23 @@ async def liturgical_month(year: int, month: int):
         days.append(get_liturgical_day(d))
         d += timedelta(days=1)
     return {"year": year, "month": month, "days": days}
+
+
+@api.get("/eastern/day")
+async def eastern_day(date: str, calendar: str = "new"):
+    try:
+        d = datetime.strptime(date, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="date must be YYYY-MM-DD")
+    return get_eastern_day(d, calendar)
+
+
+@api.get("/eastern/month")
+async def eastern_month(year: int, month: int, calendar: str = "new"):
+    if month < 1 or month > 12:
+        raise HTTPException(status_code=400, detail="month must be 1-12")
+    days = get_eastern_month(year, month, calendar)
+    return {"year": year, "month": month, "calendar": ("old" if calendar == "old" else "new"), "days": days}
 
 
 # ---------- Preferences ----------

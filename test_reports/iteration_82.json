@@ -1,0 +1,27 @@
+{
+  "summary": "Eastern (Byzantine) liturgical calendar feature — backend + frontend fully verified. 16/16 pytest cases pass against the public URL, covering Nativity/Theophany +13-day shift, Pascha differing between new (Gregorian) and old (Julian) computus in 2026, Great Feasts (Transfiguration, Dormition, Annunciation, Pentecost, Ascension), 400 on invalid month/date, and Roman calendar unchanged. UI: on the Calendar tab (mobile viewport 390x844) — tapping 'Eastern (Byzantine)' reveals New/Old chips; the month grid reloads and the day detail card shows the correct Byzantine feast/season. Verified: NEW Dec 25 2026 → 'Nativity of Christ'; OLD Dec 25 2026 → 'Nativity Fast (Philip's Fast)' with no feast; OLD Jan 7 2027 → 'Nativity of Christ'; OLD Jan 19 2027 → 'Theophany'; NEW Jan 6 2027 → 'Theophany'. Roman toggle restores the Roman grid and hides the New/Old chips. No red screens, no crashes, loading indicator resolves.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_eastern_calendar.py",
+    "/app/test_reports/pytest/iteration_82_eastern.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "eastern_calendar.py is small, focused and well-commented; feast tables and moveable cycle look correct. JULIAN_OFFSET_DAYS=13 is only valid for 1900-2099 (already documented in the module docstring).",
+    "server.py: /api/eastern/* endpoints are public (no auth) — matches /api/liturgical/* behaviour, which is intended for calendar rendering.",
+    "calendar.tsx correctly reuses the existing LiturgicalDay renderer for both rites; the New/Old chip row only renders when rite='eastern' (good), and the load() dependency array includes rite + eastCal so refetch happens on every toggle."
+  ],
+  "updated_files": ["/app/backend/tests/test_eastern_calendar.py"],
+  "success_rate": {"backend": "100% (16/16)", "frontend": "100% (all UI assertions passed)"},
+  "seed_data_creation": "None — endpoints are stateless and public.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Eastern-calendar toggles (cal-rite-roman/cal-rite-eastern, cal-eastcal-new/cal-eastcal-old) are stable. If regressing, the Playwright script in this iteration navigates by clicking cal-next N times (today=2026-07 → +5 = Dec 2026, +6 = Jan 2027) and asserts on cal-detail-card text.",
+  "rca_of_issue": "N/A — no issues found."
+}

@@ -29,6 +29,8 @@ export default function CalendarScreen() {
   const [days, setDays] = useState<LiturgicalDay[]>([]);
   const [selected, setSelected] = useState<string>(todayISO());
   const [loading, setLoading] = useState(true);
+  const [rite, setRite] = useState<"roman" | "eastern">("roman");
+  const [eastCal, setEastCal] = useState<"new" | "old">("new");
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [entriesLoading, setEntriesLoading] = useState(false);
   const [entryDates, setEntryDates] = useState<Set<string>>(new Set());
@@ -84,9 +86,13 @@ export default function CalendarScreen() {
   }, [year]);
 
   const load = useCallback(async () => {
-    const res = await api<{ days: LiturgicalDay[] }>(`/liturgical/month?year=${year}&month=${month}`);
+    const url =
+      rite === "eastern"
+        ? `/eastern/month?year=${year}&month=${month}&calendar=${eastCal}`
+        : `/liturgical/month?year=${year}&month=${month}`;
+    const res = await api<{ days: LiturgicalDay[] }>(url);
     setDays(res.days);
-  }, [year, month]);
+  }, [year, month, rite, eastCal]);
 
   const loadSchedule = useCallback(async () => {
     try {
@@ -264,6 +270,36 @@ export default function CalendarScreen() {
     <SafeAreaView style={styles.safe} edges={["top"]} testID="calendar-screen">
       <View style={styles.header}>
         <Text style={styles.title}>Liturgical Calendar</Text>
+        <View style={styles.riteRow}>
+          {(["roman", "eastern"] as const).map((r) => (
+            <Pressable
+              key={r}
+              testID={`cal-rite-${r}`}
+              onPress={() => setRite(r)}
+              style={[styles.riteChip, rite === r && styles.riteChipActive]}
+            >
+              <Text style={[styles.riteChipText, rite === r && styles.riteChipTextActive]}>
+                {r === "roman" ? "Roman (Latin)" : "Eastern (Byzantine)"}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+        {rite === "eastern" ? (
+          <View style={styles.calRow}>
+            {(["new", "old"] as const).map((c) => (
+              <Pressable
+                key={c}
+                testID={`cal-eastcal-${c}`}
+                onPress={() => setEastCal(c)}
+                style={[styles.calChip, eastCal === c && styles.calChipActive]}
+              >
+                <Text style={[styles.calChipText, eastCal === c && styles.calChipTextActive]}>
+                  {c === "new" ? "New (Gregorian)" : "Old (Julian)"}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
         <View style={styles.monthRow}>
           <Pressable testID="cal-prev" onPress={prev} hitSlop={12}>
             <Ionicons name="chevron-back" size={22} color={colors.primary} />
@@ -639,6 +675,30 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.borderSoft,
   },
   title: { fontFamily: fonts.headingBold, fontSize: 28, color: colors.textPrimary },
+  riteRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm },
+  riteChip: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    alignItems: "center",
+  },
+  riteChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  riteChipText: { fontFamily: fonts.uiSemi, fontSize: 12.5, color: colors.textSecondary },
+  riteChipTextActive: { color: colors.gold },
+  calRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm },
+  calChip: {
+    flex: 1,
+    paddingVertical: 6,
+    borderRadius: radius.round,
+    borderWidth: 1,
+    borderColor: colors.gold,
+    alignItems: "center",
+  },
+  calChipActive: { backgroundColor: colors.gold },
+  calChipText: { fontFamily: fonts.uiMedium, fontSize: 12, color: colors.gold },
+  calChipTextActive: { color: colors.primary },
   monthRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: spacing.md },
   monthLabel: { fontFamily: fonts.headingSemi, fontSize: 20, color: colors.primary },
   dowRow: { flexDirection: "row", marginTop: spacing.sm },

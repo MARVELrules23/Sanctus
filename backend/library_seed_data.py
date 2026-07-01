@@ -385,21 +385,6 @@ SEED_BOOKS: List[Dict[str, Any]] = [
         ],
     },
 
-    # ---------- EXTERNAL: Catechism of the Catholic Church ----------
-    {
-        "slug": "catechism-catholic-church",
-        "title": "Catechism of the Catholic Church",
-        "author": "Roman Catholic Church",
-        "year": 1992,
-        "blurb": "The complete, official Catechism in English, hosted by the Vatican. The summary statement of all Catholic faith and practice.",
-        "tradition": "catholic-classic",
-        "cover_color": "#374151",
-        "cover_icon": "library",
-        "type": "external",
-        "source_url": "https://www.vatican.va/archive/ENG0015/_INDEX.HTM",
-        "chapters": [],
-    },
-
     # ---------- EXTERNAL: Summa Theologica ----------
     {
         "slug": "summa-theologica",

@@ -176,3 +176,10 @@ Reverent & traditional aesthetic: cream/parchment background, deep stained-gl- C
 - **Encyclicals (embedded, papal, free)**: added Redemptoris Mater, Marialis Cultus, Rosarium Virginis Mariae, Redemptoris Custos, Patris Corde via `scripts/load_encyclicals.py` (BOOKS + SUMMARY_CHAPTERS). NOTE: no papal encyclical exists specifically on Guardian Angels.
 - **Devotional Books (external links, in-app browser)**: NEW `scripts/load_devotional_books.py` upserts 7 type=external books (Guardian Angels: Aquinas Treatise on the Angels, Catholic Encyclopedia, EWTN devotion; Blessed Mother: Glories of Mary, True Devotion to Mary; St Joseph: Life & Glories of St Joseph; Saints: Story of a Soul). Library total now 35 books.
 
+
+## Session update 11 (July 2026) — Full Catechism of the Catholic Church (iter 81, pass)
+- Ingested the COMPLETE CCC (English, Vatican archive) as a single free embedded library book: slug `catechism-of-the-catholic-church`, 374 chapters (Prologue → Parts/Sections/Chapters/Articles → paragraphs 1–2865 + IN BRIEF). tradition `reference`, is_premium False. Script: `scripts/load_catechism_full.py` (scrapes TOC + each leaf page; builds running Part·Section·Chapter·Article breadcrumb as chapter subtitle).
+- `library.py _public_book` now honors an explicit `is_premium` bool on the doc (so CCC is free though non-papal). Added TRADITION_LABEL "reference" → "Reference" in library index.
+- Reader now has a **Table of Contents picker** (needed for 374 chapters): header `reader-toc` list icon → searchable modal (`reader-toc-search`) listing all chapters (`reader-toc-item-<n>`), jumps to chapter. Also benefits multi-chapter encyclicals.
+- Removed the legacy empty placeholder `catechism-catholic-church` (deleted DB doc + removed from library_seed_data.SEED_BOOKS) that caused a duplicate Library card.
+

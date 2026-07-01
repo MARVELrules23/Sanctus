@@ -183,3 +183,9 @@ Reverent & traditional aesthetic: cream/parchment background, deep stained-gl- C
 - Reader now has a **Table of Contents picker** (needed for 374 chapters): header `reader-toc` list icon → searchable modal (`reader-toc-search`) listing all chapters (`reader-toc-item-<n>`), jumps to chapter. Also benefits multi-chapter encyclicals.
 - Removed the legacy empty placeholder `catechism-catholic-church` (deleted DB doc + removed from library_seed_data.SEED_BOOKS) that caused a duplicate Library card.
 
+
+## Session update 12 (July 2026) — Eastern Catholic (Byzantine) liturgical calendar (iter 82, pass)
+- New `eastern_calendar.py`: Byzantine calendar with two reckonings — "new" (Gregorian/Revised-Julian: fixed feasts on civil dates + Roman/Gregorian Pascha) and "old" (Julian: fixed feasts +13 days + Orthodox/Julian Pascha via Meeus). Covers Pascha, Twelve Great Feasts, moveable cycle (Palm Sunday, Ascension, Pentecost, Great/Holy Week), the four great fasts + weekly Wed/Fri abstinence, and curated commemorations.
+- Endpoints: GET /api/eastern/month?year&month&calendar and GET /api/eastern/day?date&calendar (same LiturgicalDay shape as Roman).
+- Calendar tab: rite toggle (cal-rite-roman / cal-rite-eastern); when Eastern, a New/Old (Gregorian/Julian) toggle (cal-eastcal-new / cal-eastcal-old). Grid + detail reuse the existing renderer. Roman calendar unchanged.
+- Verified: Nativity Dec 25 (new) → Jan 7 (old); Theophany Jan 6 → Jan 19; Pascha 2026 Apr 5 (new) vs Apr 12 (old).

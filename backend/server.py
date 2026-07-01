@@ -20,6 +20,7 @@ from emergentintegrations.llm.chat import LlmChat, UserMessage
 
 from liturgical import get_liturgical_day
 from eastern_calendar import get_eastern_day, get_eastern_month
+from tridentine_calendar import get_tridentine_day, get_tridentine_month
 from catholic_filter import RITE_KEYS
 from lang_ctx import current_lang, resolve_lang, lang_instruction, get_lang
 from usccb import fetch_readings, usccb_url_for
@@ -422,6 +423,24 @@ async def eastern_month(year: int, month: int, calendar: str = "new"):
         raise HTTPException(status_code=400, detail="month must be 1-12")
     days = get_eastern_month(year, month, calendar)
     return {"year": year, "month": month, "calendar": ("old" if calendar == "old" else "new"), "days": days}
+
+
+@api.get("/tridentine/day")
+async def tridentine_day(date: str):
+    """Traditional Latin (1962 Missal) liturgical info for a date."""
+    try:
+        d = datetime.strptime(date, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="date must be YYYY-MM-DD")
+    return get_tridentine_day(d)
+
+
+@api.get("/tridentine/month")
+async def tridentine_month(year: int, month: int):
+    if month < 1 or month > 12:
+        raise HTTPException(status_code=400, detail="month must be 1-12")
+    days = get_tridentine_month(year, month)
+    return {"year": year, "month": month, "calendar": "1962", "days": days}
 
 
 # ---------- Preferences ----------

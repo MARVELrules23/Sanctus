@@ -29,7 +29,7 @@ export default function CalendarScreen() {
   const [days, setDays] = useState<LiturgicalDay[]>([]);
   const [selected, setSelected] = useState<string>(todayISO());
   const [loading, setLoading] = useState(true);
-  const [rite, setRite] = useState<"roman" | "eastern">("roman");
+  const [rite, setRite] = useState<"roman" | "tridentine" | "eastern">("roman");
   const [eastCal, setEastCal] = useState<"new" | "old">("new");
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [entriesLoading, setEntriesLoading] = useState(false);
@@ -89,6 +89,8 @@ export default function CalendarScreen() {
     const url =
       rite === "eastern"
         ? `/eastern/month?year=${year}&month=${month}&calendar=${eastCal}`
+        : rite === "tridentine"
+        ? `/tridentine/month?year=${year}&month=${month}`
         : `/liturgical/month?year=${year}&month=${month}`;
     const res = await api<{ days: LiturgicalDay[] }>(url);
     setDays(res.days);
@@ -271,15 +273,22 @@ export default function CalendarScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Liturgical Calendar</Text>
         <View style={styles.riteRow}>
-          {(["roman", "eastern"] as const).map((r) => (
+          {(["roman", "tridentine", "eastern"] as const).map((r) => (
             <Pressable
               key={r}
               testID={`cal-rite-${r}`}
               onPress={() => setRite(r)}
               style={[styles.riteChip, rite === r && styles.riteChipActive]}
             >
-              <Text style={[styles.riteChipText, rite === r && styles.riteChipTextActive]}>
-                {r === "roman" ? "Roman (Latin)" : "Eastern (Byzantine)"}
+              <Text
+                numberOfLines={2}
+                style={[styles.riteChipText, rite === r && styles.riteChipTextActive]}
+              >
+                {r === "roman"
+                  ? "Roman (Latin)"
+                  : r === "tridentine"
+                  ? "Traditional (1962)"
+                  : "Eastern (Byzantine)"}
               </Text>
             </Pressable>
           ))}
@@ -344,8 +353,14 @@ export default function CalendarScreen() {
                       {Number(cell.date.split("-")[2])}
                     </Text>
                     {isToday && <View style={styles.todayDot} />}
-                    {cell.feast && cell.rank === "solemnity" && (
+                    {cell.feast && (cell.rank === "solemnity" || cell.rank === "I class") && (
                       <Ionicons name="star" size={8} color={colors.gold} style={styles.cellStar} />
+                    )}
+                    {cell.is_holy_day && (
+                      <View style={styles.holyDayDot} testID={`holyday-dot-${cell.date}`} />
+                    )}
+                    {cell.observance && (
+                      <View style={styles.observanceDot} testID={`observance-dot-${cell.date}`} />
                     )}
                     {entryDates.has(cell.date) && (
                       <View style={styles.entryDot} testID={`entry-dot-${cell.date}`} />
@@ -457,17 +472,31 @@ export default function CalendarScreen() {
                   </View>
                 </View>
                 {sel.feast ? <Text style={styles.detailFeast}>{sel.feast}</Text> : null}
+                {sel.observance ? (
+                  <Text style={styles.detailObservance} testID="cal-observance">{sel.observance}</Text>
+                ) : null}
                 <View style={styles.detailBadges}>
-                  {sel.is_abstinence && <LiturgicalBadge color="red" label="Abstinence" />}
+                  {sel.is_holy_day && <LiturgicalBadge color="gold" label="Holy Day of Obligation" />}
+                  {sel.is_abstinence && (
+                    <LiturgicalBadge
+                      color="red"
+                      label={sel.abstinence_type === "partial" ? "Partial Abstinence" : "Abstinence"}
+                    />
+                  )}
                   {sel.is_fast && <LiturgicalBadge color="purple" label="Fast" />}
                   {sel.is_sunday && <LiturgicalBadge color="gold" label="Lord's Day" />}
                   {sel.rank && sel.rank !== "feria" && (
                     <LiturgicalBadge color={sel.color} label={sel.rank} />
                   )}
                 </View>
+                {sel.holy_day_note ? (
+                  <Text style={styles.detailNote} testID="cal-holyday-note">{sel.holy_day_note} — assist at Mass.</Text>
+                ) : null}
                 {sel.is_abstinence ? (
                   <Text style={styles.detailNote}>
-                    No meat is observed. Meals will be planned around fish, vegetables, and grains.
+                    {sel.abstinence_type === "partial"
+                      ? "Partial abstinence — meat only at the principal meal. Meals will lean on fish, vegetables, and grains."
+                      : "No meat is observed. Meals will be planned around fish, vegetables, and grains."}
                   </Text>
                 ) : sel.is_sunday ? (
                   <Text style={styles.detailNote}>
@@ -751,6 +780,30 @@ const styles = StyleSheet.create({
   detailDate: { fontFamily: fonts.headingBold, fontSize: 18, color: colors.textPrimary },
   detailSeason: { fontFamily: fonts.bodyItalic, fontStyle: "italic", color: colors.textSecondary, fontSize: 14 },
   detailFeast: { fontFamily: fonts.headingSemi, fontSize: 20, color: colors.liturgical.red, marginTop: spacing.md },
+  detailObservance: {
+    fontFamily: fonts.uiSemi,
+    fontSize: 13,
+    color: colors.liturgical.purple,
+    marginTop: spacing.xs,
+  },
+  holyDayDot: {
+    position: "absolute",
+    top: 4,
+    left: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.gold,
+  },
+  observanceDot: {
+    position: "absolute",
+    top: 4,
+    left: 12,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.liturgical.purple,
+  },
   detailBadges: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginTop: spacing.md },
   detailNote: {
     fontFamily: fonts.bodyRegular,

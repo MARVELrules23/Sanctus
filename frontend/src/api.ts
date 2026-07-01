@@ -69,6 +69,12 @@ export type LiturgicalDay = {
   is_abstinence: boolean;
   is_fast: boolean;
   is_sunday: boolean;
+  // Traditional (1962) calendar extras — present only on /tridentine responses.
+  is_holy_day?: boolean;
+  holy_day_note?: string | null;
+  observance?: string | null;
+  abstinence_type?: "complete" | "partial" | null;
+  calendar?: string;
 };
 
 export type RiteKey =

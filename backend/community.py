@@ -58,6 +58,7 @@ def public_user(u: Dict[str, Any]) -> Dict[str, Any]:
         "denomination": u.get("denomination"),      # catholic | protestant | orthodox
         "tradition_path": u.get("tradition_path"),  # convert | revert | cradle
         "age": u.get("age"),
+        "rite": u.get("rite"),
     }
 
 

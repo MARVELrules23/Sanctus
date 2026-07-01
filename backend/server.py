@@ -20,6 +20,7 @@ from emergentintegrations.llm.chat import LlmChat, UserMessage
 
 from liturgical import get_liturgical_day
 from eastern_calendar import get_eastern_day, get_eastern_month
+from catholic_filter import RITE_KEYS
 from lang_ctx import current_lang, resolve_lang, lang_instruction, get_lang
 from usccb import fetch_readings, usccb_url_for
 from churches import nearby_churches, enrich_with_masstimes, search_churches
@@ -62,6 +63,7 @@ class User(BaseModel):
     denomination: Optional[str] = None        # catholic | protestant | orthodox
     tradition_path: Optional[str] = None      # convert | revert | cradle
     age: Optional[int] = None                 # 12..120, optional
+    rite: Optional[str] = None                # latin | byzantine | maronite | ... (see catholic_filter.RITE_KEYS)
     show_attribution: Optional[bool] = None   # default for overlay attributions
     is_admin: Optional[bool] = False          # gates /api/saints/admin/* etc.
     # Premium / Sanctus Premium subscription state. The `premium` subdoc
@@ -148,6 +150,7 @@ class UpdateMeRequest(BaseModel):
     denomination: Optional[str] = None       # "catholic" | "protestant" | "orthodox" | "" to clear
     tradition_path: Optional[str] = None     # "convert" | "revert" | "cradle" | "" to clear
     age: Optional[int] = None                # 12..120, or 0/-1 to clear
+    rite: Optional[str] = None               # latin | byzantine | maronite | ...; "" clears
     show_attribution: Optional[bool] = None  # default for overlay attributions
 
 
@@ -358,6 +361,11 @@ async def update_me(payload: UpdateMeRequest, user: User = Depends(get_current_u
             raise HTTPException(status_code=400, detail="age must be between 12 and 120")
         else:
             update["age"] = int(payload.age)
+    if payload.rite is not None:
+        rk = payload.rite.strip().lower()
+        if rk and rk not in RITE_KEYS:
+            raise HTTPException(status_code=400, detail="invalid rite")
+        update["rite"] = rk or None
     if payload.show_attribution is not None:
         update["show_attribution"] = bool(payload.show_attribution)
     if not update:

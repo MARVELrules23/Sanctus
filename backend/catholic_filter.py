@@ -93,3 +93,53 @@ def is_catholic_place(tags: dict) -> bool:
                                     "syro-malabar", "syro malabar", "syro-malankara")):
             return True
     return False
+
+
+# --- Rite classification (for badges & profile) ---------------------------
+RITE_LABELS = {
+    "latin": "Latin (Roman)",
+    "byzantine": "Byzantine",
+    "maronite": "Maronite",
+    "chaldean": "Chaldean",
+    "syro_malabar": "Syro-Malabar",
+    "syro_malankara": "Syro-Malankara",
+    "coptic": "Coptic",
+    "armenian": "Armenian",
+    "syriac": "Syriac",
+    "ordinariate": "Ordinariate",
+}
+RITE_KEYS = set(RITE_LABELS)
+
+
+def rite_label(key: str) -> str:
+    return RITE_LABELS.get((key or "").lower().strip(), "")
+
+
+def rite_from_denomination(denomination: str) -> str:
+    """Best-effort rite key from an OSM denomination (or ''). '' if unknown."""
+    if not is_catholic_denomination(denomination):
+        return ""
+    d = denomination.lower()
+    if "maronite" in d:
+        return "maronite"
+    if "syro_malabar" in d or "syro-malabar" in d:
+        return "syro_malabar"
+    if "syro_malankara" in d or "syro-malankara" in d:
+        return "syro_malankara"
+    if "chaldean" in d:
+        return "chaldean"
+    if "coptic" in d:
+        return "coptic"
+    if "armenian" in d:
+        return "armenian"
+    if "syriac" in d or "syrian" in d:
+        return "syriac"
+    if "ordinariate" in d:
+        return "ordinariate"
+    if any(k in d for k in ("melkite", "greek_catholic", "ukrainian", "ruthenian",
+                            "romanian", "byzantine", "russian_catholic", "slovak",
+                            "hungarian", "croatian", "macedonian", "belarusian")):
+        return "byzantine"
+    # roman_catholic / catholic and everything else in communion → Latin.
+    return "latin"
+

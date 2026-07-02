@@ -454,6 +454,17 @@ async def tridentine_readings(date: str):
     return await get_tridentine_readings(db, d)
 
 
+@api.get("/eastern/readings")
+async def eastern_readings(date: str, calendar: str = "new"):
+    """Byzantine Divine Liturgy Epistle & Gospel with full Douay-Rheims text."""
+    try:
+        d = datetime.strptime(date, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="date must be YYYY-MM-DD")
+    from byzantine_readings import get_byzantine_readings
+    return await get_byzantine_readings(db, d, calendar)
+
+
 # ---------- Preferences ----------
 @api.get("/preferences")
 async def get_prefs(user: User = Depends(get_current_user)):

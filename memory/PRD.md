@@ -266,3 +266,11 @@ Reverent & traditional aesthetic: cream/parchment background, deep stained-gl- C
 ## Phase 5 (TLM/Byzantine full daily readings) — NOT YET BUILT (needs dedicated session)
 - Requires an accurate lectionary dataset: the full 1962 Missal proper Epistle+Gospel for every Sunday/feast (+ ferial fallback repeating the preceding Sunday) AND the Byzantine daily cycle (movable Paschal cycle + fixed Menaion). Full text would resolve citations via the app Bible (TLM) and a reliable Byzantine daily-readings source.
 - Deferred to keep accuracy (user's explicit bar) — recommend building as its own focused task.
+
+## Session update 23 (July 2026) — Phase 5: TLM (1962) & Byzantine full daily Mass readings (DONE)
+- **TLM (1962):** `tridentine_readings.py` — temporal cycle (Advent→Time after Pentecost) + movable feasts of Our Lord + major fixed feasts, ferias repeat the preceding Sunday's Mass (feria_fallback flag). Full Epistle+Gospel text resolved from the embedded Douay-Rheims Bible (`bible.get_chapter`). Endpoint `GET /api/tridentine/readings?date=`. Screen `app/tlm-readings.tsx`.
+- **Byzantine:** `byzantine_readings.py` — Paschal cycle (Pascha→Pentecost named Sundays, 32 Sundays after Pentecost, pre-Lent + Great Lent Sundays) + Great Feasts of the Menaion; weekday fallback to most recent Sunday. Multi-SEGMENT refs handle cross-chapter readings (e.g. Heb 11:33–12:2). Uses `eastern_calendar.pascha_for` and Douay-Rheims text. Endpoint `GET /api/eastern/readings?date=&calendar=new|old`. Screen `app/byzantine-readings.tsx` (renders chapter dividers when a reading spans chapters).
+- Mass hub (`app/mass/index.tsx`): two new cards — `mass-tlm-readings-card` → /tlm-readings, `mass-byzantine-readings-card` → /byzantine-readings (both trilingual). api.ts: `getTLMReadings`, `getByzantineReadings` + types.
+- Coverage note (user-approved): Byzantine ordinary weekdays fall back to the most recent Sunday (not full weekday-by-weekday lectionary). Both rites display Douay-Rheims English.
+- Verified: curl across Sundays/feasts/ferias/Pascha/cross-chapter + screenshots of both screens and the Mass hub cards.
+

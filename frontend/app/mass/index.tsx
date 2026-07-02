@@ -125,6 +125,58 @@ export default function MassHubScreen() {
           ) : null}
         </Pressable>
 
+        {/* Traditional Latin Mass Readings (1962) */}
+        <Pressable
+          testID="mass-tlm-readings-card"
+          onPress={() => router.push("/tlm-readings" as any)}
+          style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+        >
+          <View style={styles.cardHeader}>
+            <View style={[styles.iconWrap, { backgroundColor: "#8A1C1C" }]}>
+              <Ionicons name="rose-outline" size={20} color="#FAF9F6" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <AutoText style={styles.cardTitle}>
+                {lang === "es" ? "Lecturas de la Misa Tradicional (1962)" : lang === "it" ? "Letture della Messa Tradizionale (1962)" : "Traditional Latin Mass Readings"}
+              </AutoText>
+              <AutoText style={styles.cardSub}>
+                {lang === "es"
+                  ? "Epístola y Evangelio · Misal de 1962 (Douay-Rheims)"
+                  : lang === "it"
+                    ? "Epistola e Vangelo · Messale del 1962 (Douay-Rheims)"
+                    : "Epistle & Gospel · 1962 Missal (Douay-Rheims)"}
+              </AutoText>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+          </View>
+        </Pressable>
+
+        {/* Byzantine Divine Liturgy Readings */}
+        <Pressable
+          testID="mass-byzantine-readings-card"
+          onPress={() => router.push("/byzantine-readings" as any)}
+          style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+        >
+          <View style={styles.cardHeader}>
+            <View style={[styles.iconWrap, { backgroundColor: "#1E4E79" }]}>
+              <Ionicons name="flower-outline" size={20} color="#FAF9F6" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <AutoText style={styles.cardTitle}>
+                {lang === "es" ? "Lecturas de la Divina Liturgia" : lang === "it" ? "Letture della Divina Liturgia" : "Byzantine Divine Liturgy Readings"}
+              </AutoText>
+              <AutoText style={styles.cardSub}>
+                {lang === "es"
+                  ? "Epístola y Evangelio · Ciclo Pascual bizantino"
+                  : lang === "it"
+                    ? "Epistola e Vangelo · Ciclo pasquale bizantino"
+                    : "Epistle & Gospel · Byzantine Paschal cycle"}
+              </AutoText>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+          </View>
+        </Pressable>
+
         {/* Mass Missals */}
         <Pressable
           testID="mass-missals-card"

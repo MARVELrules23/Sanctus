@@ -1436,6 +1436,21 @@ export async function getTLMReadings(date: string): Promise<TLMReadings> {
   return await api(`/tridentine/readings?date=${encodeURIComponent(date)}`);
 }
 
+// ---- Byzantine (Eastern Catholic) Divine Liturgy readings ----
+export type ByzantineReadingPart = { citation: string; verses: { n: number; text: string; ch?: number }[] };
+export type ByzantineReadings = {
+  date: string;
+  available: boolean;
+  proper_key?: string;
+  feria_fallback?: boolean;
+  calendar?: string;
+  epistle?: ByzantineReadingPart;
+  gospel?: ByzantineReadingPart;
+};
+export async function getByzantineReadings(date: string, calendar = "new"): Promise<ByzantineReadings> {
+  return await api(`/eastern/readings?date=${encodeURIComponent(date)}&calendar=${calendar}`);
+}
+
 
 export async function getChallenge(slug: string): Promise<ChallengeDetail> {
   return await api(`/challenges/${encodeURIComponent(slug)}`);

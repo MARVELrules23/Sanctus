@@ -12,7 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 
-import { api, ChallengeWindow, JournalEntry, LiturgicalDay, listAttendingEvents, listChallengeWindows, listSchedule, ParishEvent, ScheduleItem } from "@/src/api";
+import { api, ChallengeWindow, JournalEntry, LiturgicalDay, listAttendingEvents, listChallengeWindows, listCustomChallengeWindows, listCustomChallenges, CustomChallenge, listSchedule, ParishEvent, ScheduleItem } from "@/src/api";
 import { useChallengeMasterPref } from "@/src/use-challenge-pref";
 import LiturgicalBadge from "@/src/components/LiturgicalBadge";
 import { colorForLiturgical, colors, fonts, radius, shadow, spacing } from "@/src/theme";
@@ -36,6 +36,8 @@ export default function CalendarScreen() {
   const [entryDates, setEntryDates] = useState<Set<string>>(new Set());
   const [challenges, setChallenges] = useState<ChallengeWindow[]>([]);
   const [novenaWin, setNovenaWin] = useState<ChallengeWindow | null>(null);
+  const [customWins, setCustomWins] = useState<ChallengeWindow[]>([]);
+  const [customList, setCustomList] = useState<CustomChallenge[]>([]);
   const [scheduleItems, setScheduleItems] = useState<ScheduleItem[]>([]);
   const [attending, setAttending] = useState<ParishEvent[]>([]);
   const { enabled: challengeMasterOn, setEnabled: setChallengeMasterOn } = useChallengeMasterPref();
@@ -82,6 +84,19 @@ export default function CalendarScreen() {
       }
     } catch {
       setNovenaWin(null);
+    }
+    // User-created custom challenges overlay the calendar too (always shown).
+    try {
+      const cw = await listCustomChallengeWindows(year);
+      setCustomWins(cw.items || []);
+    } catch {
+      setCustomWins([]);
+    }
+    try {
+      const cl = await listCustomChallenges();
+      setCustomList(cl.items || []);
+    } catch {
+      setCustomList([]);
     }
   }, [year]);
 
@@ -227,9 +242,15 @@ export default function CalendarScreen() {
         const e = (novenaWin.end_date || "").slice(0, 10);
         if (s && e && s <= dStr && dStr <= e) list.push(novenaWin);
       }
+      // Custom challenges always overlay too.
+      for (const cw of customWins) {
+        const s = (cw.start_date || "").slice(0, 10);
+        const e = (cw.end_date || "").slice(0, 10);
+        if (s && e && s <= dStr && dStr <= e) list.push(cw);
+      }
       return list.sort((a, b) => (a.total_days || 0) - (b.total_days || 0));
     },
-    [challenges, challengeMasterOn, novenaWin],
+    [challenges, challengeMasterOn, novenaWin, customWins],
   );
 
   const dayIndexFor = useCallback((c: ChallengeWindow, dStr: string): number => {
@@ -418,6 +439,52 @@ export default function CalendarScreen() {
               </View>
             ) : null}
 
+            {/* User's custom challenges + create button */}
+            <View style={styles.scheduleSection} testID="cal-my-challenges-section">
+              <View style={styles.journalHead}>
+                <Text style={styles.journalTitle}>My Challenges</Text>
+                <Pressable
+                  testID="cal-create-challenge"
+                  onPress={() => router.push("/custom-challenges/new")}
+                  style={({ pressed }) => [styles.createChallengeBtn, pressed && styles.pressed]}
+                >
+                  <Ionicons name="add" size={16} color={colors.gold} />
+                  <Text style={styles.createChallengeText}>New</Text>
+                </Pressable>
+              </View>
+              {customList.length === 0 ? (
+                <Text style={styles.scheduleEmpty}>
+                  Build your own challenge — abstinence, prayers, works of charity, adoration or a
+                  virtue to grow — over 7, 14, 30 or 60 days. It overlays the calendar from your
+                  chosen start date.
+                </Text>
+              ) : (
+                customList.map((ch) => (
+                  <Pressable
+                    key={ch.challenge_id}
+                    testID={`cal-my-challenge-${ch.challenge_id}`}
+                    onPress={() =>
+                      router.push({ pathname: "/custom-challenges/[id]", params: { id: ch.challenge_id } })
+                    }
+                    style={({ pressed }) => [
+                      styles.challengeTile,
+                      { borderColor: ch.color || colors.gold, marginTop: spacing.sm },
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <Ionicons name="create-outline" size={18} color={ch.color || colors.gold} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.challengeTileTitle}>{ch.title}</Text>
+                      <Text style={styles.challengeTileMeta}>
+                        {ch.length_days}-day challenge · begins {formatLongFromISO(ch.start_date)}
+                      </Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                  </Pressable>
+                ))
+              )}
+            </View>
+
             {/* Full list of liturgical challenges — tap any to open it and
                 choose whether to begin today, tomorrow, or on its feast day. */}
             {challenges.length > 0 ? (
@@ -518,7 +585,9 @@ export default function CalendarScreen() {
                     testID={`cal-challenge-tile-${ch.slug}`}
                     onPress={() =>
                       router.push(
-                        ch.challenge_id?.startsWith("novena-")
+                        ch.challenge_id?.startsWith("custom-")
+                          ? { pathname: "/custom-challenges/[id]", params: { id: ch.slug } }
+                          : ch.challenge_id?.startsWith("novena-")
                           ? { pathname: "/novenas/[slug]", params: { slug: ch.slug } }
                           : { pathname: "/challenges/[slug]", params: { slug: ch.slug } }
                       )
@@ -884,6 +953,17 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   journalTitle: { fontFamily: fonts.headingSemi, fontSize: 18, color: colors.textPrimary },
+  createChallengeBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: radius.round,
+    borderWidth: 1,
+    borderColor: colors.gold,
+  },
+  createChallengeText: { fontFamily: fonts.uiSemi, fontSize: 13, color: colors.gold },
   addBtn: {
     flexDirection: "row",
     alignItems: "center",

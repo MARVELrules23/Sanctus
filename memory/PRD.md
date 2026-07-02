@@ -242,3 +242,11 @@ Reverent & traditional aesthetic: cream/parchment background, deep stained-gl- C
 2. "Write your own prayer" + "Create your own devotional" (pick saint/angel + own criteria); entry points BOTH in Profile ("My Prayers & Devotionals") and Prayer tab; custom devotional can render companion-style.
 3. Mass vestments reference per rite (Roman/TLM/Byzantine) with REAL images (Wikimedia Commons, not AI) + meaning text.
 4. TLM (1962) & Byzantine Mass readings — user wants FULL readings text every day (resolve citations via app Bible where possible).
+
+## Session update 20 (July 2026) — Phase 2: Custom (user-created) Challenges
+- Backend `custom_challenges.py` (new module, registered in server.py; collection `custom_challenges`): CRUD + per-day items across categories (abstinence/prayer/charity/adoration/virtue/other), length 7/14/30/60 (validated 422), start_date, `completed` map. Endpoints: POST/GET `/api/custom-challenges`, GET `/windows?year=`, GET `/{id}`, POST `/{id}/checkin`, DELETE `/{id}`. `_window()` returns ChallengeWindow shape (challenge_id `custom-<id>`, slug=id).
+- Calendar (`app/(tabs)/calendar.tsx`): fetches custom windows + list; custom challenges always overlay the grid (like novena); added a "My Challenges" section with a "New" button (testID `cal-create-challenge`) + tappable tiles; day-detail challenge taps route `custom-` → `/custom-challenges/[id]`.
+- New screens: `app/custom-challenges/new.tsx` (title, length chips, date stepper, per-day editor with category chips + "Copy Day N to all") and `app/custom-challenges/[id].tsx` (per-day checkoff via checkin, Today highlight, delete). api.ts: types + createCustomChallenge/listCustomChallenges/listCustomChallengeWindows/getCustomChallenge/checkinCustomChallenge/deleteCustomChallenge + CUSTOM_CHALLENGE_CATEGORIES.
+- Verified: curl CRUD/windows/checkin/validation + UI screenshots (create flow, calendar overlay Jul 1-7 + My Challenges tile, detail check-offs & Today highlight).
+
+### STILL REMAINING in batch: (3) "Write your own prayer" + "Create your own devotional" (both Profile + Prayer tab entry points); (4) Mass vestments per rite with real Wikimedia images + meaning; (5) TLM(1962) & Byzantine full daily Mass readings.

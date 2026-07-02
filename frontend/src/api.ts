@@ -1312,6 +1312,69 @@ export async function listChallengeWindows(year: number): Promise<{ items: Chall
   return await api(`/challenges/windows?year=${year}`);
 }
 
+// ---- Custom (user-created) challenges ----
+export type CustomChallengeItem = { category: string; text: string };
+export type CustomChallengeDay = { day: number; items: CustomChallengeItem[] };
+export type CustomChallenge = {
+  challenge_id: string;
+  title: string;
+  color: string;
+  length_days: number;
+  start_date: string;
+  end_date: string;
+  days: CustomChallengeDay[];
+  completed: Record<string, boolean>;
+  created_at?: string | null;
+};
+
+export const CUSTOM_CHALLENGE_CATEGORIES: { key: string; label: string; icon: string }[] = [
+  { key: "abstinence", label: "Abstinence", icon: "remove-circle-outline" },
+  { key: "prayer", label: "Prayer / Devotional", icon: "book-outline" },
+  { key: "charity", label: "Work of Charity", icon: "heart-outline" },
+  { key: "adoration", label: "Adoration", icon: "flame-outline" },
+  { key: "virtue", label: "Virtue to grow", icon: "leaf-outline" },
+  { key: "other", label: "Other", icon: "ellipse-outline" },
+];
+
+export async function createCustomChallenge(payload: {
+  title: string;
+  color?: string;
+  length_days: number;
+  start_date: string;
+  days: CustomChallengeDay[];
+}): Promise<CustomChallenge> {
+  return await api("/custom-challenges", { method: "POST", body: JSON.stringify(payload) });
+}
+
+export async function listCustomChallenges(): Promise<{ items: CustomChallenge[] }> {
+  return await api("/custom-challenges");
+}
+
+export async function listCustomChallengeWindows(year: number): Promise<{ items: ChallengeWindow[] }> {
+  return await api(`/custom-challenges/windows?year=${year}`);
+}
+
+export async function getCustomChallenge(id: string): Promise<CustomChallenge> {
+  return await api(`/custom-challenges/${encodeURIComponent(id)}`);
+}
+
+export async function checkinCustomChallenge(
+  id: string,
+  day: number,
+  itemIndex: number,
+  done: boolean,
+): Promise<CustomChallenge> {
+  return await api(`/custom-challenges/${encodeURIComponent(id)}/checkin`, {
+    method: "POST",
+    body: JSON.stringify({ day, item_index: itemIndex, done }),
+  });
+}
+
+export async function deleteCustomChallenge(id: string): Promise<{ ok: boolean }> {
+  return await api(`/custom-challenges/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+
 export async function getChallenge(slug: string): Promise<ChallengeDetail> {
   return await api(`/challenges/${encodeURIComponent(slug)}`);
 }

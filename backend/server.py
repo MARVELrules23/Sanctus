@@ -3397,6 +3397,8 @@ from consecration import build_router as build_consecration_router
 from sanctuary import build_router as build_sanctuary_router
 
 api.include_router(build_companions_router(db, get_current_user, EMERGENT_LLM_KEY))
+from custom_challenges import build_router as build_custom_challenges_router
+api.include_router(build_custom_challenges_router(db, get_current_user))
 api.include_router(build_consecration_router(db, get_current_user, EMERGENT_LLM_KEY))
 api.include_router(build_sanctuary_router(db, get_current_user, EMERGENT_LLM_KEY))
 

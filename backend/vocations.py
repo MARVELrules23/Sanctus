@@ -353,6 +353,81 @@ CONTENT: Dict[str, Dict[str, Any]] = {
 }
 
 
+# --------------------------------------------------------------------------- #
+# Recommended reading (books + papal encyclicals) per vocation.               #
+# `slug` (when present) deep-links into the in-app Library at                 #
+# /library/books/<slug>, where encyclicals & classics are free to read.       #
+# `kind` is "book" | "encyclical" (drives the badge on the client).           #
+# --------------------------------------------------------------------------- #
+READINGS: Dict[str, List[Dict[str, Any]]] = {
+    "singleness": [
+        {"title": "Introduction to the Devout Life", "author": "St. Francis de Sales", "kind": "book", "slug": "devout-life",
+         "note": "A gentle, practical guide to holiness for those living in the world."},
+        {"title": "Rules for the Discernment of Spirits", "author": "St. Ignatius of Loyola", "kind": "book", "slug": "discernment-of-spirits-ignatius",
+         "note": "Learn to read the movements of your heart as you seek God's will."},
+        {"title": "The Practice of the Presence of God", "author": "Brother Lawrence", "kind": "book", "slug": "practice-presence-of-god",
+         "note": "Turn ordinary solitude into constant, loving companionship with God."},
+        {"title": "Gaudete et Exsultate", "author": "Pope Francis", "kind": "encyclical", "slug": "gaudete-et-exsultate",
+         "note": "The universal call to holiness in the modern world — yours to answer now."},
+        {"title": "Christus Vivit", "author": "Pope Francis", "kind": "encyclical", "slug": "christus-vivit",
+         "note": "Christ is alive and calls you to live your youth fully for him."},
+    ],
+    "religious life": [
+        {"title": "The Story of a Soul", "author": "St. Thérèse of Lisieux", "kind": "book", "slug": "story-of-a-soul",
+         "note": "The 'Little Way' of trust and love — the heart of a consecrated life."},
+        {"title": "The Interior Castle", "author": "St. Teresa of Ávila", "kind": "book", "slug": "interior-castle",
+         "note": "A map of the soul's journey through prayer to union with God."},
+        {"title": "The Imitation of Christ", "author": "Thomas à Kempis", "kind": "book", "slug": "imitation-of-christ",
+         "note": "The classic school of interior life and humble following of Christ."},
+        {"title": "The Spiritual Exercises", "author": "St. Ignatius of Loyola", "kind": "book", "slug": "spiritual-exercises-ignatius",
+         "note": "A retreat in a book — order your whole life to the greater glory of God."},
+        {"title": "Vita Consecrata / Veritatis Splendor", "author": "Pope St. John Paul II", "kind": "encyclical", "slug": "veritatis-splendor",
+         "note": "The splendour of truth that grounds every consecrated gift of self."},
+        {"title": "Gaudete et Exsultate", "author": "Pope Francis", "kind": "encyclical", "slug": "gaudete-et-exsultate",
+         "note": "Holiness is for you — a call renewed for every state of life."},
+    ],
+    "marriage": [
+        {"title": "True Devotion to Mary", "author": "St. Louis de Montfort", "kind": "book", "slug": "true-devotion-mary",
+         "note": "Entrust your marriage and children totally to Jesus through Mary."},
+        {"title": "The Life and Glories of St. Joseph", "author": "Edward Healy Thompson", "kind": "book", "slug": "life-and-glories-of-st-joseph",
+         "note": "Learn from the model husband, father and guardian of the Holy Family."},
+        {"title": "Humanae Vitae", "author": "Pope St. Paul VI", "kind": "encyclical", "slug": "humanae-vitae",
+         "note": "The Church's beautiful teaching on married love and the gift of life."},
+        {"title": "Patris Corde", "author": "Pope Francis", "kind": "encyclical", "slug": "patris-corde",
+         "note": "'With a father's heart' — St. Joseph for husbands and fathers today."},
+        {"title": "Rosarium Virginis Mariae", "author": "Pope St. John Paul II", "kind": "encyclical", "slug": "rosarium-virginis-mariae",
+         "note": "On the family Rosary — the prayer that builds a home upon the rock."},
+        {"title": "Redemptoris Custos", "author": "Pope St. John Paul II", "kind": "encyclical", "slug": "redemptoris-custos",
+         "note": "On St. Joseph, guardian of the Redeemer and of every Christian home."},
+    ],
+}
+
+# --------------------------------------------------------------------------- #
+# Prayer / novena / devotion recommendations per vocation.                    #
+# `route` deep-links to an existing in-app screen.                            #
+# --------------------------------------------------------------------------- #
+DEVOTIONAL_RECS: Dict[str, List[Dict[str, Any]]] = {
+    "singleness": [
+        {"title": "Daily Rosary", "body": "Pray a decade or the full Rosary for a pure, generous and undivided heart.", "route": "/prayer/rosary"},
+        {"title": "Novena to St. Joseph", "body": "Entrust your future and vocation to the guardian of the Holy Family.", "route": "/novenas/st-joseph"},
+        {"title": "Marian Consecration (33 Days)", "body": "Give yourself totally to Jesus through Mary — a beautiful path for the single heart.", "route": "/consecration"},
+        {"title": "Liturgy of the Hours", "body": "Sanctify your day with the Church's prayer, morning and night.", "route": "/liturgy"},
+    ],
+    "religious life": [
+        {"title": "Liturgy of the Hours", "body": "Pray Lauds and Compline daily, joining the Church's unceasing praise.", "route": "/liturgy"},
+        {"title": "Novena to St. Thérèse of Lisieux", "body": "Ask the Little Flower to guide you in her 'little way' of love.", "route": "/novenas/st-therese-little-flower"},
+        {"title": "Chaplets", "body": "Pray the Divine Mercy Chaplet and others as a school of trust and intercession.", "route": "/prayer/category/chaplets"},
+        {"title": "Marian Consecration", "body": "Consecrate your whole life to Jesus through the hands of Our Lady.", "route": "/consecration"},
+    ],
+    "marriage": [
+        {"title": "Family Rosary", "body": "Gather the family for a daily decade — the prayer that keeps a home together.", "route": "/prayer/rosary"},
+        {"title": "Novena to Sts. Louis & Zélie Martin", "body": "Ask the patrons of holy marriage to bless your family life.", "route": "/novenas/sts-louis-zelie"},
+        {"title": "Novena to St. Joseph", "body": "Place your spouse, children and livelihood under his fatherly care.", "route": "/novenas/st-joseph"},
+        {"title": "Marian Prayers", "body": "Entrust your spouse and children to Our Lady with the Church's Marian prayers.", "route": "/prayer/category/marian"},
+    ],
+}
+
+
 async def _localize(db, payload: Dict[str, Any]) -> Dict[str, Any]:
     lang = get_lang()
     if lang == "en":
@@ -386,6 +461,13 @@ async def _localize(db, payload: Dict[str, Any]) -> Dict[str, Any]:
         for item in payload.get(sec) or []:
             collect(lambda i=item: i.get("title"), lambda t, i=item: i.__setitem__("title", t))
             collect(lambda i=item: i.get("body"), lambda t, i=item: i.__setitem__("body", t))
+    # Recommended reading — translate the one-line note only (keep book titles/authors as-is).
+    for item in payload.get("readings") or []:
+        collect(lambda i=item: i.get("note"), lambda t, i=item: i.__setitem__("note", t))
+    # Prayer/novena/devotion recommendations — translate title + body.
+    for item in payload.get("devotional_recs") or []:
+        collect(lambda i=item: i.get("title"), lambda t, i=item: i.__setitem__("title", t))
+        collect(lambda i=item: i.get("body"), lambda t, i=item: i.__setitem__("body", t))
 
     if not texts:
         return payload
@@ -416,6 +498,8 @@ def _build_guide(vocation: str, state: str) -> Dict[str, Any]:
         "companions": copy.deepcopy(base["companions"]),
         "ideas": copy.deepcopy(base["ideas"]),
         "traditions": copy.deepcopy(traditions),
+        "readings": copy.deepcopy(READINGS.get(vocation, [])),
+        "devotional_recs": copy.deepcopy(DEVOTIONAL_RECS.get(vocation, [])),
     }
 
 

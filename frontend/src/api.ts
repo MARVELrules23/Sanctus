@@ -2214,6 +2214,8 @@ export async function sitesInBbox(
 
 export type VocationCompanion = { slug: string; name: string; why: string; prayer: string; devotions?: VocationItem[] };
 export type VocationItem = { title: string; body: string };
+export type VocationReading = { title: string; author?: string; kind?: "book" | "encyclical"; note?: string; slug?: string };
+export type VocationDevotionalRec = { title: string; body: string; route?: string };
 export type VocationGuide = {
   has_vocation: boolean;
   vocation?: string;
@@ -2226,6 +2228,8 @@ export type VocationGuide = {
   companions?: VocationCompanion[];
   ideas?: VocationItem[];
   traditions?: VocationItem[];
+  readings?: VocationReading[];
+  devotional_recs?: VocationDevotionalRec[];
   companion_saint?: string;
 };
 export async function getVocationGuide(): Promise<VocationGuide> {

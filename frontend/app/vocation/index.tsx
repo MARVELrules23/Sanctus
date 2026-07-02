@@ -134,7 +134,7 @@ export default function VocationScreen() {
                         onPress={() => router.push(`/companion/${c.slug}` as any)}
                         style={styles.visitRow}
                       >
-                        <Text style={styles.visitText}>Open {c.name}'s space</Text>
+                        <Text style={styles.visitText}>Open {c.name}&apos;s space</Text>
                         <Ionicons name="arrow-forward-circle" size={20} color={colors.gold} />
                       </Pressable>
                     </View>
@@ -142,6 +142,77 @@ export default function VocationScreen() {
                 );
               })}
             </>
+          ) : null}
+
+          {/* Recommended reading — books & encyclicals (tappable into the Library) */}
+          {guide.readings && guide.readings.length > 0 ? (
+            <View style={styles.ideaBox} testID="vocation-readings">
+              <View style={styles.cardHead}>
+                <Ionicons name="library-outline" size={16} color={colors.gold} />
+                <Text style={styles.cardHeadText}>Recommended reading</Text>
+              </View>
+              {guide.readings.map((r, i) => {
+                const tappable = !!r.slug;
+                return (
+                  <Pressable
+                    key={i}
+                    testID={`vocation-reading-${r.slug || i}`}
+                    disabled={!tappable}
+                    onPress={() => r.slug && router.push(`/library/books/${r.slug}` as any)}
+                    style={({ pressed }) => [styles.readingRow, pressed && tappable && { opacity: 0.7 }]}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <View style={styles.readingTitleRow}>
+                        <Text style={styles.itemTitle}>{r.title}</Text>
+                        {r.kind ? (
+                          <View style={[styles.kindBadge, r.kind === "encyclical" && styles.kindBadgeEnc]}>
+                            <Text style={[styles.kindBadgeText, r.kind === "encyclical" && styles.kindBadgeTextEnc]}>
+                              {r.kind === "encyclical" ? "ENCYCLICAL" : "BOOK"}
+                            </Text>
+                          </View>
+                        ) : null}
+                      </View>
+                      {r.author ? <Text style={styles.readingAuthor}>{r.author}</Text> : null}
+                      {r.note ? <Text style={styles.itemBody}>{r.note}</Text> : null}
+                    </View>
+                    {tappable ? (
+                      <Ionicons name="chevron-forward" size={18} color={colors.gold} style={{ marginTop: 2 }} />
+                    ) : null}
+                  </Pressable>
+                );
+              })}
+            </View>
+          ) : null}
+
+          {/* Prayers, novenas & devotions — deep-linked to in-app screens */}
+          {guide.devotional_recs && guide.devotional_recs.length > 0 ? (
+            <View style={styles.ideaBox} testID="vocation-devotional-recs">
+              <View style={styles.cardHead}>
+                <Ionicons name="rose-outline" size={16} color={colors.gold} />
+                <Text style={styles.cardHeadText}>Prayers, novenas & devotions</Text>
+              </View>
+              {guide.devotional_recs.map((d, i) => {
+                const tappable = !!d.route;
+                return (
+                  <Pressable
+                    key={i}
+                    testID={`vocation-devrec-${i}`}
+                    disabled={!tappable}
+                    onPress={() => d.route && router.push(d.route as any)}
+                    style={({ pressed }) => [styles.readingRow, pressed && tappable && { opacity: 0.7 }]}
+                  >
+                    <Ionicons name="leaf-outline" size={14} color={colors.goldDark} style={{ marginTop: 3 }} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.itemTitle}>{d.title}</Text>
+                      <Text style={styles.itemBody}>{d.body}</Text>
+                    </View>
+                    {tappable ? (
+                      <Ionicons name="arrow-forward-circle" size={20} color={colors.gold} style={{ marginTop: 2 }} />
+                    ) : null}
+                  </Pressable>
+                );
+              })}
+            </View>
           ) : null}
 
           {/* Ideas to draw closer */}
@@ -227,6 +298,18 @@ const styles = StyleSheet.create({
   item: { marginBottom: spacing.md },
   itemTitle: { fontFamily: fonts.uiSemi, fontSize: 15, color: colors.primary, marginBottom: 2 },
   itemBody: { fontFamily: fonts.bodyRegular, fontSize: 14, color: colors.textSecondary, lineHeight: 21 },
+  readingRow: {
+    flexDirection: "row", gap: spacing.sm, alignItems: "flex-start",
+    paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.borderSoft,
+  },
+  readingTitleRow: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 6 },
+  readingAuthor: { fontFamily: fonts.bodyItalic, fontSize: 12.5, color: colors.textMuted, marginTop: 1, marginBottom: 2 },
+  kindBadge: {
+    backgroundColor: "#EEE6D0", borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2,
+  },
+  kindBadgeEnc: { backgroundColor: "#E7D8F0" },
+  kindBadgeText: { fontFamily: fonts.uiSemi, fontSize: 9, letterSpacing: 0.6, color: colors.goldDark },
+  kindBadgeTextEnc: { color: "#6B2D5C" },
   tradBox: {
     marginTop: spacing.sm, backgroundColor: "#FBF4DF", borderWidth: 1, borderColor: "#EBDDB4",
     borderRadius: radius.md, padding: spacing.md,

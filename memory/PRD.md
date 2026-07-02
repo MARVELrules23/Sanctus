@@ -274,3 +274,11 @@ Reverent & traditional aesthetic: cream/parchment background, deep stained-gl- C
 - Coverage note (user-approved): Byzantine ordinary weekdays fall back to the most recent Sunday (not full weekday-by-weekday lectionary). Both rites display Douay-Rheims English.
 - Verified: curl across Sundays/feasts/ferias/Pascha/cross-chapter + screenshots of both screens and the Mass hub cards.
 
+
+## Session update 24 (July 2026) — "My Vocation Companion" home card + Vocation reading/devotion recommendations (DONE)
+- Backend `vocations.py`: added `READINGS` (books + papal encyclicals, each with title/author/kind/note and a Library `slug`) and `DEVOTIONAL_RECS` (prayers/novenas/devotions with in-app `route`) per vocation. Included in `_build_guide` output and translated in `_localize` (note for readings; title+body for recs). All 6 readings & 4 recs per vocation verified.
+- api.ts: extended `VocationGuide` with `readings?: VocationReading[]` and `devotional_recs?: VocationDevotionalRec[]` (+ new types).
+- Home `VocationHomeCard.tsx` rewritten: shows chosen companion's PHOTO (via `getCompanionImage`), "Walking with {name}", "Click to read more" (→ `/companion/[slug]`), and an "Open my Vocation guide" tile (→ `/vocation`). Header "MY VOCATION COMPANION".
+- Vocation page `app/vocation/index.tsx`: new "Recommended reading" section (book/encyclical badge, author, note; tappable rows → `/library/books/[slug]`) and "Prayers, novenas & devotions" section (deep-linked rows → novenas/rosary/consecration/liturgy/marian).
+- Encyclical/book slugs map to existing free Library entries (e.g. humanae-vitae, patris-corde, gaudete-et-exsultate, devout-life, story-of-a-soul, true-devotion-mary).
+- NOTE: Metro runs in CI mode (no hot reload) — must `supervisorctl restart expo` for frontend changes to bundle. Verified via screenshots: home card (St. Joseph photo) + vocation readings/devotion sections render.

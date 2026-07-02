@@ -2230,6 +2230,7 @@ export type VocationGuide = {
   traditions?: VocationItem[];
   readings?: VocationReading[];
   devotional_recs?: VocationDevotionalRec[];
+  daily_verse?: { reference: string; text: string };
   companion_saint?: string;
 };
 export async function getVocationGuide(): Promise<VocationGuide> {

@@ -17,6 +17,7 @@ shared translation cache (EN / ES / IT), exactly like the rest of the app.
 from __future__ import annotations
 
 import os
+from datetime import date
 from typing import Any, Dict, List
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -428,6 +429,50 @@ DEVOTIONAL_RECS: Dict[str, List[Dict[str, Any]]] = {
 }
 
 
+# --------------------------------------------------------------------------- #
+# Daily Scripture aligned to the vocation. One verse is surfaced each day,     #
+# chosen deterministically from the pool by the ordinal date so it is stable   #
+# for everyone on a given day and rotates through the week.                    #
+# --------------------------------------------------------------------------- #
+VOCATION_VERSES: Dict[str, List[Dict[str, str]]] = {
+    "singleness": [
+        {"reference": "1 Corinthians 7:34", "text": "The unmarried woman and the virgin thinketh on the things of the Lord, that she may be holy both in body and in spirit."},
+        {"reference": "Psalm 27:4", "text": "One thing I have asked of the Lord, this will I seek after: that I may dwell in the house of the Lord all the days of my life."},
+        {"reference": "Matthew 6:33", "text": "Seek ye therefore first the kingdom of God, and his justice, and all these things shall be added unto you."},
+        {"reference": "Psalm 73:25-26", "text": "For what have I in heaven? and besides thee what do I desire upon earth? God is the God of my heart, and the God that is my portion for ever."},
+        {"reference": "1 Corinthians 7:35", "text": "This I speak for your profit… that which may give you power to attend upon the Lord, without impediment."},
+        {"reference": "Isaiah 26:3", "text": "The old error is passed away: thou wilt keep peace: peace, because we have hoped in thee."},
+        {"reference": "Philippians 4:6-7", "text": "Be nothing solicitous; but in every thing, by prayer and supplication, let your petitions be made known to God. And the peace of God… keep your hearts and minds in Christ Jesus."},
+    ],
+    "religious life": [
+        {"reference": "Matthew 19:21", "text": "If thou wilt be perfect, go sell what thou hast, and give to the poor, and thou shalt have treasure in heaven: and come, follow me."},
+        {"reference": "Psalm 16:5-6", "text": "The Lord is the portion of my inheritance and of my cup: it is thou that wilt restore my inheritance to me. The lines are fallen unto me in goodly places."},
+        {"reference": "Luke 10:42", "text": "But one thing is necessary. Mary hath chosen the best part, which shall not be taken away from her."},
+        {"reference": "Matthew 16:24", "text": "If any man will come after me, let him deny himself, and take up his cross, and follow me."},
+        {"reference": "Galatians 2:20", "text": "And I live, now not I; but Christ liveth in me. And that I live now in the flesh: I live in the faith of the Son of God."},
+        {"reference": "Song of Songs 1:3", "text": "Draw me: we will run after thee to the odour of thy ointments."},
+        {"reference": "Psalm 42:1-2", "text": "As the hart panteth after the fountains of water; so my soul panteth after thee, O God. My soul hath thirsted after the strong living God."},
+    ],
+    "marriage": [
+        {"reference": "Genesis 2:24", "text": "Wherefore a man shall leave father and mother, and shall cleave to his wife: and they shall be two in one flesh."},
+        {"reference": "Ephesians 5:25", "text": "Husbands, love your wives, as Christ also loved the church, and delivered himself up for it."},
+        {"reference": "1 Corinthians 13:4-5", "text": "Charity is patient, is kind: charity envieth not, dealeth not perversely; is not puffed up; is not ambitious, seeketh not her own."},
+        {"reference": "Tobit 8:7", "text": "And now, Lord, thou knowest, that not for fleshly lust do I take my sister to wife, but only for the love of posterity… have mercy on us, and grant that we may grow old together."},
+        {"reference": "Ecclesiastes 4:9-10", "text": "It is better therefore that two should be together, than one: for they have the advantage of their society. If one fall he shall be supported by the other."},
+        {"reference": "Colossians 3:14", "text": "But above all these things have charity, which is the bond of perfection."},
+        {"reference": "Mark 10:9", "text": "What therefore God hath joined together, let no man put asunder."},
+    ],
+}
+
+
+def _daily_verse(vocation: str) -> Dict[str, str]:
+    pool = VOCATION_VERSES.get(vocation) or []
+    if not pool:
+        return {}
+    idx = date.today().toordinal() % len(pool)
+    return dict(pool[idx])
+
+
 async def _localize(db, payload: Dict[str, Any]) -> Dict[str, Any]:
     lang = get_lang()
     if lang == "en":
@@ -468,6 +513,10 @@ async def _localize(db, payload: Dict[str, Any]) -> Dict[str, Any]:
     for item in payload.get("devotional_recs") or []:
         collect(lambda i=item: i.get("title"), lambda t, i=item: i.__setitem__("title", t))
         collect(lambda i=item: i.get("body"), lambda t, i=item: i.__setitem__("body", t))
+    # Daily Scripture — translate the verse text (keep the reference untouched).
+    dv = payload.get("daily_verse")
+    if dv:
+        collect(lambda: dv.get("text"), lambda t: dv.__setitem__("text", t))
 
     if not texts:
         return payload
@@ -500,6 +549,7 @@ def _build_guide(vocation: str, state: str) -> Dict[str, Any]:
         "traditions": copy.deepcopy(traditions),
         "readings": copy.deepcopy(READINGS.get(vocation, [])),
         "devotional_recs": copy.deepcopy(DEVOTIONAL_RECS.get(vocation, [])),
+        "daily_verse": _daily_verse(vocation),
     }
 
 

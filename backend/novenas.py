@@ -267,6 +267,38 @@ NOVENAS: List[Dict[str, Any]] = [
         "intro": "The rock on whom Christ built His Church and the tireless Apostle to the nations. Ask their steadfast faith and burning zeal for souls.",
         "main_prayer": "Glorious Sts. Peter and Paul, pillars of the Church, Peter who confessed Jesus as the Christ and Paul who carried His name to the nations, obtain for me a faith as firm as rock and a love as bold as fire. Strengthen the Church and her shepherds, and grant me the favor I now ask… (mention your intention). Sts. Peter and Paul, pray for us. Amen.",
     },
+    {
+        "slug": "st-augustine", "name": "St. Augustine Novena",
+        "patron": "St. Augustine of Hippo", "feast": "August 28",
+        "theme": "A restless heart that finds its rest in God",
+        "color": "#7A2E4E", "icon": "flame-outline",
+        "intro": "The great convert, bishop and Doctor of the Church, who wrote 'You have made us for Yourself, O Lord, and our heart is restless until it rests in You.' Ask his conversion of heart and burning love of Truth.",
+        "main_prayer": "St. Augustine, once far from God and now aflame with His love, you cried, 'Late have I loved You, O Beauty ever ancient, ever new.' Obtain for me a true conversion of heart, freedom from the sins that bind me, and a restless longing that finds its rest in God alone. I place before God the favor I now ask… (mention your intention). St. Augustine, teach me to love Truth and to seek God with my whole heart. Amen.",
+    },
+    {
+        "slug": "st-thomas-aquinas", "name": "St. Thomas Aquinas Novena",
+        "patron": "St. Thomas Aquinas", "feast": "January 28",
+        "theme": "Wisdom, purity, and love of the Eucharist",
+        "color": "#3E5E7A", "icon": "book-outline",
+        "intro": "The Angelic Doctor, patron of students and Catholic schools, who united a brilliant mind to a humble, adoring heart. Ask his wisdom, purity, and love of the Blessed Sacrament.",
+        "main_prayer": "St. Thomas Aquinas, Angelic Doctor, who drew your wisdom from long hours before the Blessed Sacrament, obtain for me clarity of mind, purity of heart, and a deep love for the Holy Eucharist. Grant that I may learn what I ought to know, seek the truth in all things, and adore God as you did. I place before God the favor I now ask… (mention your intention). St. Thomas, pray that I may prefer nothing to the love of Christ. Amen.",
+    },
+    {
+        "slug": "st-john-baptist", "name": "St. John the Baptist Novena",
+        "patron": "St. John the Baptist", "feast": "June 24 (Nativity)",
+        "theme": "Repentance and preparing the way for the Lord",
+        "color": "#5B7A3E", "icon": "water-outline",
+        "intro": "The Forerunner, greatest of those born of women, who prepared the way of the Lord and pointed to the Lamb of God. Ask his spirit of penance and humble courage.",
+        "main_prayer": "St. John the Baptist, Forerunner of Christ, who cried in the wilderness 'Prepare the way of the Lord' and decreased that He might increase, obtain for me a heart of true repentance, courage to speak the truth, and humility to point always to Jesus, the Lamb of God. I place before God the favor I now ask… (mention your intention). St. John the Baptist, help me to prepare a straight path for the Lord in my soul. Amen.",
+    },
+    {
+        "slug": "st-james-less", "name": "St. James the Less Novena",
+        "patron": "St. James the Less, Apostle", "feast": "May 3 (with St. Philip)",
+        "theme": "Faith that works through love",
+        "color": "#6B5A2E", "icon": "hammer-outline",
+        "intro": "Apostle and first Bishop of Jerusalem, called 'the Just,' whose Letter teaches that faith without works is dead. Ask his persevering prayer and integrity of life.",
+        "main_prayer": "St. James the Less, faithful Apostle and shepherd of Jerusalem, you taught that faith without works is dead and that the prayer of a righteous man is powerful. Obtain for me a living faith that shows itself in works of mercy, perseverance in prayer, and integrity in all my dealings. I place before God the favor I now ask… (mention your intention). St. James, pray that I may be a doer of the word and not a hearer only. Amen.",
+    },
 ]
 
 NOVENA_BY_SLUG = {n["slug"]: n for n in NOVENAS}

@@ -720,6 +720,7 @@ COMPANIONS: Dict[str, Dict[str, Any]] = {
             "Order your day around one fixed time of prayer.",
             "End the day praising 'Beauty ever ancient, ever new.'",
         ],
+        "novena_slug": "st-augustine",
     },
     "john-the-baptist": {
         "name": "St. John the Baptist",
@@ -744,6 +745,7 @@ COMPANIONS: Dict[str, Dict[str, Any]] = {
             "Pray for the grace of true humility.",
             "Behold the Lamb of God at Mass or in adoration, and adore.",
         ],
+        "novena_slug": "st-john-baptist",
     },
     "james-the-less": {
         "name": "St. James the Less",
@@ -768,6 +770,7 @@ COMPANIONS: Dict[str, Dict[str, Any]] = {
             "Pray for the unity and holiness of the Church's shepherds.",
             "End the day examining whether your faith was living today.",
         ],
+        "novena_slug": "st-james-less",
     },
     "thomas-aquinas": {
         "name": "St. Thomas Aquinas",
@@ -792,6 +795,7 @@ COMPANIONS: Dict[str, Dict[str, Any]] = {
             "Pray for students and teachers.",
             "End the day acknowledging that all you know is a gift and 'straw' before God.",
         ],
+        "novena_slug": "st-thomas-aquinas",
     },
 
 }
@@ -1291,6 +1295,7 @@ SAINT_DEVOTIONS: Dict[str, List[Dict[str, str]]] = {
         {"title": "Eucharistic adoration & 'Adoro te devote'", "body": "Adore the Blessed Sacrament with his own hymn."},
         {"title": "'Tantum Ergo' at Benediction", "body": "Sing or pray his hymn before the exposed Eucharist."},
         {"title": "Read an article of the Summa or Catechism", "body": "Study one point of the faith slowly and prayerfully."},
+        {"title": "Novena to St. Thomas Aquinas", "body": "Ask the Angelic Doctor for wisdom, purity, and love of the Eucharist."},
     ],
 }
 

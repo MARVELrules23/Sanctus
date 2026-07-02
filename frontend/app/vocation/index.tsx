@@ -68,6 +68,18 @@ export default function VocationScreen() {
           ) : null}
           {guide.intro ? <Text style={styles.intro}>{guide.intro}</Text> : null}
 
+          {/* Daily Scripture aligned to the vocation */}
+          {guide.daily_verse && guide.daily_verse.text ? (
+            <View style={styles.verseCard} testID="vocation-daily-verse">
+              <View style={styles.cardHead}>
+                <Ionicons name="book-outline" size={16} color={colors.gold} />
+                <Text style={styles.cardHeadText}>Verse of the day</Text>
+              </View>
+              <Text style={styles.verseText}>“{guide.daily_verse.text}”</Text>
+              <Text style={styles.verseRef}>— {guide.daily_verse.reference}</Text>
+            </View>
+          ) : null}
+
           {/* Time-aware prayer (local device time): Morning 3–12, Afternoon 12–20, Night 20–3 */}
           {(() => {
             const h = new Date().getHours();
@@ -296,6 +308,13 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg, padding: spacing.md,
   },
   item: { marginBottom: spacing.md },
+  verseCard: {
+    backgroundColor: colors.surfaceDark, borderRadius: radius.md,
+    padding: spacing.md, marginBottom: spacing.md,
+    borderLeftWidth: 3, borderLeftColor: colors.gold,
+  },
+  verseText: { fontFamily: fonts.bodyItalic, fontSize: 16, color: "#FBF6E9", lineHeight: 25, marginTop: 4 },
+  verseRef: { fontFamily: fonts.uiSemi, fontSize: 12.5, color: colors.gold, marginTop: 8, textAlign: "right" },
   itemTitle: { fontFamily: fonts.uiSemi, fontSize: 15, color: colors.primary, marginBottom: 2 },
   itemBody: { fontFamily: fonts.bodyRegular, fontSize: 14, color: colors.textSecondary, lineHeight: 21 },
   readingRow: {

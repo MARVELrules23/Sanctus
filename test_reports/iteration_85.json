@@ -1,0 +1,34 @@
+{
+  "summary": "Validated new saint novenas (St Augustine, St Thomas Aquinas, St John the Baptist, St James the Less) + vocation daily verse card. Backend 9/10 pass, frontend 100% for the requested flows. One MINOR inconsistency: james-the-less companion exposes the devotion title 'Novena to St. James' instead of the fully-qualified 'Novena to St. James the Less' that the other three new saints use — route still resolves. Verse-of-the-day (Ecclesiastes 4:9-10) renders on /vocation above the prayer card, and Thomas Aquinas + Augustine companion pages open their respective novena screens.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/companions/james-the-less", "issue": "saint_devotions title is 'Novena to St. James' — inconsistent with the other 3 new companions which use fully-qualified names ('Novena to St. Augustine', 'Novena to St. Thomas Aquinas', 'Novena to St. John the Baptist'). Route /novenas/st-james-less still resolves correctly, so functional but display copy is inconsistent."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter85_saints_verse.py",
+    "/app/test_reports/pytest/iter85_saints_verse.xml"
+  ],
+  "action_items": [
+    "OPTIONAL: In backend/companions.py for james-the-less, change devotion title from 'Novena to St. James' → 'Novena to St. James the Less' for parity with the other new companions. (One-line copy tweak; route is unchanged.)"
+  ],
+  "critical_code_review_comments": [
+    "companions.py is quite large (>800 lines catalog + traditions). Not blocking, but consider extracting catalog data into a JSON/YAML resource file in a future iteration."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter85_saints_verse.py (new)"
+  ],
+  "success_rate": {"backend": "90% (9/10 — 1 minor copy assertion)", "frontend": "100% (4/4 flows)"},
+  "seed_data_creation": "None. Used existing test_feat_aug25 session for philipwils13@gmail.com (vocation=marriage/living, companion=st-joseph).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend suite covers: (a) 4 companions expose correct novena_slug + saint_devotions row with /novenas/<slug> route, (b) 4 new novena detail endpoints return name+main_prayer, (c) vocation guide daily_verse populated + reading/devrec regression. Vocation user is marriage/living; verse returned is Ecclesiastes 4:9-10. Companion page audio (Gregorian chant) autoplays on web — may throw a benign console warning on autoplay block; ignored.",
+  "rca_of_issue": "N/A — no bugs. Copy inconsistency (james-the-less devotion title) is a one-word display consistency nit, not a functional bug."
+}

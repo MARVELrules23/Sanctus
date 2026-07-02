@@ -30,6 +30,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from pydantic import BaseModel, Field
 
 from library_seed_data import SEED_BOOKS, SEED_FILMS, SEED_STATIONS
+from library_children_data import CHILDREN_BOOKS
 
 logger = logging.getLogger("sanctus.library")
 
@@ -151,6 +152,8 @@ def _is_book_premium(doc: Dict[str, Any]) -> bool:
     slug = (doc.get("slug") or "").lower()
     if tradition == "papal":
         return False
+    if tradition == "children":
+        return False
     if btype == "external":
         return False
     if slug == "catechism-of-the-catholic-church" or tradition == "reference":
@@ -210,7 +213,7 @@ def _word_count(s: str) -> int:
 async def _seed_books_if_missing(db: AsyncIOMotorDatabase) -> int:
     """Insert seed books only when they don't already exist (by slug)."""
     inserted = 0
-    for entry in SEED_BOOKS:
+    for entry in (SEED_BOOKS + CHILDREN_BOOKS):
         existing = await db["library_books"].find_one({"slug": entry["slug"]}, {"_id": 0, "slug": 1})
         if existing:
             continue

@@ -34,6 +34,7 @@ const TRADITION_LABEL: Record<string, string> = {
   doctor: "Doctor of the Church",
   mystic: "Mystic",
   apologist: "Apologist",
+  children: "For Children",
   reference: "Reference",
 };
 
@@ -129,9 +130,11 @@ export default function LibraryIndexScreen() {
       (b) => b.progress && (b.progress.chapter_index > 0 || b.progress.scroll_pct > 0.01),
     );
     const isEncyclical = (b: LibraryBook) => (b.tradition || "").toLowerCase() === "papal";
+    const isChildren = (b: LibraryBook) => (b.tradition || "").toLowerCase() === "children";
     const encyclicals = base.filter((b) => isEncyclical(b) && !inProgress.includes(b));
-    const authored = base.filter((b) => !isEncyclical(b) && !inProgress.includes(b));
-    return { inProgress, encyclicals, authored };
+    const children = base.filter((b) => isChildren(b) && !inProgress.includes(b));
+    const authored = base.filter((b) => !isEncyclical(b) && !isChildren(b) && !inProgress.includes(b));
+    return { inProgress, encyclicals, children, authored };
   }, [books, bookFilter]);
 
   const filteredFilms = useMemo(() => {
@@ -412,6 +415,16 @@ export default function LibraryIndexScreen() {
                 Spiritual classics & guides — including a discernment library. Reading included with Sanctus Premium.
               </Text>
               {grouped.authored.map(renderBookCard)}
+
+              {grouped.children.length > 0 ? (
+                <>
+                  <Text style={styles.section} testID="library-section-children">For Children</Text>
+                  <Text style={styles.sectionHint}>
+                    Full storybooks written for little ones — free to read together as a family.
+                  </Text>
+                  {grouped.children.map(renderBookCard)}
+                </>
+              ) : null}
 
               <Text style={styles.section}>Encyclicals</Text>
               <Text style={styles.sectionHint}>

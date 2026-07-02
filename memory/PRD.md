@@ -294,3 +294,9 @@ Reverent & traditional aesthetic: cream/parchment background, deep stained-gl- C
 - **Feast-day food traditions:** new `food_traditions.py` (12 curated recipes keyed to feasts/seasons + home recipe; localized). Endpoints `/api/food-traditions`, `/api/food-traditions/day?date=` (matches liturgical feast then season), `/api/food-traditions/{slug}`. Meals tab has a "Feast-day food traditions" card (testID meals-food-traditions-card) → `app/food-traditions/index.tsx` list → `[slug].tsx` detail (ingredients + steps).
 - **Home vocation card daily verse:** VocationHomeCard now shows guide.daily_verse (testID vocation-card-verse) under the guide tile.
 - IMPORTANT: parallel search_replace on the SAME file corrupted server.py once (duplicated tail). Recovered via `git checkout` + sequential re-apply. Never parallelize edits to the same file.
+
+## Session update 27 (July 2026) — Children's books + "For Children" Library section (DONE)
+- New `backend/library_children_data.py` with 3 original (copyright-safe) full chapter-by-chapter kids' books, tradition="children": "Bible Stories for Little Souls" (12 ch), "Little Saints for Little Hearts" (9 ch), "The Holy Mass for Little Ones" (8 ch).
+- `library.py`: seeds `SEED_BOOKS + CHILDREN_BOOKS`; `_is_book_premium` now returns FREE for tradition=="children" (kids' books free to read). Seeded 3 books on startup (verified free, chapters readable).
+- Frontend `app/library/index.tsx`: TRADITION_LABEL children="For Children"; grouped memo splits `children` out of authored; renders a dedicated "For Children" section (testID library-section-children) between Books and Encyclicals. Verified rendering with all 3 books + Free-to-read tags.
+- NOTE: children's books are FREE by design choice (family focus); if user wants them Premium, remove the children rule in `_is_book_premium`.

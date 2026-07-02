@@ -1415,6 +1415,13 @@ export async function deleteMyDevotion(id: string): Promise<{ ok: boolean }> {
   return await api(`/my/devotions/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 
+// ---- Vestments reference ----
+export type Vestment = { name: string; meaning: string; image: string | null };
+export type VestmentRite = { key: string; label: string; blurb: string; vestments: Vestment[] };
+export async function getVestments(): Promise<{ rites: VestmentRite[] }> {
+  return await api("/vestments");
+}
+
 
 export async function getChallenge(slug: string): Promise<ChallengeDetail> {
   return await api(`/challenges/${encodeURIComponent(slug)}`);

@@ -257,3 +257,12 @@ Reverent & traditional aesthetic: cream/parchment background, deep stained-gl- C
 - Entry points BOTH: Profile ("My Prayers & Devotionals" row, testID profile-my-devotions) and Prayer tab (card testID prayer-card-my-devotions).
 - api.ts: MyPrayer/MyDevotion types + create/list/get/delete functions.
 - BUGFIX: `api()` already JSON.stringifies opts.body; my new POST helpers were double-stringifying (createCustomChallenge, checkinCustomChallenge, createMyPrayer, createMyDevotion) causing 422 on the Save buttons. Fixed to pass raw objects. Verified prayer Save now persists end-to-end via UI (this also fixes the Custom Challenges create/checkin buttons).
+
+## Session update 22 (July 2026) — Phase 4: Mass Vestments reference (real photos)
+- Backend `vestments.py` (registered): RITES data for Roman (OF), Traditional Latin (1962, incl. Maniple), Byzantine — each vestment has name + meaning + a Wikipedia article title. Lead photo resolved via MediaWiki ACTION API (`/w/api.php prop=pageimages`) with a compliant User-Agent (the REST summary API returns 403 for generic clients). Cached in `vestment_images`. Endpoint `GET /api/vestments`.
+- Frontend `app/vestments.tsx`: rite tabs + cards (real image + name + meaning + CC credit). Entry: Mass hub card (testID `mass-vestments-card`).
+- Verified: all 17 vestments resolve real images; UI screenshot shows Amice/Alb photos rendering; rite tabs switch (Byzantine Phelonion etc.).
+
+## Phase 5 (TLM/Byzantine full daily readings) — NOT YET BUILT (needs dedicated session)
+- Requires an accurate lectionary dataset: the full 1962 Missal proper Epistle+Gospel for every Sunday/feast (+ ferial fallback repeating the preceding Sunday) AND the Byzantine daily cycle (movable Paschal cycle + fixed Menaion). Full text would resolve citations via the app Bible (TLM) and a reliable Byzantine daily-readings source.
+- Deferred to keep accuracy (user's explicit bar) — recommend building as its own focused task.

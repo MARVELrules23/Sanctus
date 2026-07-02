@@ -3401,6 +3401,8 @@ from custom_challenges import build_router as build_custom_challenges_router
 api.include_router(build_custom_challenges_router(db, get_current_user))
 from personal import build_router as build_personal_router
 api.include_router(build_personal_router(db, get_current_user))
+from vestments import build_router as build_vestments_router
+api.include_router(build_vestments_router(db, get_current_user))
 api.include_router(build_consecration_router(db, get_current_user, EMERGENT_LLM_KEY))
 api.include_router(build_sanctuary_router(db, get_current_user, EMERGENT_LLM_KEY))
 

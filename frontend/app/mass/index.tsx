@@ -151,6 +151,32 @@ export default function MassHubScreen() {
           </View>
         </Pressable>
 
+        {/* Vestments reference */}
+        <Pressable
+          testID="mass-vestments-card"
+          onPress={() => router.push("/vestments" as any)}
+          style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+        >
+          <View style={styles.cardHeader}>
+            <View style={[styles.iconWrap, { backgroundColor: "#6B2D5C" }]}>
+              <Ionicons name="shirt-outline" size={20} color="#FAF9F6" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <AutoText style={styles.cardTitle}>
+                {lang === "es" ? "Vestiduras litúrgicas" : lang === "it" ? "Paramenti liturgici" : "Vestments"}
+              </AutoText>
+              <AutoText style={styles.cardSub}>
+                {lang === "es"
+                  ? "Las vestiduras del sacerdote por rito y su significado"
+                  : lang === "it"
+                    ? "I paramenti del sacerdote per rito e il loro significato"
+                    : "The priest's vestments by rite & their meaning"}
+              </AutoText>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+          </View>
+        </Pressable>
+
         {/* Find nearby Mass */}
         <Pressable
           testID="mass-nearby-card"

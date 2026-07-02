@@ -250,3 +250,10 @@ Reverent & traditional aesthetic: cream/parchment background, deep stained-gl- C
 - Verified: curl CRUD/windows/checkin/validation + UI screenshots (create flow, calendar overlay Jul 1-7 + My Challenges tile, detail check-offs & Today highlight).
 
 ### STILL REMAINING in batch: (3) "Write your own prayer" + "Create your own devotional" (both Profile + Prayer tab entry points); (4) Mass vestments per rite with real Wikimedia images + meaning; (5) TLM(1962) & Byzantine full daily Mass readings.
+
+## Session update 21 (July 2026) — Phase 3: Personal prayers & devotionals
+- Backend `personal.py` (registered in server.py; collections `custom_prayers`, `custom_devotions`): CRUD for user prayers (title+body) and devotionals (saint_name, optional saint_slug, intro, practices[]). Endpoints under `/api/my/prayers` and `/api/my/devotions`.
+- Frontend screens: `app/my-devotions/index.tsx` (hub: prayers inline-expand + devotionals list, per-item delete, two create buttons), `new-prayer.tsx`, `new-devotional.tsx` (free-text saint/angel + suggestion chips + practices editor), `[id].tsx` (companion-style devotional detail).
+- Entry points BOTH: Profile ("My Prayers & Devotionals" row, testID profile-my-devotions) and Prayer tab (card testID prayer-card-my-devotions).
+- api.ts: MyPrayer/MyDevotion types + create/list/get/delete functions.
+- BUGFIX: `api()` already JSON.stringifies opts.body; my new POST helpers were double-stringifying (createCustomChallenge, checkinCustomChallenge, createMyPrayer, createMyDevotion) causing 422 on the Save buttons. Fixed to pass raw objects. Verified prayer Save now persists end-to-end via UI (this also fixes the Custom Challenges create/checkin buttons).

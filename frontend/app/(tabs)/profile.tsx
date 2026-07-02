@@ -157,6 +157,16 @@ export default function ProfileScreen() {
           </Pressable>
         </View>
 
+        <Pressable
+          testID="profile-my-devotions"
+          onPress={() => router.push("/my-devotions")}
+          style={({ pressed }) => [styles.quickLink, { marginTop: 8 }, pressed && styles.pressed]}
+        >
+          <Ionicons name="create-outline" size={18} color={colors.gold} />
+          <Text style={styles.quickLinkText}>My Prayers & Devotionals</Text>
+          <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
+        </Pressable>
+
         <Ornament />
 
         {/* Friends */}

@@ -139,6 +139,15 @@ export default function PrayerHubScreen() {
       onPress: () => router.push("/consecration" as any),
     });
     arr.push({
+      testID: "prayer-card-my-devotions",
+      title: "My Prayers & Devotionals",
+      subtitle: "Write your own prayers and create devotionals to any saint or angel",
+      meta: "YOURS",
+      color: "#B08D3F",
+      icon: "create-outline",
+      onPress: () => router.push("/my-devotions" as any),
+    });
+    arr.push({
       testID: "prayer-card-companions",
       title: "Daily Companions",
       subtitle: "Choose up to 3 saints to walk with each day",

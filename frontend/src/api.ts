@@ -1343,7 +1343,7 @@ export async function createCustomChallenge(payload: {
   start_date: string;
   days: CustomChallengeDay[];
 }): Promise<CustomChallenge> {
-  return await api("/custom-challenges", { method: "POST", body: JSON.stringify(payload) });
+  return await api("/custom-challenges", { method: "POST", body: payload });
 }
 
 export async function listCustomChallenges(): Promise<{ items: CustomChallenge[] }> {
@@ -1366,12 +1366,53 @@ export async function checkinCustomChallenge(
 ): Promise<CustomChallenge> {
   return await api(`/custom-challenges/${encodeURIComponent(id)}/checkin`, {
     method: "POST",
-    body: JSON.stringify({ day, item_index: itemIndex, done }),
+    body: { day, item_index: itemIndex, done },
   });
 }
 
 export async function deleteCustomChallenge(id: string): Promise<{ ok: boolean }> {
   return await api(`/custom-challenges/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+// ---- Personal prayers & devotionals ----
+export type MyPrayer = { prayer_id: string; title: string; body: string; created_at?: string | null };
+export type MyDevotion = {
+  devotion_id: string;
+  title: string;
+  saint_name: string;
+  saint_slug?: string | null;
+  intro: string;
+  practices: string[];
+  created_at?: string | null;
+};
+
+export async function createMyPrayer(payload: { title: string; body: string }): Promise<MyPrayer> {
+  return await api("/my/prayers", { method: "POST", body: payload });
+}
+export async function listMyPrayers(): Promise<{ items: MyPrayer[] }> {
+  return await api("/my/prayers");
+}
+export async function deleteMyPrayer(id: string): Promise<{ ok: boolean }> {
+  return await api(`/my/prayers/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+export async function createMyDevotion(payload: {
+  title: string;
+  saint_name: string;
+  saint_slug?: string | null;
+  intro?: string;
+  practices: string[];
+}): Promise<MyDevotion> {
+  return await api("/my/devotions", { method: "POST", body: payload });
+}
+export async function listMyDevotions(): Promise<{ items: MyDevotion[] }> {
+  return await api("/my/devotions");
+}
+export async function getMyDevotion(id: string): Promise<MyDevotion> {
+  return await api(`/my/devotions/${encodeURIComponent(id)}`);
+}
+export async function deleteMyDevotion(id: string): Promise<{ ok: boolean }> {
+  return await api(`/my/devotions/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 
 

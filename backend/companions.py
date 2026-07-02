@@ -1288,7 +1288,7 @@ SAINT_DEVOTIONS: Dict[str, List[Dict[str, str]]] = {
         {"title": "Read the Letter of St. James", "body": "Take a short passage daily and put one verse into practice."},
         {"title": "A daily work of mercy", "body": "Show your faith by works — visit, feed, clothe, or console someone."},
         {"title": "Persevering prayer", "body": "Spend extra time on your knees, like James 'the Just.'"},
-        {"title": "Novena to St. James", "body": "Ask the apostle for a living, active faith."},
+        {"title": "Novena to St. James the Less", "body": "Ask the apostle for a living, active faith."},
     ],
     "thomas-aquinas": [
         {"title": "The prayer before study", "body": "Pray his 'Creator of all things' before work or study."},

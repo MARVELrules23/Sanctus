@@ -697,6 +697,103 @@ COMPANIONS: Dict[str, Dict[str, Any]] = {
             "End the day thanking God for one way He used you to reach another.",
         ],
     },
+    "augustine": {
+        "name": "St. Augustine of Hippo",
+        "feast": "August 28",
+        "image_prompt": "Saint Augustine of Hippo, bishop in ornate cope and mitre holding a flaming heart and a book, thoughtful and prayerful, " + _IMG_STYLE,
+        "importance": "Augustine turned from a restless, sinful youth to become one of the Church's greatest bishops and Doctors. His 'Confessions' show that no past is too dark for grace: 'You have made us for Yourself, O Lord, and our heart is restless until it rests in You.' He is the patron of converts and of the restless heart seeking truth.",
+        "virtues": [
+            {"name": "Restless seeking of truth", "how": "Keep searching for God honestly, refusing to settle for lesser goods."},
+            {"name": "Humble confession", "how": "Name your sins plainly before God, trusting His mercy more than your failures."},
+            {"name": "Love as the measure", "how": "'Love, and do what you will' — let charity order every choice."},
+            {"name": "Interior conversion", "how": "Turn inward daily; God is 'more inward to me than my innermost self.'"},
+        ],
+        "daily_acts": [
+            "Pray, 'Our heart is restless until it rests in You,' and offer your restlessness to God.",
+            "Make an honest confession of one fault, trusting His mercy.",
+            "Read a short passage of the 'Confessions' as lectio divina.",
+            "Spend five minutes in interior silence, seeking God within.",
+            "Turn away from one lesser good today for the sake of the greatest Good.",
+            "Pray for someone who has drifted from the faith, as St. Monica prayed for you.",
+            "Do one act purely for love, then 'do what you will.'",
+            "Thank God for a grace that drew you back to Him.",
+            "Order your day around one fixed time of prayer.",
+            "End the day praising 'Beauty ever ancient, ever new.'",
+        ],
+    },
+    "john-the-baptist": {
+        "name": "St. John the Baptist",
+        "feast": "June 24 (Nativity)",
+        "image_prompt": "Saint John the Baptist, rugged prophet in camel-hair garment holding a slender reed cross, pointing upward by the Jordan, " + _IMG_STYLE,
+        "importance": "John was the forerunner of Christ, the voice crying in the wilderness who prepared the way of the Lord. Filled with the Spirit from the womb, he lived in penance and pointed always away from himself: 'He must increase, but I must decrease.' He is the model of humility, courage, and repentance.",
+        "virtues": [
+            {"name": "Humility", "how": "Point to Christ, not yourself: 'He must increase, but I must decrease.'"},
+            {"name": "Courageous truth", "how": "Speak the truth even to the powerful, whatever the cost."},
+            {"name": "Penance", "how": "Embrace simplicity and self-denial to make room for God."},
+            {"name": "Preparing the way", "how": "Make straight in your own heart a highway for the Lord."},
+        ],
+        "daily_acts": [
+            "Pray, 'He must increase, but I must decrease,' and step back so Christ is seen.",
+            "Make one small act of penance in the spirit of the desert.",
+            "Speak a needed truth today with courage and charity.",
+            "Simplify one thing you own or consume.",
+            "Point someone toward Christ by a quiet word or example.",
+            "Examine your conscience and repent of one sin.",
+            "Spend time in silence, listening as John listened in the wilderness.",
+            "Fast from one comfort and offer it in reparation.",
+            "Pray for the grace of true humility.",
+            "Behold the Lamb of God at Mass or in adoration, and adore.",
+        ],
+    },
+    "james-the-less": {
+        "name": "St. James the Less",
+        "feast": "May 3 (with St. Philip)",
+        "image_prompt": "Saint James the Less, apostle in simple robe holding a fuller's club and a scroll, steady and prayerful, " + _IMG_STYLE,
+        "importance": "James the Less, an Apostle and first bishop of Jerusalem, was called 'the Just' for his holiness and constant prayer. His letter urges a living faith: 'Faith without works is dead.' A man whose knees were worn from prayer, he shows that leadership in the Church is built on justice, prayer, and works of mercy.",
+        "virtues": [
+            {"name": "Living faith", "how": "Let your faith show in concrete works of mercy — 'faith without works is dead.'"},
+            {"name": "Constancy in prayer", "how": "Be a person of persevering prayer, like James 'the Just.'"},
+            {"name": "Care for the poor", "how": "Show no partiality; honor the lowly as much as the great."},
+            {"name": "Steadfast leadership", "how": "Serve quietly and justly wherever you are entrusted."},
+        ],
+        "daily_acts": [
+            "Put your faith into action with one concrete work of mercy today.",
+            "Spend extra time on your knees in prayer.",
+            "Show kindness to someone the world overlooks.",
+            "Read a short passage of the Letter of St. James.",
+            "Guard your tongue, which James calls a small member that sets great fires.",
+            "Be 'quick to hear, slow to speak, slow to anger' in one conversation.",
+            "Ask a priest or the sick if they need prayers, and offer them.",
+            "Give patiently in a trial, counting it 'all joy.'",
+            "Pray for the unity and holiness of the Church's shepherds.",
+            "End the day examining whether your faith was living today.",
+        ],
+    },
+    "thomas-aquinas": {
+        "name": "St. Thomas Aquinas",
+        "feast": "January 28",
+        "image_prompt": "Saint Thomas Aquinas, Dominican friar in white and black habit holding a book and a radiant sun on his chest, serene and brilliant, " + _IMG_STYLE,
+        "importance": "Thomas Aquinas, the 'Angelic Doctor,' united faith and reason as no other, giving the Church the 'Summa Theologiae' and the great Eucharistic hymns. Yet this towering genius was a man of deep prayer who called all his writing 'straw' before the vision of God. He is the patron of students and of all who seek truth on their knees.",
+        "virtues": [
+            {"name": "Faith seeking understanding", "how": "Study the faith prayerfully; let reason serve belief."},
+            {"name": "Eucharistic love", "how": "Adore the Blessed Sacrament, the theme of his greatest hymns."},
+            {"name": "Humility of the mind", "how": "Hold your knowledge lightly; before God all is 'straw.'"},
+            {"name": "Diligent study", "how": "Offer your learning and work to God as a form of prayer."},
+        ],
+        "daily_acts": [
+            "Begin study or work with his prayer, 'Creator of all things, true source of light and wisdom.'",
+            "Learn one truth of the faith today and thank God for it.",
+            "Adore the Blessed Sacrament; pray a verse of 'Adoro te devote' or 'Tantum Ergo.'",
+            "Hold an opinion humbly; seek the truth rather than winning.",
+            "Offer your studies or labor to God as prayer.",
+            "Read a short article of the Summa or Catechism slowly.",
+            "Practise recollection: withdraw the mind to God amid busy work.",
+            "Give a clear, charitable answer to someone's honest question about the faith.",
+            "Pray for students and teachers.",
+            "End the day acknowledging that all you know is a gift and 'straw' before God.",
+        ],
+    },
+
 }
 
 
@@ -952,6 +1049,10 @@ DAILY_PRAYERS: Dict[str, str] = {
     "sts-peter-paul": "Sts. Peter and Paul, obtain for me this day a faith as firm as rock and a zeal as bold as fire, that I may follow Christ without fear. Pray for me.",
     "carlo-acutis": "St. Carlo Acutis, help me today to make the Eucharist my 'highway to heaven,' to use all I have for Jesus, and to be original — not a photocopy. Pray for me.",
     "fulton-sheen": "Ven. Fulton Sheen, help me to give God my daily Holy Hour and to witness to Christ with courage and joy in my own world this day. Pray for me.",
+    "augustine": "St. Augustine, you made our hearts for God and know their restlessness; win for me true conversion of heart, that I may rest at last in Him. Pray for me.",
+    "john-the-baptist": "St. John the Baptist, forerunner of the Lord, teach me humility and courage, that Christ may increase in me and I may decrease. Pray for me.",
+    "james-the-less": "St. James the Less, apostle and man of prayer, obtain for me a living faith that shows itself in works of mercy. Pray for me.",
+    "thomas-aquinas": "St. Thomas Aquinas, Angelic Doctor, enlighten my mind and enkindle my love, that I may seek the truth and adore it in the Blessed Sacrament. Pray for me.",
 }
 
 # The Guardian Angel is a permanent companion for everyone — always present,
@@ -964,6 +1065,7 @@ COMPANION_ORDER: List[str] = [ "blessed-virgin-mary", "sacred-heart", "guardian-
     "therese-lisieux", "francis-assisi", "st-joseph", "teresa-avila",
     "catherine-siena", "benedict", "john-paul-ii", "pier-giorgio",
     "agnes", "gianna-molla", "louis-zelie", "monica",
+    "augustine", "thomas-aquinas", "john-the-baptist", "james-the-less",
 ]
 
 
@@ -1166,6 +1268,30 @@ SAINT_DEVOTIONS: Dict[str, List[Dict[str, str]]] = {
         {"title": "Frequent Confession", "body": "Confess regularly to keep the soul bright."},
         {"title": "Daily spiritual reading", "body": "Read a few pages of solid Catholic doctrine each day."},
     ],
+    "augustine": [
+        {"title": "Frequent Confession", "body": "Confess regularly, trusting the mercy that raised Augustine from sin."},
+        {"title": "Lectio on the 'Confessions'", "body": "Read a short passage of his Confessions prayerfully."},
+        {"title": "Daily interior prayer", "body": "Withdraw inward each day to the God who is nearer than your own heart."},
+        {"title": "Novena to St. Augustine", "body": "Ask his intercession for a wandering soul or your own conversion."},
+    ],
+    "john-the-baptist": [
+        {"title": "Daily examination & repentance", "body": "Prepare the way of the Lord by repenting of one sin each day."},
+        {"title": "A spirit of penance", "body": "Take up a small fast or self-denial in John's desert spirit."},
+        {"title": "The Benedictus (Canticle of Zechariah)", "body": "Pray the canticle sung at his birth, part of Morning Prayer."},
+        {"title": "Novena to St. John the Baptist", "body": "Ask the forerunner for humility and courage."},
+    ],
+    "james-the-less": [
+        {"title": "Read the Letter of St. James", "body": "Take a short passage daily and put one verse into practice."},
+        {"title": "A daily work of mercy", "body": "Show your faith by works — visit, feed, clothe, or console someone."},
+        {"title": "Persevering prayer", "body": "Spend extra time on your knees, like James 'the Just.'"},
+        {"title": "Novena to St. James", "body": "Ask the apostle for a living, active faith."},
+    ],
+    "thomas-aquinas": [
+        {"title": "The prayer before study", "body": "Pray his 'Creator of all things' before work or study."},
+        {"title": "Eucharistic adoration & 'Adoro te devote'", "body": "Adore the Blessed Sacrament with his own hymn."},
+        {"title": "'Tantum Ergo' at Benediction", "body": "Sing or pray his hymn before the exposed Eucharist."},
+        {"title": "Read an article of the Summa or Catechism", "body": "Study one point of the faith slowly and prayerfully."},
+    ],
 }
 
 
@@ -1276,6 +1402,43 @@ async def _get_or_make_image(db, slug: str, prompt: str, emergent_llm_key: str) 
     return None
 
 
+def _devotion_route(title: str, novena_slug: Optional[str]) -> Optional[str]:
+    """Map a devotional's title to an in-app prayer/novena route when one exists."""
+    t = (title or "").lower()
+    if "novena" in t:
+        return f"/novenas/{novena_slug}" if novena_slug else "/novenas"
+    if "rosary" in t:
+        return "/prayer/rosary"
+    if "chaplet" in t or "divine mercy" in t:
+        return "/prayer/category/chaplets"
+    if "consecrat" in t or "enthron" in t or "totus tuus" in t:
+        return "/consecration"
+    if "liturgy of the hours" in t or "divine office" in t:
+        return "/liturgy"
+    if "stations of the cross" in t:
+        return "/prayer/category/stations"
+    if "litany" in t or "litanies" in t:
+        return "/prayer/category/litany"
+    if "angelus" in t or "memorare" in t or "salve regina" in t or "magnificat" in t:
+        return "/prayer/category/marian"
+    if "st. michael" in t or "st michael" in t:
+        return "/prayer/category/devotional"
+    if "before mass" in t or "after mass" in t or "communion" in t:
+        return "/prayer/category/mass"
+    return None
+
+
+def _with_routes(items: List[Dict[str, str]], novena_slug: Optional[str]) -> List[Dict[str, Any]]:
+    out: List[Dict[str, Any]] = []
+    for it in items:
+        d = dict(it)
+        r = _devotion_route(it.get("title", ""), novena_slug)
+        if r:
+            d["route"] = r
+        out.append(d)
+    return out
+
+
 def _public(slug: str, c: Dict[str, Any], vocation: str = "", state: str = "") -> Dict[str, Any]:
     voc_key = f"{vocation}|{state}"
     voc_trad = VOCATION_TRADITIONS.get(voc_key)
@@ -1295,8 +1458,12 @@ def _public(slug: str, c: Dict[str, Any], vocation: str = "", state: str = "") -
         "church_traditions": CHURCH_TRADITIONS.get(slug, []),
         "daily_traditions": DAILY_TRADITIONS.get(slug, []),
         "vocation_traditions": voc_trad,
-        "saint_devotions": SAINT_DEVOTIONS.get(slug, []),
-        "vocation_devotions": VOCATION_DEVOTIONS.get(voc_key),
+        "saint_devotions": _with_routes(SAINT_DEVOTIONS.get(slug, []), c.get("novena_slug")),
+        "vocation_devotions": (
+            {"label": VOCATION_DEVOTIONS[voc_key]["label"],
+             "items": _with_routes(VOCATION_DEVOTIONS[voc_key]["items"], c.get("novena_slug"))}
+            if voc_key in VOCATION_DEVOTIONS else None
+        ),
         "has_consecration": True,  # the St. Joseph consecration is open to all companions
         "is_joseph": slug == "st-joseph",
         "note": c.get("note"),

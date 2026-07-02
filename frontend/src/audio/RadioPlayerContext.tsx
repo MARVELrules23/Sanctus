@@ -51,8 +51,20 @@ export function RadioPlayerProvider({ children }: { children: React.ReactNode })
   const [error, setError] = useState<string | null>(null);
 
   // The player is bound to the current stream URL. When `current` changes,
-  // expo-audio swaps the underlying source automatically.
-  const player = useAudioPlayer(current?.stream_url ? { uri: current.stream_url } : null);
+  // expo-audio swaps the underlying source automatically. We attach the
+  // station name as now-playing metadata so the lock screen / browser media
+  // session shows the station instead of the app bundle name ("frontend").
+  const player = useAudioPlayer(
+    current?.stream_url
+      ? {
+          uri: current.stream_url,
+          metadata: {
+            title: current.name,
+            artist: "Sanctus Catholic Radio",
+          },
+        }
+      : null,
+  );
   const status = useAudioPlayerStatus(player);
 
   // Configure audio session once at provider mount — required so audio keeps

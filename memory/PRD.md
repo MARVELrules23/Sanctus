@@ -231,3 +231,14 @@ Reverent & traditional aesthetic: cream/parchment background, deep stained-gl- C
 - Companions (backend `companions.py`): added `SAINT_DEVOTIONS` (per-slug recommended devotions for all 21 companions) and `VOCATION_DEVOTIONS` (per vocation|state). `_public` now returns `saint_devotions` and `vocation_devotions`.
 - Companion screen (`app/companion/[slug].tsx`): new "Recommended devotionals" section (saint-specific, testID `companion-saint-devotions`) plus a vocation-tailored devotions box (testID `companion-vocation-devotions`). `CompanionDetail` type extended in api.ts.
 - Verified: /companions/therese-lisieux returns 4 saint devotions + marriage|discerning vocation devotions; UI screenshots confirm both the library free filter/labels and the companion devotionals render.
+
+## Session update 19 (July 2026) — Phase 1 of big batch (radio title, 4 companions, deep-linked devotionals)
+- Radio: `RadioPlayerContext.tsx` now passes `metadata:{title: station name, artist:"Sanctus Catholic Radio"}` to the expo-audio source so the lock screen / media session shows the STATION NAME instead of "frontend" (best validated on a native build).
+- New companions added to `companions.py` (COMPANIONS + COMPANION_ORDER + SAINT_DEVOTIONS + DAILY_PRAYERS): St. Augustine (augustine), St. John the Baptist (john-the-baptist), St. James the Less (james-the-less), St. Thomas Aquinas (thomas-aquinas) — each with importance, 4 virtues, 10 daily acts, 4 devotions, morning prayer.
+- Deep-linked devotionals: `_devotion_route()` + `_with_routes()` in companions.py attach an in-app `route` to saint & vocation devotions by keyword (rosary→/prayer/rosary, chaplet/divine mercy→/prayer/category/chaplets, consecration/enthronement→/consecration, liturgy of hours→/liturgy, stations→/prayer/category/stations, litany→/prayer/category/litany, marian prayers→/prayer/category/marian, novena→/novenas/<slug>). Frontend `CompanionTradition.route?`; companion screen makes devotion rows Pressable with a chevron when a route exists. Verified via API + screenshot.
+
+### REMAINING in this batch (not yet built) — next phases:
+1. Custom Challenges (PER-DAY custom entries): components (abstinence, prayer/devotional, works of charity, adoration, virtue), length 7/14/30/60, start date, show on liturgical calendar. Needs backend user-challenge model + endpoints + calendar overlay + create UI.
+2. "Write your own prayer" + "Create your own devotional" (pick saint/angel + own criteria); entry points BOTH in Profile ("My Prayers & Devotionals") and Prayer tab; custom devotional can render companion-style.
+3. Mass vestments reference per rite (Roman/TLM/Byzantine) with REAL images (Wikimedia Commons, not AI) + meaning text.
+4. TLM (1962) & Byzantine Mass readings — user wants FULL readings text every day (resolve citations via app Bible where possible).

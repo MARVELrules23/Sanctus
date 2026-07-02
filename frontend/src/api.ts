@@ -2094,7 +2094,7 @@ export async function getVocationGuide(): Promise<VocationGuide> {
 
 // ---- Companion saints ----
 export type CompanionVirtue = { name: string; how: string };
-export type CompanionTradition = { title: string; body: string };
+export type CompanionTradition = { title: string; body: string; route?: string };
 export type CompanionDetail = {
   slug: string;
   name: string;

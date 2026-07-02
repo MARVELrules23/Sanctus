@@ -208,13 +208,21 @@ export default function CompanionScreen() {
               </View>
               <Text style={styles.devotionHint}>Devotions especially connected to {data.name}.</Text>
               {data.saint_devotions.map((t, i) => (
-                <View key={i} style={styles.tradition}>
+                <Pressable
+                  key={i}
+                  disabled={!t.route}
+                  onPress={() => t.route && router.push(t.route as any)}
+                  style={styles.tradition}
+                >
                   <Ionicons name="flower" size={13} color={colors.goldDark} style={{ marginTop: 3 }} />
                   <View style={{ flex: 1 }}>
                     <Text style={styles.tradName}>{t.title}</Text>
                     <Text style={styles.tradBody}>{t.body}</Text>
                   </View>
-                </View>
+                  {t.route ? (
+                    <Ionicons name="chevron-forward" size={16} color={colors.gold} style={{ marginTop: 3 }} />
+                  ) : null}
+                </Pressable>
               ))}
             </View>
           ) : null}
@@ -227,13 +235,21 @@ export default function CompanionScreen() {
                 <Text style={styles.cardHeadText}>{data.vocation_devotions.label}</Text>
               </View>
               {data.vocation_devotions.items.map((t, i) => (
-                <View key={i} style={styles.tradition}>
+                <Pressable
+                  key={i}
+                  disabled={!t.route}
+                  onPress={() => t.route && router.push(t.route as any)}
+                  style={styles.tradition}
+                >
                   <Ionicons name="add-circle-outline" size={15} color={colors.primary} style={{ marginTop: 2 }} />
                   <View style={{ flex: 1 }}>
                     <Text style={styles.tradName}>{t.title}</Text>
                     <Text style={styles.tradBody}>{t.body}</Text>
                   </View>
-                </View>
+                  {t.route ? (
+                    <Ionicons name="chevron-forward" size={16} color={colors.primary} style={{ marginTop: 2 }} />
+                  ) : null}
+                </Pressable>
               ))}
             </View>
           ) : null}

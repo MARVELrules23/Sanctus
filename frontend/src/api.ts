@@ -1422,6 +1422,20 @@ export async function getVestments(): Promise<{ rites: VestmentRite[] }> {
   return await api("/vestments");
 }
 
+// ---- Traditional Latin Mass (1962) readings ----
+export type TLMReadingPart = { citation: string; verses: { n: number; text: string }[] };
+export type TLMReadings = {
+  date: string;
+  available: boolean;
+  proper_key?: string;
+  feria_fallback?: boolean;
+  epistle?: TLMReadingPart;
+  gospel?: TLMReadingPart;
+};
+export async function getTLMReadings(date: string): Promise<TLMReadings> {
+  return await api(`/tridentine/readings?date=${encodeURIComponent(date)}`);
+}
+
 
 export async function getChallenge(slug: string): Promise<ChallengeDetail> {
   return await api(`/challenges/${encodeURIComponent(slug)}`);

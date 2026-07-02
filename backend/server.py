@@ -443,6 +443,17 @@ async def tridentine_month(year: int, month: int):
     return {"year": year, "month": month, "calendar": "1962", "days": days}
 
 
+@api.get("/tridentine/readings")
+async def tridentine_readings(date: str):
+    """Traditional Latin Mass (1962) Epistle & Gospel with full Douay-Rheims text."""
+    try:
+        d = datetime.strptime(date, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="date must be YYYY-MM-DD")
+    from tridentine_readings import get_tridentine_readings
+    return await get_tridentine_readings(db, d)
+
+
 # ---------- Preferences ----------
 @api.get("/preferences")
 async def get_prefs(user: User = Depends(get_current_user)):

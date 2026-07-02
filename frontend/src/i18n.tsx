@@ -46,6 +46,7 @@ const en: Dict = {
   "tab.parish": "Parish",
   "tab.sanctuary": "Sanctuary",
   "tab.profile": "Profile",
+  "tab.family": "Family",
   // home quick tiles
   "home.prayer": "Prayer",
   "home.journal": "Journal",
@@ -198,6 +199,7 @@ const es: Dict = {
   "tab.parish": "Parroquia",
   "tab.sanctuary": "Santuario",
   "tab.profile": "Perfil",
+  "tab.family": "Familia",
   // home quick tiles
   "home.prayer": "Oración",
   "home.journal": "Diario",
@@ -350,6 +352,7 @@ const it: Dict = {
   "tab.parish": "Parrocchia",
   "tab.sanctuary": "Santuario",
   "tab.profile": "Profilo",
+  "tab.family": "Famiglia",
   // home quick tiles
   "home.prayer": "Preghiera",
   "home.journal": "Diario",

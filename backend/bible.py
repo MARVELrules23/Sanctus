@@ -25,6 +25,24 @@ from i18n_translate import translate_texts
 
 GETBIBLE_BASE = "https://api.getbible.net/v2/douayrheims"
 USER_AGENT = "SanctusApp/1.0 (+https://sanctus.app)"
+
+# Embedded, full-text translations we serve chapter-by-chapter (public domain).
+# The book numbering (`getbible_nr`) is shared across getbible.net translations.
+DEFAULT_TRANSLATION = "douayrheims"
+TRANSLATIONS: Dict[str, Dict[str, str]] = {
+    "douayrheims": {"base": "https://api.getbible.net/v2/douayrheims", "label": "Douay-Rheims (Challoner)", "lang": "en"},
+    "vulgate": {"base": "https://api.getbible.net/v2/vulgate", "label": "Vulgata Clementina (Latin)", "lang": "la"},
+}
+
+
+def _norm_translation(translation: Optional[str]) -> str:
+    t = (translation or DEFAULT_TRANSLATION).strip().lower()
+    return t if t in TRANSLATIONS else DEFAULT_TRANSLATION
+
+
+def _doc_id(slug: str, chapter: int, translation: str) -> str:
+    return f"{slug}-{chapter}" if translation == DEFAULT_TRANSLATION else f"{slug}-{chapter}-{translation}"
+
 ALLOWED_COLORS = {"rose", "gold", "sage", "violet"}
 
 # Emergent LLM key for on-demand Spanish translation of chapters (set at startup).
@@ -140,9 +158,10 @@ def all_books() -> List[Dict[str, Any]]:
     ]
 
 
-async def _fetch_book_from_upstream(book: Dict[str, Any]) -> List[Dict[str, Any]]:
+async def _fetch_book_from_upstream(book: Dict[str, Any], translation: str = DEFAULT_TRANSLATION) -> List[Dict[str, Any]]:
     """Download the entire book from getbible.net once and return its chapters."""
-    url = f"{GETBIBLE_BASE}/{book['getbible_nr']}.json"
+    base = TRANSLATIONS[_norm_translation(translation)]["base"]
+    url = f"{base}/{book['getbible_nr']}.json"
     async with httpx.AsyncClient(timeout=30.0, headers={"User-Agent": USER_AGENT}) as client:
         r = await client.get(url)
     if r.status_code != 200:
@@ -154,21 +173,18 @@ async def _fetch_book_from_upstream(book: Dict[str, Any]) -> List[Dict[str, Any]
     return chapters
 
 
-async def _ensure_book_cached(db, book: Dict[str, Any]) -> None:
-    """If any chapter for this book is missing in cache, fetch the whole book and
-    insert chapter docs that don't yet exist. Concurrent calls coalesce via a lock."""
-    # Fast check: if any chapter for this book is already cached we assume the
-    # whole book is cached (we always write all chapters together below).
-    cached = await db.bible_books.find_one({"book_slug": book["slug"]}, {"_id": 1})
-    if cached:
+async def _ensure_book_cached(db, book: Dict[str, Any], translation: str = DEFAULT_TRANSLATION) -> None:
+    """If this book (for the given translation) is not cached, fetch it whole and
+    write per-chapter docs. Concurrent calls coalesce via a per-book+translation lock."""
+    translation = _norm_translation(translation)
+    # chapter 1 existing => whole book cached (we always write all chapters together).
+    if await db.bible_books.find_one({"_id": _doc_id(book["slug"], 1, translation)}, {"_id": 1}):
         return
-    lock = _BOOK_FETCH_LOCKS.setdefault(book["slug"], asyncio.Lock())
+    lock = _BOOK_FETCH_LOCKS.setdefault(f"{book['slug']}-{translation}", asyncio.Lock())
     async with lock:
-        # Re-check inside the lock
-        cached = await db.bible_books.find_one({"book_slug": book["slug"]}, {"_id": 1})
-        if cached:
+        if await db.bible_books.find_one({"_id": _doc_id(book["slug"], 1, translation)}, {"_id": 1}):
             return
-        chapters = await _fetch_book_from_upstream(book)
+        chapters = await _fetch_book_from_upstream(book, translation)
         now = datetime.now(timezone.utc).isoformat()
         docs = []
         for idx, chap in enumerate(chapters, start=1):
@@ -179,17 +195,17 @@ async def _ensure_book_cached(db, book: Dict[str, Any]) -> None:
                 if (v.get("text") or "").strip()
             ]
             docs.append({
-                "_id": f"{book['slug']}-{idx}",
+                "_id": _doc_id(book["slug"], idx, translation),
                 "book_slug": book["slug"],
                 "book_name": book["name"],
                 "book_order": book["order"],
                 "chapter": idx,
                 "verses": verses,
+                "translation": translation,
                 "chapters_total": len(chapters),
                 "fetched_at": now,
             })
         if docs:
-            # Use ordered=False so retries don't fail on dup-key after partial writes.
             try:
                 await db.bible_books.insert_many(docs, ordered=False)
             except Exception:
@@ -255,17 +271,18 @@ async def _localize_chapter_es(db, book: Dict[str, Any], chapter: int, en_doc: D
     return es_doc
 
 
-async def get_chapter(db, book_slug: str, chapter: int) -> Dict[str, Any]:
+async def get_chapter(db, book_slug: str, chapter: int, translation: str = DEFAULT_TRANSLATION) -> Dict[str, Any]:
+    translation = _norm_translation(translation)
     book = book_meta(book_slug)
     if not book:
         raise HTTPException(status_code=404, detail="unknown book")
     if chapter < 1 or chapter > book["chapters"]:
         raise HTTPException(status_code=400, detail=f"chapter out of range (1-{book['chapters']})")
-    await _ensure_book_cached(db, book)
-    doc = await db.bible_books.find_one({"_id": f"{book_slug}-{chapter}"}, {"_id": 0, "fetched_at": 0})
+    await _ensure_book_cached(db, book, translation)
+    doc = await db.bible_books.find_one({"_id": _doc_id(book_slug, chapter, translation)}, {"_id": 0, "fetched_at": 0})
     if not doc:
         # Cache write failed silently — fall back to live fetch for this chapter.
-        chapters = await _fetch_book_from_upstream(book)
+        chapters = await _fetch_book_from_upstream(book, translation)
         chap = chapters[chapter - 1] if 0 < chapter <= len(chapters) else None
         if not chap:
             raise HTTPException(status_code=502, detail="chapter unavailable")
@@ -284,10 +301,15 @@ async def get_chapter(db, book_slug: str, chapter: int) -> Dict[str, Any]:
     doc["book_name"] = book["name"]
     doc["dr_name"] = book["dr_name"]
     doc["chapters_total"] = book["chapters"]
-    if get_lang() == "es":
+    doc["translation"] = translation
+    doc["translation_label"] = TRANSLATIONS[translation]["label"]
+    # Spanish rendering only applies to the English Douay-Rheims text.
+    if translation == DEFAULT_TRANSLATION and get_lang() == "es":
         doc = await _localize_chapter_es(db, book, chapter, doc)
         doc["dr_name"] = book["dr_name"]
         doc["chapters_total"] = book["chapters"]
+        doc["translation"] = translation
+        doc["translation_label"] = TRANSLATIONS[translation]["label"]
     return doc
 
 

@@ -39,6 +39,8 @@ db = client[os.environ["DB_NAME"]]
 
 EMERGENT_LLM_KEY = os.environ.get("EMERGENT_LLM_KEY", "")
 bible_svc.set_llm_key(EMERGENT_LLM_KEY)
+import food_traditions as food_svc
+food_svc.set_llm_key(EMERGENT_LLM_KEY)
 SESSION_DATA_URL = "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data"
 
 logger = logging.getLogger("sanctus")
@@ -393,6 +395,32 @@ async def liturgical_day(date: str):
     except ValueError:
         raise HTTPException(status_code=400, detail="date must be YYYY-MM-DD")
     return get_liturgical_day(d)
+
+
+@api.get("/food-traditions")
+async def food_traditions_all():
+    return {"items": await food_svc.localize(db, food_svc.all_traditions())}
+
+
+@api.get("/food-traditions/day")
+async def food_traditions_day(date: str):
+    try:
+        d = datetime.strptime(date, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="date must be YYYY-MM-DD")
+    lit = get_liturgical_day(d)
+    items = food_svc.traditions_for_day(lit)
+    return {"date": date, "feast": lit.get("feast"), "season": lit.get("season"),
+            "items": await food_svc.localize(db, items)}
+
+
+@api.get("/food-traditions/{slug}")
+async def food_tradition_one(slug: str):
+    t = food_svc.get_tradition(slug)
+    if not t:
+        raise HTTPException(status_code=404, detail="unknown tradition")
+    items = await food_svc.localize(db, [t])
+    return items[0]
 
 
 @api.get("/liturgical/month")
@@ -2017,8 +2045,8 @@ async def bible_books():
 
 
 @api.get("/bible/chapter/{book_slug}/{chapter}")
-async def bible_chapter(book_slug: str, chapter: int, user: User = Depends(get_current_user)):
-    data = await bible_svc.get_chapter(db, book_slug, chapter)
+async def bible_chapter(book_slug: str, chapter: int, translation: str = "douayrheims", user: User = Depends(get_current_user)):
+    data = await bible_svc.get_chapter(db, book_slug, chapter, translation)
     cursor = db.bible_highlights.find(
         {"user_id": user.user_id, "book_slug": book_slug, "chapter": chapter},
         {"_id": 0, "verse": 1, "color": 1},

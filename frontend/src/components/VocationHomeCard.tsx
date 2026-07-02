@@ -103,6 +103,13 @@ export default function VocationHomeCard() {
         </View>
         <Ionicons name="chevron-forward" size={20} color={colors.gold} />
       </Pressable>
+
+      {guide.daily_verse && guide.daily_verse.text ? (
+        <View style={styles.verseLine} testID="vocation-card-verse">
+          <Text style={styles.verseText} numberOfLines={3}>“{guide.daily_verse.text}”</Text>
+          <Text style={styles.verseRef}>— {guide.daily_verse.reference}</Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -141,4 +148,7 @@ const styles = StyleSheet.create({
   },
   guideTitle: { fontFamily: fonts.headingSemi, fontSize: 14.5, color: "#FBF6E9" },
   guideSub: { fontFamily: fonts.bodyRegular, fontSize: 12, color: "#E9E2D0", marginTop: 1 },
+  verseLine: { marginTop: spacing.sm, borderLeftWidth: 3, borderLeftColor: colors.gold, paddingLeft: spacing.sm },
+  verseText: { fontFamily: fonts.bodyItalic, fontSize: 13.5, color: colors.textSecondary, lineHeight: 20 },
+  verseRef: { fontFamily: fonts.uiSemi, fontSize: 11.5, color: colors.gold, marginTop: 3 },
 });

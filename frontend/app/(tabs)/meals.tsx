@@ -198,6 +198,21 @@ export default function MealsScreen() {
             {lit.is_sunday && <LiturgicalBadge color="gold" label="Lord's Day" />}
           </View>
         ) : null}
+
+        <Pressable
+          testID="meals-food-traditions-card"
+          onPress={() => router.push("/food-traditions" as any)}
+          style={({ pressed }) => [styles.foodTradCard, pressed && styles.pressed]}
+        >
+          <View style={styles.foodTradIcon}>
+            <Ionicons name="restaurant-outline" size={20} color="#FBF6E9" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.foodTradTitle}>Feast-day food traditions</Text>
+            <Text style={styles.foodTradSub}>Recipes to celebrate the Church's feasts & seasons at home</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </Pressable>
         {lit?.feast ? <Text style={styles.feast}>{lit.feast}</Text> : null}
         <Text style={styles.dayHeader}>
           {d.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
@@ -549,4 +564,19 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   pressed: { opacity: 0.7 },
+
+  foodTradCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  foodTradIcon: { width: 42, height: 42, borderRadius: 21, backgroundColor: "#7A5C2E", alignItems: "center", justifyContent: "center" },
+  foodTradTitle: { fontFamily: fonts.headingSemi, fontSize: 15, color: colors.textPrimary },
+  foodTradSub: { fontFamily: fonts.bodyRegular, fontSize: 12.5, color: colors.textSecondary, lineHeight: 18, marginTop: 2 },
 });

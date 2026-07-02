@@ -133,6 +133,16 @@ export default function TabsLayout() {
           tabBarTestID: "tab-profile",
         }}
       />
+      <Tabs.Screen
+        name="family"
+        options={{
+          title: t("tab.family"),
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="home-outline" color={color} size={size} />
+          ),
+          tabBarTestID: "tab-family",
+        }}
+      />
     </Tabs>
   );
 }

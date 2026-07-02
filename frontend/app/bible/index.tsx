@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -119,6 +120,28 @@ export default function BibleIndexScreen() {
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scroll}>
+          <View style={styles.transPanel}>
+            <Text style={styles.transPanelTitle}>More Catholic translations</Text>
+            <Text style={styles.transPanelSub}>
+              Douay-Rheims & the Latin Vulgate are read in-app. These approved editions open in your browser:
+            </Text>
+            {[
+              { label: "New American Bible (NABRE) · USCCB", url: "https://bible.usccb.org/bible" },
+              { label: "Revised Standard Version — Catholic Edition", url: "https://www.biblegateway.com/versions/Revised-Standard-Version-Catholic-Edition-RSVCE-Bible/" },
+              { label: "Knox Bible", url: "https://www.newadventbible.com/" },
+            ].map((x, i) => (
+              <Pressable
+                key={x.url}
+                testID={`bible-ext-translation-${i}`}
+                onPress={() => Linking.openURL(x.url)}
+                style={({ pressed }) => [styles.transLink, pressed && styles.pressed]}
+              >
+                <Ionicons name="open-outline" size={16} color={colors.gold} />
+                <Text style={styles.transLinkText}>{x.label}</Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} style={{ marginLeft: "auto" }} />
+              </Pressable>
+            ))}
+          </View>
           {SECTION_ORDER.map((sec) => {
             const list = grouped[sec];
             if (!list.length) return null;
@@ -280,6 +303,18 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   chapText: { fontFamily: fonts.uiSemi, color: colors.textPrimary, fontSize: 14 },
+  transPanel: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  transPanelTitle: { fontFamily: fonts.headingSemi, fontSize: 15, color: colors.textPrimary },
+  transPanelSub: { fontFamily: fonts.bodyRegular, fontSize: 12.5, color: colors.textSecondary, lineHeight: 18, marginTop: 3, marginBottom: spacing.sm },
+  transLink: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.borderSoft },
+  transLinkText: { fontFamily: fonts.uiSemi, fontSize: 13, color: colors.primary },
   pressed: { opacity: 0.7 },
 
 });

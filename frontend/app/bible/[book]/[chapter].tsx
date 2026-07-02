@@ -36,6 +36,7 @@ export default function BibleReaderScreen() {
   const [error, setError] = useState<string | null>(null);
   const [pendingVerse, setPendingVerse] = useState<number | null>(null);
   const [busyVerse, setBusyVerse] = useState<number | null>(null);
+  const [translation, setTranslation] = useState<"douayrheims" | "vulgate">("douayrheims");
 
   const highlightMap = useMemo(() => {
     const m: Record<number, BibleColor> = {};
@@ -52,7 +53,7 @@ export default function BibleReaderScreen() {
       // (No HTTP cache layer yet — keep simple; cost is fine.)
       const [meta, ch] = await Promise.all([
         api<{ items: BibleBook[] }>("/bible/books"),
-        api<BibleChapter>(`/bible/chapter/${bookSlug}/${chapter}`),
+        api<BibleChapter>(`/bible/chapter/${bookSlug}/${chapter}?translation=${translation}`),
       ]);
       const b = meta.items.find((x) => x.slug === bookSlug) || null;
       setBook(b);
@@ -62,7 +63,7 @@ export default function BibleReaderScreen() {
     } finally {
       setLoading(false);
     }
-  }, [bookSlug, chapter]);
+  }, [bookSlug, chapter, translation]);
 
   useEffect(() => {
     void load();
@@ -160,6 +161,21 @@ export default function BibleReaderScreen() {
     <SafeAreaView style={styles.safe} edges={["top", "bottom"]} testID="bible-reader-screen">
       <Stack.Screen options={{ headerShown: false }} />
       {renderHeader()}
+
+      <View style={styles.transRow}>
+        {(["douayrheims", "vulgate"] as const).map((tr) => (
+          <Pressable
+            key={tr}
+            testID={`bible-trans-${tr}`}
+            onPress={() => setTranslation(tr)}
+            style={[styles.transChip, translation === tr && styles.transChipActive]}
+          >
+            <Text style={[styles.transChipText, translation === tr && styles.transChipTextActive]}>
+              {tr === "douayrheims" ? "Douay-Rheims" : "Latin · Vulgate"}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
 
       {loading ? (
         <View style={styles.center}>
@@ -321,6 +337,11 @@ const styles = StyleSheet.create({
   headerTitle: { fontFamily: fonts.headingBold, fontSize: 18, color: colors.textPrimary },
   headerSubRow: { flexDirection: "row", gap: spacing.sm, alignItems: "center", marginTop: 2 },
   drName: { fontFamily: fonts.bodyItalic, fontStyle: "italic", color: colors.textMuted, fontSize: 11 },
+  transRow: { flexDirection: "row", gap: 8, paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
+  transChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: radius.round, borderWidth: 1, borderColor: colors.borderSoft, backgroundColor: colors.surface },
+  transChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  transChipText: { fontFamily: fonts.uiSemi, fontSize: 12, color: colors.textSecondary },
+  transChipTextActive: { color: colors.gold },
   scroll: { padding: spacing.lg, paddingTop: spacing.md },
   chapterLabel: {
     fontFamily: fonts.uiSemi,

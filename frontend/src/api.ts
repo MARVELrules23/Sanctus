@@ -1451,6 +1451,28 @@ export async function getByzantineReadings(date: string, calendar = "new"): Prom
   return await api(`/eastern/readings?date=${encodeURIComponent(date)}&calendar=${calendar}`);
 }
 
+// ---- Feast-day / seasonal food traditions ----
+export type FoodTradition = {
+  slug: string;
+  title: string;
+  origin: string;
+  occasion: string;
+  icon?: string;
+  color?: string;
+  description: string;
+  ingredients: string[];
+  steps: string[];
+};
+export async function getFoodTraditions(): Promise<{ items: FoodTradition[] }> {
+  return await api(`/food-traditions`);
+}
+export async function getFoodTraditionsForDay(date: string): Promise<{ date: string; feast?: string; season?: string; items: FoodTradition[] }> {
+  return await api(`/food-traditions/day?date=${encodeURIComponent(date)}`);
+}
+export async function getFoodTradition(slug: string): Promise<FoodTradition> {
+  return await api(`/food-traditions/${slug}`);
+}
+
 
 export async function getChallenge(slug: string): Promise<ChallengeDetail> {
   return await api(`/challenges/${encodeURIComponent(slug)}`);

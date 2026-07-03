@@ -103,7 +103,8 @@ export default function ColoringCanvas() {
       ) : (
         <View style={{ flex: 1 }}>
           <View style={styles.canvasWrap} {...panResponder.panHandlers} testID="coloring-canvas">
-            <Svg style={StyleSheet.absoluteFill}>
+            <Image source={{ uri: page.image }} style={styles.lineArt} resizeMode="contain" />
+            <Svg style={styles.overlay} pointerEvents="none">
               {strokes.map((s, i) => (
                 <Path key={i} d={s.d} stroke={s.color} strokeWidth={22} strokeLinecap="round" strokeLinejoin="round" fill="none" opacity={0.55} />
               ))}
@@ -111,7 +112,6 @@ export default function ColoringCanvas() {
                 <Path d={current} stroke={color} strokeWidth={22} strokeLinecap="round" strokeLinejoin="round" fill="none" opacity={0.55} />
               ) : null}
             </Svg>
-            <Image source={{ uri: page.image }} style={styles.lineArt} resizeMode="contain" />
           </View>
 
           <View style={styles.palette}>
@@ -137,7 +137,8 @@ const styles = StyleSheet.create({
   headerTitle: { flex: 1, textAlign: "center", fontFamily: fonts.headingSemi, fontSize: 16, color: colors.textPrimary, marginHorizontal: spacing.sm },
   empty: { textAlign: "center", marginTop: 40, fontFamily: fonts.bodyRegular, color: colors.textSecondary },
   canvasWrap: { flex: 1, margin: spacing.md, borderRadius: radius.lg, overflow: "hidden", backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: colors.borderSoft },
-  lineArt: { ...StyleSheet.absoluteFillObject, width: "100%", height: "100%" },
+  lineArt: { ...StyleSheet.absoluteFillObject, width: "100%", height: "100%", pointerEvents: "none" },
+  overlay: { ...StyleSheet.absoluteFillObject },
   palette: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: spacing.sm, paddingHorizontal: spacing.md },
   swatch: { width: 34, height: 34, borderRadius: 17, borderWidth: 1, borderColor: colors.borderSoft },
   swatchActive: { borderWidth: 3, borderColor: colors.primary, transform: [{ scale: 1.15 }] },

@@ -436,6 +436,49 @@ async def coloring_pages():
     return {"items": docs}
 
 
+def _family_member_public(d: dict) -> dict:
+    from companions import COMPANIONS
+    slug = d.get("companion_slug")
+    comp = COMPANIONS.get(slug or "", {})
+    return {"id": d["member_id"], "name": d.get("name"), "companion_slug": slug, "companion_name": comp.get("name")}
+
+
+@api.get("/family/members")
+async def family_members_list(user: User = Depends(get_current_user)):
+    docs = await db.family_members.find({"user_id": user.user_id}, {"_id": 0}).sort("created_at", 1).to_list(50)
+    return {"items": [_family_member_public(d) for d in docs]}
+
+
+@api.post("/family/members")
+async def family_members_add(payload: dict, user: User = Depends(get_current_user)):
+    name = (payload.get("name") or "").strip()
+    slug = (payload.get("companion_slug") or "").strip() or None
+    if not name:
+        raise HTTPException(status_code=400, detail="name required")
+    doc = {"member_id": "fm_" + uuid.uuid4().hex[:12], "user_id": user.user_id, "name": name,
+           "companion_slug": slug, "created_at": datetime.now(timezone.utc)}
+    await db.family_members.insert_one(doc)
+    return _family_member_public(doc)
+
+
+@api.patch("/family/members/{member_id}")
+async def family_members_update(member_id: str, payload: dict, user: User = Depends(get_current_user)):
+    upd = {}
+    if (payload.get("name") or "").strip():
+        upd["name"] = payload["name"].strip()
+    if "companion_slug" in payload:
+        upd["companion_slug"] = (payload.get("companion_slug") or None)
+    if upd:
+        await db.family_members.update_one({"member_id": member_id, "user_id": user.user_id}, {"$set": upd})
+    return {"ok": True}
+
+
+@api.delete("/family/members/{member_id}")
+async def family_members_delete(member_id: str, user: User = Depends(get_current_user)):
+    await db.family_members.delete_one({"member_id": member_id, "user_id": user.user_id})
+    return {"ok": True}
+
+
 @api.get("/liturgical/month")
 async def liturgical_month(year: int, month: int):
     if month < 1 or month > 12:

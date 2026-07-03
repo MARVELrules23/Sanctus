@@ -31,6 +31,7 @@ from pydantic import BaseModel, Field
 
 from library_seed_data import SEED_BOOKS, SEED_FILMS, SEED_STATIONS
 from library_children_data import CHILDREN_BOOKS
+from parent_guides_data import PARENT_GUIDES
 
 logger = logging.getLogger("sanctus.library")
 

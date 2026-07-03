@@ -118,6 +118,24 @@ export default function ColoringCanvas() {
       "worklet";
     });
 
+  // Clamp the translation so the (top-left-anchored) scaled content always
+  // covers the canvas — you can pan to every edge but never past it, so no
+  // part of the picture gets cut off and no blank gutter appears.
+  const clampX = (v: number, s: number) => {
+    "worklet";
+    const min = canvasW.value * (1 - s); // right edge limit (<= 0)
+    if (v > 0) return 0;
+    if (v < min) return min;
+    return v;
+  };
+  const clampY = (v: number, s: number) => {
+    "worklet";
+    const min = canvasH.value * (1 - s);
+    if (v > 0) return 0;
+    if (v < min) return min;
+    return v;
+  };
+
   // Two-finger pinch = zoom (and pan via the focal point). Zoom is anchored to
   // the top-left origin so the coordinate math above stays simple.
   const pinchGesture = Gesture.Pinch()
@@ -136,8 +154,8 @@ export default function ColoringCanvas() {
       const cx = (e.focalX - startTx.value) / startScale.value;
       const cy = (e.focalY - startTy.value) / startScale.value;
       scale.value = next;
-      tx.value = e.focalX - cx * next;
-      ty.value = e.focalY - cy * next;
+      tx.value = clampX(e.focalX - cx * next, next);
+      ty.value = clampY(e.focalY - cy * next, next);
     })
     .onEnd(() => {
       "worklet";
@@ -145,6 +163,9 @@ export default function ColoringCanvas() {
         scale.value = withTiming(1);
         tx.value = withTiming(0);
         ty.value = withTiming(0);
+      } else {
+        tx.value = clampX(tx.value, scale.value);
+        ty.value = clampY(ty.value, scale.value);
       }
     });
 
@@ -209,7 +230,16 @@ export default function ColoringCanvas() {
           <Text style={styles.empty}>Page not found.</Text>
         ) : (
           <View style={{ flex: 1 }}>
-            <View ref={captureRefView} collapsable={false} style={styles.canvasWrap} testID="coloring-canvas">
+            <View
+              ref={captureRefView}
+              collapsable={false}
+              style={styles.canvasWrap}
+              testID="coloring-canvas"
+              onLayout={(e) => {
+                canvasW.value = e.nativeEvent.layout.width;
+                canvasH.value = e.nativeEvent.layout.height;
+              }}
+            >
               <GestureDetector gesture={composed}>
                 <Animated.View style={[styles.content, animatedStyle]} testID="coloring-touch-layer">
                   <Image source={{ uri: page.image }} style={styles.lineArt} resizeMode="contain" />

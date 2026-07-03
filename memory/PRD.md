@@ -364,3 +364,9 @@ Reverent & traditional aesthetic: cream/parchment background, deep stained-gl- C
   - Content (Image + Svg) in Animated.View with transform [translateX, translateY, scale], transformOrigin 'top left'. canvasWrap overflow hidden clips zoom.
   - Added reset-zoom button (testID coloring-reset-zoom). Hint updated: "Draw with one finger — pinch with two fingers to zoom in."
 - Verified iter94: single-finger drag draws & window scroll stays (0,0) [steady], strokes over image, color/undo/clear/share/persistence pass, no crash. Pinch code path verified (not automatable on web).
+
+## Session update 36 (July 2026) — Coloring canvas: pan-bounds clamp + pinch never paints (bug fix)
+- User asks: pinching with two fingers must NOT leave a stroke, and while zoomed the whole image must be pannable to every edge without any part being cut off.
+- Pinch-never-paints: already guaranteed by Gesture.Pan().maxPointers(1) (draw gesture ignores 2+ pointers). Confirmed still in place.
+- Pan-bounds clamp (the missing piece): wired canvasW/canvasH via onLayout on the canvasWrap (were declared but never set). Added clampX/clampY worklets — for a top-left-anchored scaled content of size W*s, tx is clamped to [W*(1-s), 0] and ty to [H*(1-s), 0]. Applied in pinch onUpdate (live focal-pan) and onEnd. Guarantees you can pan to every edge but never past it (no blank gutter, no clipped picture).
+- Lint clean. Canvas renders correctly under auth (/coloring/cross, Simple Cross). Multi-touch pinch/pan is a native gesture and cannot be exercised in the single-pointer web preview — needs a real device / build for full QA.

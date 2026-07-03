@@ -355,3 +355,12 @@ Reverent & traditional aesthetic: cream/parchment background, deep stained-gl- C
 - Root cause 1: PanResponder was on the outer canvas View, competing with the underlying <Image> as touch target → touches over the image swallowed/offset. Fix: moved panHandlers to a single transparent top-layer View (testID coloring-touch-layer, styles.touchLayer absoluteFill) covering the whole canvas so all touches are captured uniformly.
 - Root cause 2 (found & fixed by testing agent): `<Svg style={styles.overlay}>` had no explicit width/height → react-native-svg on web used default 300x150 with overflow:hidden, clipping strokes drawn over the (centered) image. Fix: `<Svg width="100%" height="100%" style={styles.overlay}>`.
 - Verified iter93: drag over center of illustration renders visible strokes on both /coloring/sacred-heart and /coloring/cross; color switch, undo, clear, share, and AsyncStorage persistence all pass.
+
+## Session update 35 (July 2026) — Coloring canvas: steady drawing + pinch-to-zoom (bug fix, verified iter94)
+- User bug: drawing with a finger scrolled/moved the image instead of staying steady; wanted pinch-to-zoom.
+- Rewrote app/coloring/[slug].tsx to use react-native-gesture-handler (GestureDetector, wrapped in local GestureHandlerRootView) + reanimated:
+  - Gesture.Pan().maxPointers(1) = draw; claims the touch so the canvas stays STEADY (no scroll). Screen coords converted to unscaled content space (cx=(e.x-tx)/scale) via runOnJS so strokes align when zoomed.
+  - Gesture.Pinch() = zoom (focal-anchored, scale clamp 1..5) + focal-pan; composed via Gesture.Simultaneous(draw, pinch).
+  - Content (Image + Svg) in Animated.View with transform [translateX, translateY, scale], transformOrigin 'top left'. canvasWrap overflow hidden clips zoom.
+  - Added reset-zoom button (testID coloring-reset-zoom). Hint updated: "Draw with one finger — pinch with two fingers to zoom in."
+- Verified iter94: single-finger drag draws & window scroll stays (0,0) [steady], strokes over image, color/undo/clear/share/persistence pass, no crash. Pinch code path verified (not automatable on web).

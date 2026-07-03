@@ -1491,6 +1491,24 @@ export async function getColoringPages(): Promise<{ items: ColoringPage[] }> {
   return await api(`/coloring-pages`);
 }
 
+// ---- My Family Companions ----
+export type FamilyMember = { id: string; name: string; companion_slug?: string | null; companion_name?: string | null };
+export async function getFamilyMembers(): Promise<{ items: FamilyMember[] }> {
+  return await api(`/family/members`);
+}
+export async function addFamilyMember(name: string, companion_slug?: string | null): Promise<FamilyMember> {
+  return await api(`/family/members`, { method: "POST", body: { name, companion_slug } });
+}
+export async function deleteFamilyMember(id: string): Promise<{ ok: boolean }> {
+  return await api(`/family/members/${id}`, { method: "DELETE" });
+}
+export type CompanionOption = { slug: string; name: string };
+export async function getCompanionOptions(): Promise<CompanionOption[]> {
+  const r: any = await api(`/companions`);
+  const arr = Array.isArray(r) ? r : (r.items || r.companions || []);
+  return arr.map((c: any) => ({ slug: c.slug, name: c.name }));
+}
+
 
 export async function getChallenge(slug: string): Promise<ChallengeDetail> {
   return await api(`/challenges/${encodeURIComponent(slug)}`);

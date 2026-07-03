@@ -215,7 +215,7 @@ def _word_count(s: str) -> int:
 async def _seed_books_if_missing(db: AsyncIOMotorDatabase) -> int:
     """Insert seed books only when they don't already exist (by slug)."""
     inserted = 0
-    for entry in (SEED_BOOKS + CHILDREN_BOOKS):
+    for entry in (SEED_BOOKS + CHILDREN_BOOKS + PARENT_GUIDES):
         existing = await db["library_books"].find_one({"slug": entry["slug"]}, {"_id": 0, "slug": 1})
         if existing:
             continue

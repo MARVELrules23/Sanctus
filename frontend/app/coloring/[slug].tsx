@@ -130,9 +130,9 @@ export default function ColoringCanvas() {
         <Text style={styles.empty}>Page not found.</Text>
       ) : (
         <View style={{ flex: 1 }}>
-          <View ref={captureRefView} collapsable={false} style={styles.canvasWrap} {...panResponder.panHandlers} testID="coloring-canvas">
+          <View ref={captureRefView} collapsable={false} style={styles.canvasWrap} testID="coloring-canvas">
             <Image source={{ uri: page.image }} style={styles.lineArt} resizeMode="contain" />
-            <Svg style={styles.overlay}>
+            <Svg width="100%" height="100%" style={styles.overlay}>
               {strokes.map((s, i) => (
                 <Path key={i} d={s.d} stroke={s.color} strokeWidth={22} strokeLinecap="round" strokeLinejoin="round" fill="none" opacity={0.55} />
               ))}
@@ -140,6 +140,10 @@ export default function ColoringCanvas() {
                 <Path d={current} stroke={color} strokeWidth={22} strokeLinecap="round" strokeLinejoin="round" fill="none" opacity={0.55} />
               ) : null}
             </Svg>
+            {/* Single transparent top layer captures ALL touches uniformly, so
+                the coordinates are consistent whether the finger is over the
+                line-art image or the surrounding margins. */}
+            <View style={styles.touchLayer} {...panResponder.panHandlers} testID="coloring-touch-layer" />
           </View>
 
           <View style={styles.palette}>
@@ -167,6 +171,7 @@ const styles = StyleSheet.create({
   canvasWrap: { flex: 1, margin: spacing.md, borderRadius: radius.lg, overflow: "hidden", backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: colors.borderSoft },
   lineArt: { ...StyleSheet.absoluteFillObject, width: "100%", height: "100%", pointerEvents: "none" },
   overlay: { ...StyleSheet.absoluteFillObject, pointerEvents: "none" },
+  touchLayer: { ...StyleSheet.absoluteFillObject },
   palette: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: spacing.sm, paddingHorizontal: spacing.md },
   swatch: { width: 34, height: 34, borderRadius: 17, borderWidth: 1, borderColor: colors.borderSoft },
   swatchActive: { borderWidth: 3, borderColor: colors.primary, transform: [{ scale: 1.15 }] },

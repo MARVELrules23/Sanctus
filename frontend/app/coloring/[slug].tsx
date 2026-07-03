@@ -41,6 +41,10 @@ export default function ColoringCanvas() {
   const ty = useSharedValue(0);
   const startTx = useSharedValue(0);
   const startTy = useSharedValue(0);
+  const canvasW = useSharedValue(0);
+  const canvasH = useSharedValue(0);
+  // True while two fingers are pinching, so we never treat it as coloring.
+  const pinchingRef = useRef(false);
 
   const storageKey = `coloring_progress_${slug}`;
 

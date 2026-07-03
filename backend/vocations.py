@@ -264,6 +264,56 @@ CONTENT: Dict[str, Dict[str, Any]] = {
             "each one under this roof; send your holy angels to guard our rest. Jesus, Mary, "
             "and Joseph, watch over our home this night. Amen.",
         },
+        # State-tailored prayers: those DISCERNING marriage pray for their future
+        # spouse and family; those LIVING it pray for the spouse and children they have.
+        "prayers_by_state": {
+            "discerning": {
+                "morning_prayer": {
+                    "title": "Morning Prayer for My Future Spouse",
+                    "body": "Heavenly Father, wherever my future spouse is this morning, bless and "
+                    "keep them. Make us both holy while we wait, guard our hearts in purity, and "
+                    "prepare us to give ourselves fully one day in a marriage that glorifies you. "
+                    "Holy Family of Nazareth, lead me toward the family you have prepared. Amen.",
+                },
+                "afternoon_prayer": {
+                    "title": "Midday Prayer for a Holy Courtship",
+                    "body": "Lord, at the turning of this day I lift up the one you are preparing "
+                    "to walk beside me. Let my love be patient and chaste, my choices wise, and my "
+                    "trust in your timing unshaken. Draw us both closer to you now, so that our "
+                    "future home may be built on the rock of your love. Amen.",
+                },
+                "night_prayer": {
+                    "title": "Night Prayer for a Future Family",
+                    "body": "Father, as this day ends I entrust to you my future spouse and the "
+                    "children you may one day give us. Where I was impatient or fearful today, grant "
+                    "me peace and trust. Make me the person my future family will need me to be. "
+                    "Jesus, Mary, and Joseph, watch over us all until that day. Amen.",
+                },
+            },
+            "living": {
+                "morning_prayer": {
+                    "title": "Morning Prayer for My Spouse & Children",
+                    "body": "Heavenly Father, bless my spouse and our children this day. Make our "
+                    "home a domestic church, where love is patient and forgiveness quick. Watch "
+                    "over each one as they go out and come in. Holy Family of Nazareth — Jesus, "
+                    "Mary, and Joseph — pray for us, that we may love as you loved. Amen.",
+                },
+                "afternoon_prayer": {
+                    "title": "Midday Prayer for My Home",
+                    "body": "Lord, in the busyness of this day I lift up my spouse and each of my "
+                    "children to you. Where there is tiredness, give strength; where there is "
+                    "tension, give patience; where there is distance, draw us near. Holy Family of "
+                    "Nazareth, keep our home in your peace until we are gathered again this evening. Amen.",
+                },
+                "night_prayer": {
+                    "title": "Night Prayer for My Family",
+                    "body": "Father, we thank you for this day shared in love. Forgive the harsh "
+                    "word and the missed kindness, and let us not sleep on our anger. Bless my "
+                    "spouse and each child under this roof; send your holy angels to guard their "
+                    "rest. Jesus, Mary, and Joseph, watch over our home this night. Amen.",
+                },
+            },
+        },
         "companions": [
             {"slug": "st-joseph", "name": "St. Joseph",
              "why": "Guardian of the Holy Family — model of the faithful, hardworking, protecting spouse.",
@@ -430,6 +480,29 @@ DEVOTIONAL_RECS: Dict[str, List[Dict[str, Any]]] = {
 
 
 # --------------------------------------------------------------------------- #
+# State-specific prayer/novena recommendations that override DEVOTIONAL_RECS   #
+# for a given vocation. Marriage: discerners pray for a *future* spouse and    #
+# family; those living pray for the spouse and children they have.             #
+# --------------------------------------------------------------------------- #
+DEVOTIONAL_RECS_BY_STATE: Dict[str, Dict[str, List[Dict[str, Any]]]] = {
+    "marriage": {
+        "discerning": [
+            {"title": "Daily Rosary for your future spouse", "body": "Pray a decade each day for the one God is preparing for you — even now entrust them to Our Lady.", "route": "/prayer/rosary"},
+            {"title": "Novena to St. Joseph for a holy spouse", "body": "Ask the guardian of the Holy Family to lead you to — and prepare you for — a holy marriage.", "route": "/novenas/st-joseph"},
+            {"title": "Novena to Sts. Louis & Zélie Martin", "body": "Ask the patrons of holy marriage to bless and prepare your future family.", "route": "/novenas/sts-louis-zelie"},
+            {"title": "Marian Prayers for purity & patience", "body": "Entrust your courtship and your future family to Our Lady with the Church's Marian prayers.", "route": "/prayer/category/marian"},
+        ],
+        "living": [
+            {"title": "Family Rosary", "body": "Gather your spouse and children for a daily decade — the prayer that keeps a home together.", "route": "/prayer/rosary"},
+            {"title": "Novena to Sts. Louis & Zélie Martin", "body": "Ask the patrons of holy marriage to bless your spouse and children.", "route": "/novenas/sts-louis-zelie"},
+            {"title": "Novena to St. Joseph", "body": "Place your spouse, children and livelihood under his fatherly care.", "route": "/novenas/st-joseph"},
+            {"title": "Marian Prayers", "body": "Entrust your spouse and each of your children to Our Lady with the Church's Marian prayers.", "route": "/prayer/category/marian"},
+        ],
+    },
+}
+
+
+# --------------------------------------------------------------------------- #
 # Daily Scripture aligned to the vocation. One verse is surfaced each day,     #
 # chosen deterministically from the pool by the ordinal date so it is stable   #
 # for everyone on a given day and rotates through the week.                    #
@@ -534,6 +607,16 @@ async def _localize(db, payload: Dict[str, Any]) -> Dict[str, Any]:
 def _build_guide(vocation: str, state: str) -> Dict[str, Any]:
     base = CONTENT[vocation]
     traditions = base["traditions"].get(state) or base["traditions"]["living"]
+    # State-tailored prayers (e.g. marriage: future spouse when discerning,
+    # current spouse & children when living). Falls back to the shared prayers.
+    pbs = (base.get("prayers_by_state") or {}).get(state) or {}
+    morning = pbs.get("morning_prayer") or base["morning_prayer"]
+    afternoon = pbs.get("afternoon_prayer") or base.get("afternoon_prayer") or base["morning_prayer"]
+    night = pbs.get("night_prayer") or base.get("night_prayer") or base["morning_prayer"]
+    # State-tailored prayer/novena recommendations, if provided for this vocation.
+    recs = (DEVOTIONAL_RECS_BY_STATE.get(vocation, {}) or {}).get(state)
+    if recs is None:
+        recs = DEVOTIONAL_RECS.get(vocation, [])
     # Deep-ish copy so localization does not mutate the module constants.
     import copy
     return {
@@ -541,14 +624,14 @@ def _build_guide(vocation: str, state: str) -> Dict[str, Any]:
         "state": state,
         "label": base["label"],
         "intro": base["intro"],
-        "morning_prayer": copy.deepcopy(base["morning_prayer"]),
-        "afternoon_prayer": copy.deepcopy(base.get("afternoon_prayer") or base["morning_prayer"]),
-        "night_prayer": copy.deepcopy(base.get("night_prayer") or base["morning_prayer"]),
+        "morning_prayer": copy.deepcopy(morning),
+        "afternoon_prayer": copy.deepcopy(afternoon),
+        "night_prayer": copy.deepcopy(night),
         "companions": copy.deepcopy(base["companions"]),
         "ideas": copy.deepcopy(base["ideas"]),
         "traditions": copy.deepcopy(traditions),
         "readings": copy.deepcopy(READINGS.get(vocation, [])),
-        "devotional_recs": copy.deepcopy(DEVOTIONAL_RECS.get(vocation, [])),
+        "devotional_recs": copy.deepcopy(recs),
         "daily_verse": _daily_verse(vocation),
     }
 

@@ -340,3 +340,12 @@ Reverent & traditional aesthetic: cream/parchment background, deep stained-gl- C
   - library_seed_data.py: EWTN Spanish radio ewtn.com/spanish (404)→ewtn.com/espanol.
 - Verified working (not broken): all 8 sanctuary archive.org audio tracks (206), Gregorian chant mp3 (206), Leo XIV encyclical 'Magnifica Humanitas' (genuine Vatican page, 200).
 - Remaining 403/000 in audit are datacenter bot-blocking / geo-blocking (usccb, britannica, unesco, knockshrine, nationalshrine, radiomaria, thedivinemercy, and a few EU/Latam shrine sites that resolve DNS) — these work in a real browser/device, NOT broken.
+
+## Session update 33 (July 2026) — Vocation persistence + state-tailored marriage prayers
+- CONFIRMED persistence works: vocation, vocation_state, companion_saint, daily_companions all persist across PUT /preferences (Mongo $set merges; profile sends full merged prefs). Verified via curl — selecting a vocation/state stays until changed, doesn't wipe companions.
+- NEW: marriage prayers are now STATE-AWARE (vocations.py):
+  - Added marriage `prayers_by_state` (morning/afternoon/night) + `DEVOTIONAL_RECS_BY_STATE`.
+  - Discerning → prayers for a FUTURE spouse & family ("Morning Prayer for My Future Spouse", "Daily Rosary for your future spouse", novena to St Joseph for a holy spouse).
+  - Living → prayers for the CURRENT spouse & children ("Morning Prayer for My Spouse & Children", "Family Rosary").
+  - `_build_guide` picks prayers_by_state[state] + DEVOTIONAL_RECS_BY_STATE[vocation][state], falling back to shared prayers/recs for singleness & religious life (unchanged).
+- Verified all vocation×state combos return correct prayers/recs/traditions with no errors.

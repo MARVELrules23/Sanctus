@@ -22,6 +22,7 @@ import { NotificationsProvider } from "@/src/notifications-context";
 import { RadioPlayerProvider } from "@/src/audio/RadioPlayerContext";
 import { BookmarksProvider } from "@/src/bookmarks-context";
 import RadioMiniPlayer from "@/src/components/RadioMiniPlayer";
+import ErrorBoundary from "@/src/components/ErrorBoundary";
 
 // Keep the native splash visible from cold start until icon fonts register.
 // Required because @expo/vector-icons' componentDidMount fallback fires
@@ -86,19 +87,21 @@ export default function RootLayout() {
   if (!iconsLoaded && !iconsError) return null;
 
   return (
-    <SafeAreaProvider>
-      <StatusBar style="dark" />
-      <LanguageProvider>
-        <AuthProvider>
-          <BookmarksProvider>
-            <NotificationsProvider>
-              <RadioPlayerProvider>
-                <AppShell />
-              </RadioPlayerProvider>
-            </NotificationsProvider>
-          </BookmarksProvider>
-        </AuthProvider>
-      </LanguageProvider>
-    </SafeAreaProvider>
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <StatusBar style="dark" />
+        <LanguageProvider>
+          <AuthProvider>
+            <BookmarksProvider>
+              <NotificationsProvider>
+                <RadioPlayerProvider>
+                  <AppShell />
+                </RadioPlayerProvider>
+              </NotificationsProvider>
+            </BookmarksProvider>
+          </AuthProvider>
+        </LanguageProvider>
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }

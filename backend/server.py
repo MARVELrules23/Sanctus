@@ -389,6 +389,55 @@ async def auth_logout(authorization: Optional[str] = Header(None)):
     return {"ok": True}
 
 
+@api.delete("/auth/me")
+async def delete_me(user: User = Depends(get_current_user)):
+    """Permanently delete the signed-in user's account and all personal data.
+
+    Required for App Store compliance (Apple 5.1.1(v)): account deletion must be
+    initiated in-app. Removes the user record, every session, and all
+    user-owned documents across the app's collections. Global content
+    (saints, challenges, library, readings, etc.) is left untouched.
+    """
+    uid = user.user_id
+
+    # Collections keyed by a single `user_id` owner field.
+    owner_collections = [
+        "user_sessions", "preferences", "bookmarks", "bible_highlights",
+        "catechism_assignments", "challenge_enrollments", "daily_practices",
+        "family_members", "journal", "meals", "self_defense_acks",
+        "self_defense_progress", "self_defense_sessions", "support_tickets",
+        "user_churches", "virtue_plans", "weight_log", "wellness", "workouts",
+        "community_posts", "community_replies", "community_post_likes",
+        "community_prayers", "community_prayer_prays", "community_reports",
+        "community_churches", "parish_events",
+    ]
+    for coll in owner_collections:
+        try:
+            await db[coll].delete_many({"user_id": uid})
+        except Exception as exc:  # pragma: no cover - best-effort purge
+            logger.warning("account deletion: failed purging %s: %s", coll, exc)
+
+    # Relationship / two-party collections keyed by more than one field.
+    try:
+        await db.community_friendships.delete_many(
+            {"$or": [{"user_id": uid}, {"friend_id": uid},
+                     {"user_a": uid}, {"user_b": uid}, {"requester_id": uid}, {"addressee_id": uid}]}
+        )
+        await db.community_blocks.delete_many(
+            {"$or": [{"user_id": uid}, {"blocker_id": uid}, {"blocked_id": uid}]}
+        )
+        await db.community_dm_threads.delete_many({"participants": uid})
+        await db.community_dm_messages.delete_many(
+            {"$or": [{"user_id": uid}, {"sender_id": uid}, {"from_user_id": uid}]}
+        )
+    except Exception as exc:  # pragma: no cover
+        logger.warning("account deletion: failed purging community relations: %s", exc)
+
+    # Finally, remove the user record itself.
+    await db.users.delete_one({"user_id": uid})
+    return {"ok": True, "deleted": True}
+
+
 # ---------- Liturgical routes ----------
 @api.get("/liturgical/day")
 async def liturgical_day(date: str):

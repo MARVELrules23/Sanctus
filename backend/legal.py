@@ -121,8 +121,9 @@ PRIVACY_POLICY_SECTIONS = [
             "• You can leave any group conversation, unfriend any user, and block "
             "users from the Parish tab.\n"
             "• To delete your account entirely — including all of your generated "
-            "plans, community content, and saved data — email "
-            f"{SUPPORT_EMAIL} and we will remove your record within 30 days."
+            "plans, community content, and saved data — open Profile → "
+            "\"Delete my account\" and confirm. Deletion is immediate. You may "
+            f"also email {SUPPORT_EMAIL} and we will remove your record within 30 days."
         ),
     },
     {

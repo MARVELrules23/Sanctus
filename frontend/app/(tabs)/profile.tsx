@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Pressable,
   ScrollView,
@@ -39,7 +40,7 @@ const VOCATION_OPTIONS = ["singleness", "religious life", "marriage"];
 const VOCATION_STATE_OPTIONS = ["discerning", "living"];
 
 export default function ProfileScreen() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, deleteAccount } = useAuth();
   const { t, lang, setLang } = useI18n();
   const router = useRouter();
   const [prefs, setPrefs] = useState<Prefs | null>(null);
@@ -48,6 +49,19 @@ export default function ProfileScreen() {
   const [savedFlash, setSavedFlash] = useState(false);
   const [friends, setFriends] = useState<Friendship[]>([]);
   const [incomingCount, setIncomingCount] = useState(0);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const onDeleteAccount = useCallback(async () => {
+    setDeleting(true);
+    try {
+      await deleteAccount();
+    } catch (e: any) {
+      setDeleting(false);
+      setConfirmingDelete(false);
+      Alert.alert("Couldn't delete account", e?.message || "Something went wrong. Please try again or email support.");
+    }
+  }, [deleteAccount]);
 
   const loadFriends = useCallback(async () => {
     try {
@@ -558,6 +572,45 @@ export default function ProfileScreen() {
           <Text style={styles.signOutText}>{t("profile.signOut")}</Text>
         </Pressable>
 
+        {!confirmingDelete ? (
+          <Pressable
+            testID="delete-account-button"
+            onPress={() => setConfirmingDelete(true)}
+            style={({ pressed }) => [styles.deleteBtn, pressed && styles.pressed]}
+          >
+            <Ionicons name="trash-outline" size={16} color={colors.textMuted} />
+            <Text style={styles.deleteText}>Delete my account</Text>
+          </Pressable>
+        ) : (
+          <View style={styles.deleteConfirmBox} testID="delete-account-confirm">
+            <Text style={styles.deleteConfirmTitle}>Delete your account?</Text>
+            <Text style={styles.deleteConfirmBody}>
+              This permanently removes your profile, journal, prayers, community posts,
+              saved churches, and all other data. This cannot be undone.
+            </Text>
+            <Pressable
+              testID="delete-account-confirm-button"
+              onPress={onDeleteAccount}
+              disabled={deleting}
+              style={({ pressed }) => [styles.deleteConfirmBtn, pressed && styles.pressed]}
+            >
+              {deleting ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text style={styles.deleteConfirmBtnText}>Yes, permanently delete everything</Text>
+              )}
+            </Pressable>
+            <Pressable
+              testID="delete-account-cancel-button"
+              onPress={() => setConfirmingDelete(false)}
+              disabled={deleting}
+              style={({ pressed }) => [styles.deleteCancelBtn, pressed && styles.pressed]}
+            >
+              <Text style={styles.deleteCancelText}>Cancel</Text>
+            </Pressable>
+          </View>
+        )}
+
         <Text style={styles.footer}>{t("profile.footer")}</Text>
         <View style={{ height: spacing.xl }} />
       </ScrollView>
@@ -726,6 +779,37 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
   },
   signOutText: { fontFamily: fonts.uiSemi, color: colors.liturgical.red, fontSize: 15 },
+  deleteBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.xs,
+    paddingVertical: 12,
+    marginTop: spacing.md,
+  },
+  deleteText: { fontFamily: fonts.uiSemi, color: colors.textMuted, fontSize: 13 },
+  deleteConfirmBox: {
+    marginTop: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.liturgical.red,
+    backgroundColor: "rgba(138,28,28,0.05)",
+    gap: spacing.sm,
+  },
+  deleteConfirmTitle: { fontFamily: fonts.uiSemi, color: colors.liturgical.red, fontSize: 15 },
+  deleteConfirmBody: { fontFamily: fonts.bodyRegular, color: colors.textSecondary, fontSize: 13, lineHeight: 19 },
+  deleteConfirmBtn: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 13,
+    borderRadius: radius.md,
+    backgroundColor: colors.liturgical.red,
+    marginTop: spacing.xs,
+  },
+  deleteConfirmBtnText: { fontFamily: fonts.uiSemi, color: "#FFFFFF", fontSize: 14 },
+  deleteCancelBtn: { alignItems: "center", justifyContent: "center", paddingVertical: 10 },
+  deleteCancelText: { fontFamily: fonts.uiSemi, color: colors.textSecondary, fontSize: 14 },
   footer: {
     fontFamily: fonts.bodyItalic,
     fontStyle: "italic",

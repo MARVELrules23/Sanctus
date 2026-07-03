@@ -14,6 +14,7 @@ type AuthState = {
   loading: boolean;
   signIn: () => Promise<void>;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   setUser: (u: User | null) => void;
   refresh: () => Promise<void>;
 };
@@ -23,6 +24,7 @@ const AuthCtx = createContext<AuthState>({
   loading: true,
   signIn: async () => {},
   signOut: async () => {},
+  deleteAccount: async () => {},
   setUser: () => {},
   refresh: async () => {},
 });
@@ -147,7 +149,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.replace("/login");
   }, [router]);
 
-  const value = useMemo(() => ({ user, loading, signIn, signOut, setUser, refresh }), [user, loading, signIn, signOut, refresh]);
+  const deleteAccount = useCallback(async () => {
+    // Permanently delete the account + all data server-side, then sign out.
+    await api("/auth/me", { method: "DELETE" });
+    await clearToken();
+    setUser(null);
+    router.replace("/login");
+  }, [router]);
+
+  const value = useMemo(() => ({ user, loading, signIn, signOut, deleteAccount, setUser, refresh }), [user, loading, signIn, signOut, deleteAccount, refresh]);
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;
 }
 

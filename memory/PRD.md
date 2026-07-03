@@ -370,3 +370,12 @@ Reverent & traditional aesthetic: cream/parchment background, deep stained-gl- C
 - Pinch-never-paints: already guaranteed by Gesture.Pan().maxPointers(1) (draw gesture ignores 2+ pointers). Confirmed still in place.
 - Pan-bounds clamp (the missing piece): wired canvasW/canvasH via onLayout on the canvasWrap (were declared but never set). Added clampX/clampY worklets — for a top-left-anchored scaled content of size W*s, tx is clamped to [W*(1-s), 0] and ty to [H*(1-s), 0]. Applied in pinch onUpdate (live focal-pan) and onEnd. Guarantees you can pan to every edge but never past it (no blank gutter, no clipped picture).
 - Lint clean. Canvas renders correctly under auth (/coloring/cross, Simple Cross). Multi-touch pinch/pan is a native gesture and cannot be exercised in the single-pointer web preview — needs a real device / build for full QA.
+
+## Session update 37 (July 2026) — App Store readiness fixes
+- Ran expo-appstore-readiness-review (iOS). Fixed the code-level items:
+  - **BLOCKER (Apple 5.1.1(v)) In-app account deletion:** added `DELETE /api/auth/me` (server.py) — purges user record, all sessions, and user-owned docs across ~30 collections + community relations; leaves global content. Frontend: `deleteAccount()` in auth-context + "Delete my account" flow in Profile (inline confirm box, testIDs delete-account-button/-confirm/-confirm-button/-cancel-button). Verified E2E: user+journal+prefs+session removed, session 401 after.
+  - **WARNING:** removed unused `NSRemindersUsageDescription` from app.json (app uses local notifications + calendar, not the Reminders API).
+  - **WARNING:** added `ios.config.usesNonExemptEncryption: false` (export-compliance).
+  - **WARNING:** added root `ErrorBoundary` (src/components/ErrorBoundary.tsx) wrapping providers in app/_layout.tsx.
+  - Updated legal.py deletion copy to reference the in-app path.
+- **NOT fixed (needs discussion / larger effort):** BLOCKER Apple 3.1.1 — Premium subscription sold via Stripe must use Apple IAP/StoreKit on iOS (requires App Store Connect product setup + native build). Left as-is pending user decision. Manual items (demo account for review, privacy manifest in built ipa, Data Safety labels) remain.

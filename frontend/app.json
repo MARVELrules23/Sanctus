@@ -14,8 +14,10 @@
         "NSLocationWhenInUseUsageDescription": "Find Catholic churches near you",
         "NSPhotoLibraryUsageDescription": "Attach photos to your profile and Saints entries",
         "NSCalendarsUsageDescription": "Save parish events to your calendar",
-        "NSCalendarsFullAccessUsageDescription": "Save parish events to your calendar",
-        "NSRemindersUsageDescription": "Add prayer reminders to your reminders"
+        "NSCalendarsFullAccessUsageDescription": "Save parish events to your calendar"
+      },
+      "config": {
+        "usesNonExemptEncryption": false
       },
       "bundleIdentifier": "app.emergent.faithfulfitness329c749ee"
     },

@@ -1,0 +1,38 @@
+{
+  "summary": "iter91 review — Add-to-practices, home vocation daily-acts, pilgrimage complete + regressions. CRITICAL BUG FOUND & FIXED in /app/frontend/src/theme.ts: duplicate `import { Platform } from \"react-native\"` (lines 5 and 47) caused a Babel SyntaxError ('Identifier Platform has already been declared') that prevented the entire web bundle from loading — every screen rendered blank. After removing the duplicate import and restarting Expo, all iter91 flows work: (T1) blessed-virgin-mary companion page renders companion-add-practice-ct-0/dt-0/vt-0 buttons; tapping each POSTs /api/my/devotions/add-practice (200) and swaps label to 'Added to my practices' with green check. (T2) Home vocation card shows 'TODAY'S ACTS WITH YOUR COMPANIONS' (testID vocation-daily-acts) with 4 daily-act-* rows (guardian-angel, st-lucy, francis-assisi, blessed-virgin-mary); tapping daily-act-guardian-angel navigates to /companion/guardian-angel. (T3) Pilgrimage created via /api/schedule (kind=pilgrimage, notify=true, time 09:00) shows schedule-complete-{id} chip on /schedule; tap toggles 'Mark as completed' <-> 'Pilgrimage completed' and calls POST /api/schedule/{id}/complete. Backend pytest 12/12 pass in test_iter91_practices_daily_acts_pilgrimage.py (daily-acts endpoint, add-practice create/idempotent/list/delete, schedule pilgrimage create/complete-true/complete-false/delete, companion traditions arrays for BVM/St Joseph/Francis). Regression: coloring canvas page loads and coloring-share button visible & clickable without crash. Pre-existing non-blocking react-native-web warnings remain: 'shadow* style props deprecated' and 'props.pointerEvents is deprecated' (surface across many screens).",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "src/theme.ts", "issue": "Duplicate `import { Platform } from \"react-native\"` at line 5 AND line 47 broke the whole web bundle with 'Identifier Platform has already been declared' (Babel SyntaxError). App was blank on every screen. FIXED by removing the duplicate at line 47. Reference: /app/frontend/src/theme.ts:47"},
+      {"component": "react-native-web deprecations", "issue": "'shadow*' style props deprecated (use boxShadow) and 'props.pointerEvents' deprecated (use style.pointerEvents) — repeated warnings across screens. Not introduced this iteration but still surfacing."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter91_practices_daily_acts_pilgrimage.py",
+    "/app/test_reports/pytest/iteration_91.xml"
+  ],
+  "action_items": [
+    "The duplicate Platform import in /app/frontend/src/theme.ts was fixed by T1 (removed line 47). Please double-check no similar duplicate-import regressions were introduced with the boxShadow refactor across other files (grep for `import { Platform }` duplicated per file).",
+    "Optionally silence RN-web shadow*/pointerEvents deprecation warnings by continuing the boxShadow + style.pointerEvents migration."
+  ],
+  "critical_code_review_comments": [
+    "theme.ts had two `import { Platform }` statements — likely an incomplete refactor. Ensure imports live at the top only; ESLint's no-duplicate-imports rule would have caught this.",
+    "companion/[slug].tsx: addToPractices sends `${title} — ${body}` as the practice string, which the backend truncates to 400 chars — good. addedKeys Set state correctly disables/re-labels the button after success.",
+    "VocationHomeCard.tsx: conditionally hides the acts box when `acts.length===0` and hides the whole card when `!guide` — correct.",
+    "schedule/index.tsx: schedule-complete-{id} testID present only for kind==='pilgrimage'. POST /api/schedule/{id}/complete correctly toggles based on payload.completed.",
+    "backend personal.py add_practice: idempotent when practice already exists (returns added:false), and creates devotion if none for that saint — verified in pytest."
+  ],
+  "updated_files": [
+    "/app/frontend/src/theme.ts (removed duplicate `import { Platform } from \"react-native\"` at line 47)",
+    "/app/backend/tests/test_iter91_practices_daily_acts_pilgrimage.py (new, 12 tests, all pass)"
+  ],
+  "success_rate": {"backend": "100% (12/12)", "frontend": "100% (T1 add-practice ct/dt/vt, T2 vocation daily acts + tap-nav, T3 pilgrimage complete toggle, T4 coloring regression all verified end-to-end after theme.ts fix)"},
+  "seed_data_creation": "Ephemeral E2E_iter91 schedule pilgrimage + devotion-to-BVM created and cleaned up in the same run.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "iter91 features (companion add-practice, home vocation daily-acts, pilgrimage mark-completed) verified end-to-end. Key finding: the boxShadow refactor accidentally introduced a duplicate Platform import in src/theme.ts causing a full bundler SyntaxError — after removal the app loads. If any future agent sees blank screens across the app, check `grep -n 'import { Platform }' src/*.ts*` for duplicates first.",
+  "rca_of_issue": "Duplicate import in /app/frontend/src/theme.ts: a second `import { Platform } from 'react-native';` was added at line 47 (likely when introducing the shadow.web/boxShadow Platform.select block) without noticing the existing top-level import at line 5. Babel throws 'Identifier Platform has already been declared' → Metro cannot bundle entry.js → every route serves the HTML shell with an empty React root. Fix: delete the duplicate import statement at line 47. Prevention: enable eslint `no-duplicate-imports` rule."
+}

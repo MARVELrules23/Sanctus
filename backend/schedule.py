@@ -116,6 +116,8 @@ def _shape(doc: Dict[str, Any]) -> Dict[str, Any]:
         "color": doc.get("color"),
         "notify": bool(doc.get("notify")),
         "notif_ids": doc.get("notif_ids", []),
+        "completed": bool(doc.get("completed")),
+        "completed_at": doc.get("completed_at"),
         "ics_token": doc.get("ics_token"),
         "created_at": doc.get("created_at"),
         "updated_at": doc.get("updated_at"),
@@ -296,6 +298,20 @@ def build_router(db: AsyncIOMotorDatabase, get_current_user) -> APIRouter:
         if res.matched_count == 0:
             raise HTTPException(status_code=404, detail="Schedule item not found")
         return {"ok": True, "notif_ids": ids}
+
+    @router.post("/{item_id}/complete")
+    async def set_completed(item_id: str, payload: Dict[str, Any], user=Depends(get_current_user)):
+        completed = bool(payload.get("completed", True))
+        upd: Dict[str, Any] = {
+            "completed": completed,
+            "completed_at": datetime.now(timezone.utc).isoformat() if completed else None,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }
+        res = await col.update_one({"id": item_id, "user_id": user.user_id}, {"$set": upd})
+        if res.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Schedule item not found")
+        doc = await col.find_one({"id": item_id, "user_id": user.user_id}, {"_id": 0})
+        return _shape(doc)
 
     @router.delete("/{item_id}")
     async def delete_item(item_id: str, user=Depends(get_current_user)):

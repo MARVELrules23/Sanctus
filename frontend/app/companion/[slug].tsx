@@ -6,7 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 
-import { getCompanion, getCompanionImage, CompanionDetail } from "@/src/api";
+import { getCompanion, getCompanionImage, addDevotionPractice, CompanionDetail } from "@/src/api";
 import LofiSaintBackground from "@/src/components/LofiSaintBackground";
 import { colors, fonts, radius, spacing } from "@/src/theme";
 
@@ -19,6 +19,25 @@ export default function CompanionScreen() {
   const [data, setData] = useState<CompanionDetail | null>(null);
   const [image, setImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [addedKeys, setAddedKeys] = useState<Set<string>>(new Set());
+  const [addingKey, setAddingKey] = useState<string | null>(null);
+
+  const addToPractices = useCallback(async (key: string, title: string, body: string) => {
+    if (!data || addedKeys.has(key) || addingKey) return;
+    setAddingKey(key);
+    try {
+      await addDevotionPractice({
+        saint_name: data.name,
+        saint_slug: slug || null,
+        practice: body ? `${title} — ${body}` : title,
+      });
+      setAddedKeys((prev) => new Set(prev).add(key));
+    } catch {
+      /* ignore */
+    } finally {
+      setAddingKey(null);
+    }
+  }, [data, slug, addedKeys, addingKey]);
 
   // Soft looping Gregorian chant ambiance — auto-tries on open, stops on leave.
   const player = useAudioPlayer(CHANT_URL);
@@ -168,15 +187,28 @@ export default function CompanionScreen() {
                 <Ionicons name="library-outline" size={16} color={colors.gold} />
                 <Text style={styles.cardHeadText}>Traditions of the Church</Text>
               </View>
-              {data.church_traditions.map((t, i) => (
-                <View key={i} style={styles.tradition}>
-                  <Ionicons name="bookmark-outline" size={15} color={colors.goldDark} style={{ marginTop: 2 }} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.tradName}>{t.title}</Text>
-                    <Text style={styles.tradBody}>{t.body}</Text>
+              {data.church_traditions.map((t, i) => {
+                const key = `ct-${i}`;
+                const done = addedKeys.has(key);
+                return (
+                  <View key={i} style={styles.tradition}>
+                    <Ionicons name="bookmark-outline" size={15} color={colors.goldDark} style={{ marginTop: 2 }} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.tradName}>{t.title}</Text>
+                      <Text style={styles.tradBody}>{t.body}</Text>
+                      <Pressable
+                        testID={`companion-add-practice-${key}`}
+                        disabled={done || addingKey === key}
+                        onPress={() => addToPractices(key, t.title, t.body)}
+                        style={({ pressed }) => [styles.addPracticeBtn, done && styles.addPracticeBtnDone, pressed && { opacity: 0.7 }]}
+                      >
+                        <Ionicons name={done ? "checkmark-circle" : "add-circle-outline"} size={15} color={done ? "#3E7A4E" : colors.primary} />
+                        <Text style={[styles.addPracticeText, done && { color: "#3E7A4E" }]}>{done ? "Added to my practices" : "Add to my practices"}</Text>
+                      </Pressable>
+                    </View>
                   </View>
-                </View>
-              ))}
+                );
+              })}
             </>
           ) : null}
 
@@ -187,15 +219,28 @@ export default function CompanionScreen() {
                 <Ionicons name="repeat-outline" size={16} color={colors.gold} />
                 <Text style={styles.cardHeadText}>Daily traditions to grow closer</Text>
               </View>
-              {data.daily_traditions.map((t, i) => (
-                <View key={i} style={styles.tradition}>
-                  <Ionicons name="ellipse" size={8} color={colors.goldDark} style={{ marginTop: 6 }} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.tradName}>{t.title}</Text>
-                    <Text style={styles.tradBody}>{t.body}</Text>
+              {data.daily_traditions.map((t, i) => {
+                const key = `dt-${i}`;
+                const done = addedKeys.has(key);
+                return (
+                  <View key={i} style={styles.tradition}>
+                    <Ionicons name="ellipse" size={8} color={colors.goldDark} style={{ marginTop: 6 }} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.tradName}>{t.title}</Text>
+                      <Text style={styles.tradBody}>{t.body}</Text>
+                      <Pressable
+                        testID={`companion-add-practice-${key}`}
+                        disabled={done || addingKey === key}
+                        onPress={() => addToPractices(key, t.title, t.body)}
+                        style={({ pressed }) => [styles.addPracticeBtn, done && styles.addPracticeBtnDone, pressed && { opacity: 0.7 }]}
+                      >
+                        <Ionicons name={done ? "checkmark-circle" : "add-circle-outline"} size={15} color={done ? "#3E7A4E" : colors.primary} />
+                        <Text style={[styles.addPracticeText, done && { color: "#3E7A4E" }]}>{done ? "Added to my practices" : "Add to my practices"}</Text>
+                      </Pressable>
+                    </View>
                   </View>
-                </View>
-              ))}
+                );
+              })}
             </View>
           ) : null}
 
@@ -285,15 +330,28 @@ export default function CompanionScreen() {
                 <Ionicons name="compass-outline" size={16} color={colors.gold} />
                 <Text style={styles.cardHeadText}>For your walk · {data.vocation_traditions.label}</Text>
               </View>
-              {data.vocation_traditions.items.map((t, i) => (
-                <View key={i} style={styles.tradition}>
-                  <Ionicons name="add-circle-outline" size={15} color={colors.primary} style={{ marginTop: 2 }} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.tradName}>{t.title}</Text>
-                    <Text style={styles.tradBody}>{t.body}</Text>
+              {data.vocation_traditions.items.map((t, i) => {
+                const key = `vt-${i}`;
+                const done = addedKeys.has(key);
+                return (
+                  <View key={i} style={styles.tradition}>
+                    <Ionicons name="add-circle-outline" size={15} color={colors.primary} style={{ marginTop: 2 }} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.tradName}>{t.title}</Text>
+                      <Text style={styles.tradBody}>{t.body}</Text>
+                      <Pressable
+                        testID={`companion-add-practice-${key}`}
+                        disabled={done || addingKey === key}
+                        onPress={() => addToPractices(key, t.title, t.body)}
+                        style={({ pressed }) => [styles.addPracticeBtn, done && styles.addPracticeBtnDone, pressed && { opacity: 0.7 }]}
+                      >
+                        <Ionicons name={done ? "checkmark-circle" : "add-circle-outline"} size={15} color={done ? "#3E7A4E" : colors.primary} />
+                        <Text style={[styles.addPracticeText, done && { color: "#3E7A4E" }]}>{done ? "Added to my practices" : "Add to my practices"}</Text>
+                      </Pressable>
+                    </View>
                   </View>
-                </View>
-              ))}
+                );
+              })}
             </View>
           ) : (
             <Pressable
@@ -378,6 +436,9 @@ const styles = StyleSheet.create({
   tradition: { flexDirection: "row", gap: 8, alignItems: "flex-start", marginBottom: spacing.sm },
   tradName: { fontFamily: fonts.uiSemi, fontSize: 14.5, color: colors.primary },
   tradBody: { fontFamily: fonts.bodyRegular, fontSize: 13.5, color: colors.textSecondary, lineHeight: 20, marginTop: 1 },
+  addPracticeBtn: { flexDirection: "row", alignItems: "center", gap: 5, alignSelf: "flex-start", marginTop: 6, paddingVertical: 4, paddingHorizontal: 8, borderRadius: radius.round, borderWidth: 1, borderColor: colors.borderSoft, backgroundColor: colors.surface },
+  addPracticeBtnDone: { borderColor: "#B7DCC0", backgroundColor: "#EEF7F0" },
+  addPracticeText: { fontFamily: fonts.uiSemi, fontSize: 12, color: colors.primary },
   vocBox: { backgroundColor: "#F3EEFB", borderWidth: 1, borderColor: "#DED2F0", borderRadius: radius.lg, padding: spacing.md, marginTop: spacing.sm },
   dailyTradBox: { backgroundColor: "#FBF6E8", borderWidth: 1, borderColor: "#EADfBE", borderRadius: radius.lg, padding: spacing.md, marginTop: spacing.sm, marginBottom: spacing.sm },
   devotionBox: { backgroundColor: "#FBF6E8", borderWidth: 1, borderColor: "#EADfBE", borderRadius: radius.lg, padding: spacing.md, marginTop: spacing.sm, marginBottom: spacing.sm },

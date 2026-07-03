@@ -214,7 +214,7 @@ export default function VirtuePlanScreen() {
                 </View>
                 <View style={styles.statPill}>
                   <Ionicons name="checkmark-done-outline" size={13} color={colors.gold} />
-                  <Text style={styles.statText}>{doneSet.size}/{plan.total} today</Text>
+                  <Text style={styles.statText}>{(plan.checkins?.[todayISO()] || []).length}/{plan.total} today</Text>
                 </View>
               </View>
               {plan.note ? <Text style={styles.note}>“{plan.note}”</Text> : null}

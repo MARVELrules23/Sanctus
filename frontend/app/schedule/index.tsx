@@ -17,7 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 
-import { listSchedule, ScheduleItem } from "@/src/api";
+import { listSchedule, setScheduleCompleted, ScheduleItem } from "@/src/api";
 import { notificationsSupported } from "@/src/notifications";
 import { useI18n } from "@/src/i18n";
 import { DOW_SHORT, daysLabel, format12 } from "@/src/schedule-utils";
@@ -70,6 +70,16 @@ export default function ScheduleScreen() {
   const goEdit = (id: string) =>
     router.push({ pathname: "/schedule/edit", params: { id } } as any);
 
+  const toggleComplete = useCallback(async (item: ScheduleItem) => {
+    const next = !item.completed;
+    setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, completed: next } : i)));
+    try {
+      await setScheduleCompleted(item.id, next);
+    } catch {
+      setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, completed: !next } : i)));
+    }
+  }, []);
+
   const ItemCard = ({ item }: { item: ScheduleItem }) => (
     <Pressable
       testID={`schedule-item-${item.id}`}
@@ -80,7 +90,7 @@ export default function ScheduleScreen() {
         <Ionicons name={(item.icon as keyof typeof Ionicons.glyphMap) || "ellipse-outline"} size={18} color={item.color || colors.gold} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={styles.itemTitle} numberOfLines={1}>{item.title}</Text>
+        <Text style={[styles.itemTitle, item.completed && styles.itemTitleDone]} numberOfLines={1}>{item.title}</Text>
         <View style={styles.itemMetaRow}>
           <Ionicons name="time-outline" size={12} color={colors.textMuted} />
           <Text style={styles.itemMeta}>{format12(item.time)}</Text>
@@ -89,6 +99,17 @@ export default function ScheduleScreen() {
             {item.recurrence === "once" ? (item.date ? formatLongFromISO(item.date) : "Once") : daysLabel(item.days_of_week)}
           </Text>
         </View>
+        {item.kind === "pilgrimage" ? (
+          <Pressable
+            testID={`schedule-complete-${item.id}`}
+            onPress={() => toggleComplete(item)}
+            hitSlop={8}
+            style={[styles.completeChip, item.completed && styles.completeChipDone]}
+          >
+            <Ionicons name={item.completed ? "checkmark-circle" : "ellipse-outline"} size={14} color={item.completed ? "#3E7A4E" : colors.gold} />
+            <Text style={[styles.completeChipText, item.completed && { color: "#3E7A4E" }]}>{item.completed ? "Pilgrimage completed" : "Mark as completed"}</Text>
+          </Pressable>
+        ) : null}
       </View>
       {item.notify ? <Ionicons name="notifications" size={15} color={colors.gold} /> : null}
       <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
@@ -208,6 +229,10 @@ const styles = StyleSheet.create({
   },
   itemIcon: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
   itemTitle: { fontFamily: fonts.headingSemi, fontSize: 15, color: colors.textPrimary },
+  itemTitleDone: { textDecorationLine: "line-through", color: colors.textMuted },
+  completeChip: { flexDirection: "row", alignItems: "center", gap: 5, alignSelf: "flex-start", marginTop: 6, paddingVertical: 4, paddingHorizontal: 9, borderRadius: radius.round, borderWidth: 1, borderColor: colors.borderSoft, backgroundColor: colors.background },
+  completeChipDone: { borderColor: "#B7DCC0", backgroundColor: "#EEF7F0" },
+  completeChipText: { fontFamily: fonts.uiSemi, fontSize: 11.5, color: colors.gold },
   itemMetaRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 3 },
   itemMeta: { fontFamily: fonts.uiMedium, fontSize: 11.5, color: colors.textMuted },
   itemDot: { color: colors.textMuted, fontSize: 11 },

@@ -2,6 +2,8 @@
  * Design tokens & shared styles for Sanctus.
  * Mirrors /app/design_guidelines.json.
  */
+import { Platform } from "react-native";
+
 export const colors = {
   background: "#FAF9F6",
   surface: "#FFFFFF",
@@ -43,13 +45,16 @@ export const radius = {
 } as const;
 
 export const shadow = {
-  card: {
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
+  card: Platform.select({
+    web: { boxShadow: "0px 2px 8px rgba(0,0,0,0.05)" },
+    default: {
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 8,
+      elevation: 2,
+    },
+  }) as any,
 } as const;
 
 export const fonts = {

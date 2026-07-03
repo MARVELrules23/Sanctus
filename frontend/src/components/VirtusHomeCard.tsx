@@ -10,6 +10,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 
 import { listVirtuePlans, VirtuePlan } from "@/src/api";
+import { todayISO } from "@/src/date-utils";
 import { colors, fonts, radius, spacing } from "@/src/theme";
 
 export default function VirtusHomeCard() {
@@ -49,7 +50,7 @@ export default function VirtusHomeCard() {
             <Text style={styles.planTitle} numberOfLines={1}>
               {plan.virtues.map((v) => v.name).join(" · ")}
             </Text>
-            <Text style={styles.planSub}>{plan.completed}/{plan.total} goals · ends {plan.end_date}</Text>
+            <Text style={styles.planSub}>{(plan.checkins?.[todayISO()] || []).length}/{plan.total} today · ends {plan.end_date}</Text>
             <View style={styles.track}>
               <View style={[styles.fill, { width: `${plan.total ? (plan.completed / plan.total) * 100 : 0}%` }]} />
             </View>

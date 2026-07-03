@@ -85,6 +85,20 @@ class DevotionCreate(BaseModel):
         return out[:40]
 
 
+class AddPractice(BaseModel):
+    saint_name: str
+    saint_slug: Optional[str] = None
+    practice: str
+
+    @field_validator("saint_name", "practice")
+    @classmethod
+    def _req2(cls, v: str) -> str:
+        v = (v or "").strip()
+        if not v:
+            raise ValueError("required")
+        return v[:400]
+
+
 def _devotion_public(doc: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "devotion_id": doc["devotion_id"],
@@ -168,5 +182,44 @@ def build_router(db: AsyncIOMotorDatabase, get_current_user, *_ignore) -> APIRou
         if res.deleted_count == 0:
             raise HTTPException(status_code=404, detail="Devotional not found")
         return {"ok": True}
+
+    @router.post("/devotions/add-practice")
+    async def add_practice(payload: AddPractice, user=Depends(get_current_user)):
+        """Append a single practice to the user's devotion for a given saint,
+        creating that devotion if it does not exist yet. Used by the
+        "＋ Add to my practices" buttons on the companion (saint) pages."""
+        practice = payload.practice.strip()[:400]
+        saint = payload.saint_name.strip()[:160]
+        slug = (payload.saint_slug or None)
+        query: Dict[str, Any] = {"user_id": user.user_id}
+        if slug:
+            query["saint_slug"] = slug
+        else:
+            query["saint_name"] = saint
+        existing = await devotions.find_one(query)
+        if existing:
+            current = list(existing.get("practices", []))
+            already = practice in current
+            if not already:
+                current.append(practice)
+                current = current[:40]
+                await devotions.update_one(
+                    {"devotion_id": existing["devotion_id"]},
+                    {"$set": {"practices": current}},
+                )
+            doc = await devotions.find_one({"devotion_id": existing["devotion_id"]})
+            return {**_devotion_public(doc), "added": not already}
+        doc = {
+            "devotion_id": uuid.uuid4().hex[:12],
+            "user_id": user.user_id,
+            "title": f"Devotion to {saint}",
+            "saint_name": saint,
+            "saint_slug": slug,
+            "intro": "",
+            "practices": [practice],
+            "created_at": datetime.now(timezone.utc),
+        }
+        await devotions.insert_one(doc)
+        return {**_devotion_public(doc), "added": True}
 
     return router

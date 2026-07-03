@@ -13,7 +13,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useRouter } from "expo-router";
 
-import { listCatholicSites, nearbyCatholicSites, createScheduleItem, sitesInBbox, CatholicSite, BboxMarker } from "@/src/api";
+import { listCatholicSites, nearbyCatholicSites, createScheduleItem, setScheduleNotifIds, sitesInBbox, CatholicSite, BboxMarker } from "@/src/api";
+import { scheduleItemNotifications } from "@/src/notifications";
 import * as Location from "expo-location";
 import CatholicMapView, { MapBounds } from "@/src/components/catholic-map/CatholicMapView";
 import { colors, fonts, radius, spacing } from "@/src/theme";
@@ -142,18 +143,25 @@ export default function CatholicMapScreen() {
 
   const planPilgrimage = useCallback(async (site: CatholicSite, date: string, label: string) => {
     try {
-      await createScheduleItem({
+      const created = await createScheduleItem({
         kind: "pilgrimage",
         title: `Pilgrimage: ${site.name}`,
         note: `${site.city}, ${site.country}`,
         recurrence: "once",
         date,
+        time: "09:00",
+        notify: true,
         ref_slug: site.slug,
         icon: "footsteps-outline",
         color: "#7A5CB0",
       });
+      // Schedule OS reminders (day-of + gentle day-before) on a built app.
+      try {
+        const ids = await scheduleItemNotifications(created);
+        if (ids.length) await setScheduleNotifIds(created.id, ids);
+      } catch { /* best-effort */ }
       setPlanFor(null);
-      setToast(`Added to your calendar for ${label}.`);
+      setToast(`Added to your calendar for ${label}. We'll remind you the day before.`);
       setTimeout(() => setToast(null), 2800);
     } catch (e: any) {
       setToast(e?.message || "Couldn't add to calendar.");

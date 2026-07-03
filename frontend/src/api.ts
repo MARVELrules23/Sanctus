@@ -1414,6 +1414,17 @@ export async function getMyDevotion(id: string): Promise<MyDevotion> {
 export async function deleteMyDevotion(id: string): Promise<{ ok: boolean }> {
   return await api(`/my/devotions/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
+export async function addDevotionPractice(payload: {
+  saint_name: string;
+  saint_slug?: string | null;
+  practice: string;
+}): Promise<MyDevotion & { added: boolean }> {
+  return await api("/my/devotions/add-practice", { method: "POST", body: payload });
+}
+export type DailyCompanionAct = { slug: string; name: string; act: string };
+export async function getDailyCompanionActs(): Promise<{ items: DailyCompanionAct[] }> {
+  return await api("/companions/daily-acts");
+}
 
 // ---- Vestments reference ----
 export type Vestment = { name: string; meaning: string; image: string | null };
@@ -2420,6 +2431,8 @@ export type ScheduleItem = {
   color?: string | null;
   notify: boolean;
   notif_ids: string[];
+  completed?: boolean;
+  completed_at?: string | null;
   ics_token?: string | null;
   created_at?: string;
   updated_at?: string;
@@ -2466,4 +2479,7 @@ export async function setScheduleNotifIds(id: string, notif_ids: string[]): Prom
 }
 export async function deleteScheduleItem(id: string): Promise<{ ok: boolean; notif_ids: string[] }> {
   return await api(`/schedule/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+export async function setScheduleCompleted(id: string, completed: boolean): Promise<ScheduleItem> {
+  return await api(`/schedule/${encodeURIComponent(id)}/complete`, { method: "POST", body: { completed } });
 }

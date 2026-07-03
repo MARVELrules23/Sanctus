@@ -1500,6 +1500,22 @@ def build_router(db: AsyncIOMotorDatabase, get_current_user, emergent_llm_key: s
                 "vocation_companion": vocation_companion,
                 "permanent": PERMANENT_COMPANION}
 
+    @router.get("/daily-acts")
+    async def daily_acts(user=Depends(get_current_user)):
+        """Today's small act for each of the user's chosen daily companions
+        (plus the permanent Guardian Angel), for the Home screen."""
+        prefs = await db.preferences.find_one({"user_id": user.user_id}, {"_id": 0}) or {}
+        selected = [s for s in (prefs.get("daily_companions") or []) if s != PERMANENT_COMPANION]
+        order = [PERMANENT_COMPANION] + selected
+        items = []
+        for slug in order:
+            c = COMPANIONS.get(slug)
+            if not c:
+                continue
+            act = _today_act(c["daily_acts"])
+            items.append({"slug": slug, "name": c["name"], "act": act["text"]})
+        return {"items": items}
+
     @router.post("/select")
     async def select_companion(payload: Dict[str, Any], user=Depends(get_current_user)):
         slug = (payload.get("slug") or "").strip()

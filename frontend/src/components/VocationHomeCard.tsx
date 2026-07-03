@@ -11,13 +11,14 @@ import { AutoText as Text } from "@/src/auto-text";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 
-import { getCompanionImage, getVocationGuide, VocationGuide } from "@/src/api";
+import { getCompanionImage, getVocationGuide, getDailyCompanionActs, VocationGuide, DailyCompanionAct } from "@/src/api";
 import { colors, fonts, radius, spacing } from "@/src/theme";
 
 export default function VocationHomeCard() {
   const router = useRouter();
   const [guide, setGuide] = useState<VocationGuide | null>(null);
   const [image, setImage] = useState<string | null>(null);
+  const [acts, setActs] = useState<DailyCompanionAct[]>([]);
 
   const load = useCallback(async () => {
     try {
@@ -25,6 +26,12 @@ export default function VocationHomeCard() {
       setGuide(g.has_vocation ? g : null);
     } catch {
       setGuide(null);
+    }
+    try {
+      const r = await getDailyCompanionActs();
+      setActs(r.items || []);
+    } catch {
+      setActs([]);
     }
   }, []);
 
@@ -110,6 +117,26 @@ export default function VocationHomeCard() {
           <Text style={styles.verseRef}>— {guide.daily_verse.reference}</Text>
         </View>
       ) : null}
+
+      {acts.length > 0 ? (
+        <View style={styles.actsBox} testID="vocation-daily-acts">
+          <Text style={styles.actsHead}>{"TODAY'S ACTS WITH YOUR COMPANIONS"}</Text>
+          {acts.map((a) => (
+            <Pressable
+              key={a.slug}
+              testID={`daily-act-${a.slug}`}
+              onPress={() => router.push(`/companion/${a.slug}` as any)}
+              style={({ pressed }) => [styles.actRow, pressed && { opacity: 0.8 }]}
+            >
+              <Ionicons name="leaf-outline" size={14} color={colors.goldDark} style={{ marginTop: 2 }} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.actName}>{a.name}</Text>
+                <Text style={styles.actText}>{a.act}</Text>
+              </View>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -151,4 +178,9 @@ const styles = StyleSheet.create({
   verseLine: { marginTop: spacing.sm, borderLeftWidth: 3, borderLeftColor: colors.gold, paddingLeft: spacing.sm },
   verseText: { fontFamily: fonts.bodyItalic, fontSize: 13.5, color: colors.textSecondary, lineHeight: 20 },
   verseRef: { fontFamily: fonts.uiSemi, fontSize: 11.5, color: colors.gold, marginTop: 3 },
+  actsBox: { marginTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.borderSoft, paddingTop: spacing.sm, gap: spacing.xs },
+  actsHead: { fontFamily: fonts.uiSemi, fontSize: 10.5, letterSpacing: 1, color: colors.textMuted },
+  actRow: { flexDirection: "row", gap: 8, alignItems: "flex-start", marginTop: 4 },
+  actName: { fontFamily: fonts.uiSemi, fontSize: 12.5, color: colors.goldDark },
+  actText: { fontFamily: fonts.bodyRegular, fontSize: 13, color: colors.textPrimary, lineHeight: 19, marginTop: 1 },
 });

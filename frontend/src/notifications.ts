@@ -63,7 +63,7 @@ function timeParts(time?: string | null): { hour: number; minute: number } {
 
 function bodyFor(item: ScheduleItem): string {
   const labelByKind: Record<string, string> = {
-    meal: "Meal", workout: "Workout", virtue: "Virtue", challenge: "Challenge", custom: "Reminder",
+    meal: "Meal", workout: "Workout", virtue: "Virtue", challenge: "Challenge", custom: "Reminder", pilgrimage: "Pilgrimage",
   };
   return item.note || `${labelByKind[item.kind] || "Reminder"} from your schedule`;
 }
@@ -105,6 +105,24 @@ export async function scheduleItemNotifications(item: ScheduleItem): Promise<str
           trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: when, channelId },
         });
         ids.push(id);
+      }
+      // Gentle reminder the day before a pilgrimage.
+      if (item.kind === "pilgrimage") {
+        const dayBefore = new Date(when);
+        dayBefore.setDate(dayBefore.getDate() - 1);
+        dayBefore.setHours(9, 0, 0, 0);
+        if (dayBefore.getTime() > Date.now() + 5000) {
+          const id = await Notifications.scheduleNotificationAsync({
+            content: {
+              title: "Pilgrimage tomorrow",
+              body: `Tomorrow: ${item.title}. Prepare your heart and any plans for the journey.`,
+              sound: "default",
+              data: { scheduleId: item.id },
+            },
+            trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: dayBefore, channelId },
+          });
+          ids.push(id);
+        }
       }
     }
   } catch {

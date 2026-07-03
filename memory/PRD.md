@@ -349,3 +349,9 @@ Reverent & traditional aesthetic: cream/parchment background, deep stained-gl- C
   - Living → prayers for the CURRENT spouse & children ("Morning Prayer for My Spouse & Children", "Family Rosary").
   - `_build_guide` picks prayers_by_state[state] + DEVOTIONAL_RECS_BY_STATE[vocation][state], falling back to shared prayers/recs for singleness & religious life (unchanged).
 - Verified all vocation×state combos return correct prayers/recs/traditions with no errors.
+
+## Session update 34 (July 2026) — Coloring canvas: draw over the image (bug fix, verified iter93)
+- User bug: could only color the margins above the illustration, not the image itself.
+- Root cause 1: PanResponder was on the outer canvas View, competing with the underlying <Image> as touch target → touches over the image swallowed/offset. Fix: moved panHandlers to a single transparent top-layer View (testID coloring-touch-layer, styles.touchLayer absoluteFill) covering the whole canvas so all touches are captured uniformly.
+- Root cause 2 (found & fixed by testing agent): `<Svg style={styles.overlay}>` had no explicit width/height → react-native-svg on web used default 300x150 with overflow:hidden, clipping strokes drawn over the (centered) image. Fix: `<Svg width="100%" height="100%" style={styles.overlay}>`.
+- Verified iter93: drag over center of illustration renders visible strokes on both /coloring/sacred-heart and /coloring/cross; color switch, undo, clear, share, and AsyncStorage persistence all pass.

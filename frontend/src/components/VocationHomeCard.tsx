@@ -130,7 +130,12 @@ export default function VocationHomeCard() {
             >
               <Ionicons name="leaf-outline" size={14} color={colors.goldDark} style={{ marginTop: 2 }} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.actName}>{a.name}</Text>
+                <View style={styles.actNameRow}>
+                  <Text style={styles.actName}>{a.name}</Text>
+                  {a.is_vocation ? (
+                    <View style={styles.vocBadge}><Text style={styles.vocBadgeText}>VOCATION</Text></View>
+                  ) : null}
+                </View>
                 <Text style={styles.actText}>{a.act}</Text>
               </View>
             </Pressable>
@@ -181,6 +186,9 @@ const styles = StyleSheet.create({
   actsBox: { marginTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.borderSoft, paddingTop: spacing.sm, gap: spacing.xs },
   actsHead: { fontFamily: fonts.uiSemi, fontSize: 10.5, letterSpacing: 1, color: colors.textMuted },
   actRow: { flexDirection: "row", gap: 8, alignItems: "flex-start", marginTop: 4 },
+  actNameRow: { flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" },
   actName: { fontFamily: fonts.uiSemi, fontSize: 12.5, color: colors.goldDark },
+  vocBadge: { backgroundColor: colors.primary, borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1 },
+  vocBadgeText: { fontFamily: fonts.uiSemi, fontSize: 8.5, letterSpacing: 0.6, color: colors.gold },
   actText: { fontFamily: fonts.bodyRegular, fontSize: 13, color: colors.textPrimary, lineHeight: 19, marginTop: 1 },
 });

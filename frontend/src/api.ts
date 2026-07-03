@@ -1421,7 +1421,7 @@ export async function addDevotionPractice(payload: {
 }): Promise<MyDevotion & { added: boolean }> {
   return await api("/my/devotions/add-practice", { method: "POST", body: payload });
 }
-export type DailyCompanionAct = { slug: string; name: string; act: string };
+export type DailyCompanionAct = { slug: string; name: string; act: string; is_vocation?: boolean };
 export async function getDailyCompanionActs(): Promise<{ items: DailyCompanionAct[] }> {
   return await api("/companions/daily-acts");
 }

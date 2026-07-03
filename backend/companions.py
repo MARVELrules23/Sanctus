@@ -1502,18 +1502,30 @@ def build_router(db: AsyncIOMotorDatabase, get_current_user, emergent_llm_key: s
 
     @router.get("/daily-acts")
     async def daily_acts(user=Depends(get_current_user)):
-        """Today's small act for each of the user's chosen daily companions
-        (plus the permanent Guardian Angel), for the Home screen."""
+        """Today's small act for each of the user's companions for the Home
+        screen: the permanent Guardian Angel, the vocation companion (if the
+        user has chosen a vocation), and any chosen daily companions."""
         prefs = await db.preferences.find_one({"user_id": user.user_id}, {"_id": 0}) or {}
         selected = [s for s in (prefs.get("daily_companions") or []) if s != PERMANENT_COMPANION]
-        order = [PERMANENT_COMPANION] + selected
+        vocation_companion = (prefs.get("companion_saint") or "").strip()
+        order: List[str] = [PERMANENT_COMPANION]
+        if vocation_companion and vocation_companion in COMPANIONS:
+            order.append(vocation_companion)
+        order.extend(selected)
         items = []
+        seen = set()
         for slug in order:
+            if slug in seen:
+                continue
+            seen.add(slug)
             c = COMPANIONS.get(slug)
             if not c:
                 continue
             act = _today_act(c["daily_acts"])
-            items.append({"slug": slug, "name": c["name"], "act": act["text"]})
+            items.append({
+                "slug": slug, "name": c["name"], "act": act["text"],
+                "is_vocation": slug == vocation_companion,
+            })
         return {"items": items}
 
     @router.post("/select")

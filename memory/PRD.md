@@ -308,3 +308,13 @@ Reverent & traditional aesthetic: cream/parchment background, deep stained-gl- C
 - **Reminders:** src/family-notifications.ts uses expo-notifications DAILY triggers at 06:00 & 19:00 device-local time (each user's timezone). Permission flow per contract (settings redirect if blocked). Web = unsupported; only fires on installed build.
 - Gotcha fixed: find_one with projection excluding _id returns {} (falsy) — use `is None`.
 - Children's books remain FREE.
+
+## Session update 29 (July 2026) — Family tab expansion + coloring share (DONE, verified iter90)
+- **Coloring save/share:** `app/coloring/[slug].tsx` — canvasWrap wrapped in `ref={captureRefView} collapsable={false}`; new header Share button (testID coloring-share) uses `captureRef` (react-native-view-shot) + `Sharing.shareAsync` (expo-sharing). Web shows informative Alert (only works on installed app). No crash on web.
+- **Family tab (`app/(tabs)/family.tsx`) new sections:**
+  - **My family companions** (testID family-companions): add/list/remove members with optional patron saint chosen from `getCompanionOptions()` (GET /api/companions). Uses api.ts getFamilyMembers/addFamilyMember/deleteFamilyMember. Patron row deep-links to /companions/{slug}. testIDs: family-member-add, family-member-name-input, family-patron-{slug}, family-member-save, family-member-cancel, family-member-delete-{id}.
+  - **For Children** (3 tiles → /library/books/{slug}: bible-stories-for-little-souls, little-saints-for-little-hearts, the-holy-mass-for-little-ones) + Library link.
+  - **For Parents** (parent guides + Humanae Vitae → /library/books/{slug}: parents-guide-to-the-mass, parents-guide-to-confession, teaching-your-child-the-faith, humanae-vitae).
+- Backend (already existed, re-verified): /api/family/members CRUD, /api/companions, /api/coloring-pages; parent guides seeded via `parent_guides_data.PARENT_GUIDES` in library.py (tradition="family", free).
+- Verified iter90: 19/19 backend + frontend add-member flow, deep-links, share button no-crash.
+- KNOWN (non-blocking, deferred P3): UI delete uses RN Alert (not deterministically e2e-testable on web); react-native-web shadow*/pointerEvents deprecation warnings persist on coloring Svg overlay.

@@ -111,7 +111,7 @@ export default function ColoringCanvas() {
                 <Path d={current} stroke={color} strokeWidth={22} strokeLinecap="round" strokeLinejoin="round" fill="none" opacity={0.55} />
               ) : null}
             </Svg>
-            <Image source={{ uri: page.image }} style={styles.lineArt} resizeMode="contain" pointerEvents="none" />
+            <Image source={{ uri: page.image }} style={styles.lineArt} resizeMode="contain" />
           </View>
 
           <View style={styles.palette}>

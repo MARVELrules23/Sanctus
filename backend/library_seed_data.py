@@ -903,7 +903,7 @@ SEED_STATIONS: List[Dict[str, Any]] = [
         "country": "US",
         "language": "Spanish",
         "stream_url": "https://ewtn-ice.streamguys1.com/spanish-aac",
-        "website_url": "https://www.ewtn.com/spanish",
+        "website_url": "https://www.ewtn.com/espanol",
         "accent_color": "#831843",
         "icon": "flower-outline",
     },

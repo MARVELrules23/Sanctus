@@ -128,7 +128,7 @@ export default function BibleIndexScreen() {
             {[
               { label: "New American Bible (NABRE) · USCCB", url: "https://bible.usccb.org/bible" },
               { label: "Revised Standard Version — Catholic Edition", url: "https://www.biblegateway.com/versions/Revised-Standard-Version-Catholic-Edition-RSVCE-Bible/" },
-              { label: "Knox Bible", url: "https://www.newadventbible.com/" },
+              { label: "Knox Bible", url: "https://knoxbible.com/" },
             ].map((x, i) => (
               <Pressable
                 key={x.url}

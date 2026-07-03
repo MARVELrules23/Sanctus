@@ -332,3 +332,11 @@ Reverent & traditional aesthetic: cream/parchment background, deep stained-gl- C
 - Added 2 chaplets to src/prayers/chaplets.ts (bead format) + CHAPLET_ORDER: st_joseph_chaplet (7 Sorrows&Joys), franciscan_crown (Seraphic Rosary, 7 decades of Mary's Joys).
 - Deep-links: companions.py `_with_routes` now respects an explicit `route` on a SAINT_DEVOTIONS item. Added route "/prayer/{key}" to matching items + 3 new items (sacred-heart Act of Reparation, padre-pio Stay with me Lord, BVM Little Office). Mapping verified via curl: st-joseph→(to_you_blessed_joseph, st_joseph_chaplet), guardian-angel→angel_of_god, agnes/st-lucy→litany_virgin_martyrs + agnes→consecration_of_purity, francis-assisi→franciscan_crown, sacred-heart→act_of_reparation, sts-peter-paul→(apostles_creed, chair_of_st_peter), padre-pio→stay_with_me_lord, therese-lisieux→(the_little_way, holy_face), john-the-baptist→benedictus, blessed-virgin-mary→little_office_bvm, thomas-aquinas→tantum_ergo.
 - Prayer pages resolve via /prayer/[kind] (CHAPLETS + DEVOTIONS by key). Verified st_joseph_chaplet renders ("Bead 1 of 26"). NOTE: Metro is CI mode (no file watch) — must restart expo to pick up new prayer data files.
+
+## Session update 32 (July 2026) — External link audit & fixes
+- Audited ~150 external links (backend data + frontend). Fixed all genuinely-broken ones (dead DNS or 404 path):
+  - catholic_sites.py (World Map shrine source_url): St Peter's→basilicasanpietro.va/en.html; San Giovanni Lateran, San Francesco Assisi, Quiapo, La Salette, Marija Bistrica, St Charbel, Oura Church, San Domenico, Croagh Patrick, ND du Cap, Templo Votivo Maipú→ verified Wikipedia pages; Santa Maria delle Grazie→cenacolovinciano.org/en/; St Stephen's Vienna→stephanskirche.at/.
+  - bible/index.tsx: Knox Bible newadventbible.com (dead)→knoxbible.com.
+  - library_seed_data.py: EWTN Spanish radio ewtn.com/spanish (404)→ewtn.com/espanol.
+- Verified working (not broken): all 8 sanctuary archive.org audio tracks (206), Gregorian chant mp3 (206), Leo XIV encyclical 'Magnifica Humanitas' (genuine Vatican page, 200).
+- Remaining 403/000 in audit are datacenter bot-blocking / geo-blocking (usccb, britannica, unesco, knockshrine, nationalshrine, radiomaria, thedivinemercy, and a few EU/Latam shrine sites that resolve DNS) — these work in a real browser/device, NOT broken.

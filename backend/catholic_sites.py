@@ -43,7 +43,7 @@ SEED_SITES: List[Dict[str, Any]] = [
         "relics": ["Tomb and bones of St. Peter the Apostle (beneath the high altar)", "Relics of St. John Chrysostom", "The Veronica veil (claimed)"],
         "saints": ["St. Peter the Apostle", "Pope St. John Paul II (entombed here)", "Pope St. John XXIII"],
         "miracles": ["Numerous canonization miracles confirmed for saints entombed or venerated here"],
-        "source_url": "https://www.vaticanstate.va/en/monuments/st-peters-basilica.html",
+        "source_url": "https://www.basilicasanpietro.va/en.html",
     },
     {
         "slug": "our-lady-of-guadalupe",
@@ -127,7 +127,7 @@ SEED_SITES: List[Dict[str, Any]] = [
         "relics": ["Tomb of St. Francis of Assisi", "The habit and relics of St. Francis"],
         "saints": ["St. Francis of Assisi", "Bl. Carlo Acutis (nearby, Santa Maria Maggiore)"],
         "miracles": ["St. Francis's stigmata (received at La Verna, 1224)"],
-        "source_url": "https://www.sanfrancescoassisi.org/en/",
+        "source_url": "https://en.wikipedia.org/wiki/Basilica_of_Saint_Francis_of_Assisi",
     },
     {
         "slug": "san-giovanni-rotondo",
@@ -141,7 +141,7 @@ SEED_SITES: List[Dict[str, Any]] = [
         "relics": ["Incorrupt body of St. Pio of Pietrelcina"],
         "saints": ["St. Pio of Pietrelcina (Padre Pio)"],
         "miracles": ["The stigmata of Padre Pio", "Documented healings through his intercession"],
-        "source_url": "https://www.conventosantamariadellegrazie.it/en/",
+        "source_url": "https://cenacolovinciano.org/en/",
     },
     {
         "slug": "notre-dame-de-paris",
@@ -251,7 +251,7 @@ SEED_SITES: List[Dict[str, Any]] = [
         "relics": ["Relics of the heads of Sts. Peter and Paul (reputed)", "The Holy Stairs (Scala Sancta) nearby"],
         "saints": ["Sts. Peter and Paul (relics venerated)"],
         "miracles": [],
-        "source_url": "https://www.vatican.va/various/basiliche/san_giovanni/index_en.html",
+        "source_url": "https://en.wikipedia.org/wiki/Archbasilica_of_Saint_John_Lateran",
     },
     {
         "slug": "padua-st-anthony",
@@ -331,7 +331,7 @@ SEED_SITES: List[Dict[str, Any]] = [
         "relics": ["The image of the Black Nazarene"],
         "saints": [],
         "miracles": ["Healings reported through the Black Nazarene", "Survival of the image through fires and earthquakes"],
-        "source_url": "https://quiapochurch.com/",
+        "source_url": "https://en.wikipedia.org/wiki/Quiapo_Church",
     },
     {
         "slug": "basilica-our-lady-aparecida",
@@ -569,7 +569,7 @@ SEED_SITES: List[Dict[str, Any]] = [
      "history": "On 19 September 1846 the Virgin appeared in tears to Mélanie and Maximin, calling for "
      "conversion and the keeping of Sunday. The apparition was approved in 1851.",
      "relics": [], "saints": [], "miracles": ["The weeping apparition of Our Lady of La Salette"],
-     "source_url": "https://www.lasalette.cef.fr/"},
+     "source_url": "https://en.wikipedia.org/wiki/Our_Lady_of_La_Salette"},
     {"slug": "mariazell", "name": "Mariazell Basilica", "type": "basilica",
      "city": "Mariazell", "country": "Austria", "lat": 47.7717, "lng": 15.3186, "founded": "12th century",
      "blurb": "'Magna Mater Austriae' — the most important Marian shrine of Austria and Central Europe.",
@@ -614,7 +614,7 @@ SEED_SITES: List[Dict[str, Any]] = [
      "history": "A wooden Black Madonna hidden during Ottoman raids was rediscovered intact; the shrine "
      "became Croatia's national sanctuary, where John Paul II beatified Bl. Alojzije Stepinac.",
      "relics": ["The Black Madonna of Bistrica"], "saints": ["Bl. Alojzije Stepinac (beatified here)"], "miracles": [],
-     "source_url": "https://www.svetiste-mbistrica.hr/"},
+     "source_url": "https://en.wikipedia.org/wiki/Marija_Bistrica"},
     {"slug": "sastin-slovakia", "name": "Basilica of the Seven Sorrows", "type": "basilica",
      "city": "Šaštín", "country": "Slovakia", "lat": 48.6386, "lng": 17.1469, "founded": "1736–1764",
      "blurb": "National shrine of Slovakia, honouring Our Lady of Sorrows, patroness of the nation.",
@@ -693,7 +693,7 @@ SEED_SITES: List[Dict[str, Any]] = [
      "tomb radiated light and his body exuded a fluid, with thousands of healings reported.",
      "relics": ["Tomb of St. Charbel Makhlouf"], "saints": ["St. Charbel Makhlouf"],
      "miracles": ["Light over his tomb", "Thousands of documented healings"],
-     "source_url": "https://saintcharbel-annaya.com/en/"},
+     "source_url": "https://en.wikipedia.org/wiki/Saint_Charbel"},
     {"slug": "sheshan-shanghai", "name": "Basilica of Our Lady of Sheshan", "type": "basilica",
      "city": "Shanghai", "country": "China", "lat": 31.0958, "lng": 121.1939, "founded": "1925–1935",
      "blurb": "The largest church in East Asia, atop Sheshan hill, honouring Our Lady, Help of Christians.",
@@ -715,7 +715,7 @@ SEED_SITES: List[Dict[str, Any]] = [
      "revealed themselves to the priest here in 1865 — a moment called a 'miracle of the Orient'.",
      "relics": [], "saints": ["St. Paul Miki and the Twenty-Six Martyrs of Japan"],
      "miracles": ["The rediscovery of the Hidden Christians (1865)"],
-     "source_url": "https://nagasaki-oura-church.jp/en"},
+     "source_url": "https://en.wikipedia.org/wiki/%C5%8Cura_Church"},
     {"slug": "madhu-srilanka", "name": "Shrine of Our Lady of Madhu", "type": "shrine",
      "city": "Mannar", "country": "Sri Lanka", "lat": 8.8270, "lng": 80.1980, "founded": "1670s",
      "blurb": "A 400-year Marian shrine, refuge of all communities through Sri Lanka's conflicts.",
@@ -908,7 +908,7 @@ SEED_SITES: List[Dict[str, Any]] = [
      "history": "With its multicoloured tiled roof and great south tower, 'Steffl' has witnessed Austria's "
      "history for centuries and holds the catacombs of Viennese archbishops.",
      "relics": [], "saints": [], "miracles": [],
-     "source_url": "https://www.stephanskirche.at/index.php/en/"},
+     "source_url": "https://www.stephanskirche.at/"},
     {"slug": "holy-blood-bruges", "name": "Basilica of the Holy Blood", "type": "basilica",
      "city": "Bruges", "country": "Belgium", "lat": 51.2086, "lng": 3.2578, "founded": "12th century",
      "blurb": "Home of a venerated relic of the Precious Blood of Christ.",
@@ -991,7 +991,7 @@ SEED_SITES: List[Dict[str, Any]] = [
      "history": "St. Dominic, founder of the Dominicans, is buried in the magnificent 'Arca di San Domenico', "
      "carved by Nicola Pisano and the young Michelangelo among others.",
      "relics": ["Tomb of St. Dominic"], "saints": ["St. Dominic de Guzmán"], "miracles": [],
-     "source_url": "https://www.basilicasandomenico.it/"},
+     "source_url": "https://en.wikipedia.org/wiki/Basilica_of_San_Domenico"},
     {"slug": "minerva-rome", "name": "Basilica of Santa Maria sopra Minerva", "type": "basilica",
      "city": "Rome", "country": "Italy", "lat": 41.8983, "lng": 12.4779, "founded": "1280–1370",
      "blurb": "Rome's only Gothic church, holding the body of St. Catherine of Siena.",
@@ -1118,7 +1118,7 @@ SEED_SITES: List[Dict[str, Any]] = [
      "history": "Tradition holds that St. Patrick fasted and prayed for forty days on this peak; the "
      "pilgrimage, especially on 'Reek Sunday', is one of Ireland's most ancient.",
      "relics": [], "saints": ["St. Patrick"], "miracles": [],
-     "source_url": "https://www.croagh-patrick.com/"},
+     "source_url": "https://en.wikipedia.org/wiki/Croagh_Patrick"},
     {"slug": "medjugorje", "name": "St. James Church, Medjugorje", "type": "apparition",
      "city": "Medjugorje", "country": "Bosnia and Herzegovina", "lat": 43.1910, "lng": 17.6780, "founded": "1981 (reported apparitions)",
      "blurb": "A place of prayer and conversion linked to reported Marian apparitions since 1981.",
@@ -1183,7 +1183,7 @@ SEED_SITES: List[Dict[str, Any]] = [
      "history": "In 1888, witnesses reported the statue of Our Lady opened its eyes; the shrine of Our Lady "
      "of the Cape is now one of Canada's foremost Marian pilgrimage sites.",
      "relics": ["The statue of Our Lady of the Cape"], "saints": [], "miracles": ["The 'Miracle of the Eyes' (1888)"],
-     "source_url": "https://sanctuaire-ndcap.org/en/"},
+     "source_url": "https://en.wikipedia.org/wiki/Notre-Dame-du-Cap_Basilica"},
     {"slug": "aylesford-priory", "name": "Aylesford Priory (The Friars)", "type": "monastery",
      "city": "Aylesford", "country": "United Kingdom", "lat": 51.3030, "lng": 0.4790, "founded": "1242",
      "blurb": "Ancient Carmelite friary linked to St. Simon Stock and the Brown Scapular.",
@@ -1197,7 +1197,7 @@ SEED_SITES: List[Dict[str, Any]] = [
      "history": "Built fulfilling a vow made at the Battle of Maipú for Chile's independence, the temple "
      "honours Our Lady of Mount Carmel, mother and queen of Chile.",
      "relics": ["The image of Our Lady of Mount Carmel"], "saints": [], "miracles": [],
-     "source_url": "https://www.templovotivomaipu.cl/"},
+     "source_url": "https://en.wikipedia.org/wiki/Votive_Temple_of_Maip%C3%BA"},
     {"slug": "san-nicolas-argentina", "name": "Shrine of Our Lady of the Rosary of San Nicolás", "type": "apparition",
      "city": "San Nicolás", "country": "Argentina", "lat": -33.3360, "lng": -60.2090, "founded": "apparitions 1983",
      "blurb": "Site of approved Marian apparitions and messages beginning in 1983.",

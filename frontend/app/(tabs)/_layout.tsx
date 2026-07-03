@@ -124,16 +124,6 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="profile"
-        options={{
-          title: t("tab.profile"),
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person-circle-outline" color={color} size={size} />
-          ),
-          tabBarTestID: "tab-profile",
-        }}
-      />
-      <Tabs.Screen
         name="family"
         options={{
           title: t("tab.family"),
@@ -141,6 +131,16 @@ export default function TabsLayout() {
             <Ionicons name="home-outline" color={color} size={size} />
           ),
           tabBarTestID: "tab-family",
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: t("tab.profile"),
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="person-circle-outline" color={color} size={size} />
+          ),
+          tabBarTestID: "tab-profile",
         }}
       />
     </Tabs>

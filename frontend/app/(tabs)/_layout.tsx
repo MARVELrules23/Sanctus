@@ -59,6 +59,47 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="community"
+        options={{
+          title: t("tab.parish"),
+          tabBarLabel: t("tab.parish"),
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="people-outline" color={color} size={size} />
+          ),
+          tabBarTestID: "tab-community",
+          tabBarBadge: parishBadge,
+          tabBarBadgeStyle: {
+            backgroundColor: colors.gold,
+            color: colors.primary,
+            fontFamily: fonts.uiSemi,
+            fontSize: 10,
+            minWidth: 18,
+            height: 18,
+            lineHeight: 14,
+          },
+        }}
+      />
+      <Tabs.Screen
+        name="family"
+        options={{
+          title: t("tab.family"),
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="home-outline" color={color} size={size} />
+          ),
+          tabBarTestID: "tab-family",
+        }}
+      />
+      <Tabs.Screen
+        name="sanctuary"
+        options={{
+          title: t("tab.sanctuary"),
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="musical-notes-outline" color={color} size={size} />
+          ),
+          tabBarTestID: "tab-sanctuary",
+        }}
+      />
+      <Tabs.Screen
         name="meals"
         options={{
           title: t("tab.meals"),
@@ -87,50 +128,9 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="sanctuary"
-        options={{
-          title: t("tab.sanctuary"),
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="musical-notes-outline" color={color} size={size} />
-          ),
-          tabBarTestID: "tab-sanctuary",
-        }}
-      />
-      <Tabs.Screen
-        name="community"
-        options={{
-          title: t("tab.parish"),
-          tabBarLabel: t("tab.parish"),
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="people-outline" color={color} size={size} />
-          ),
-          tabBarTestID: "tab-community",
-          tabBarBadge: parishBadge,
-          tabBarBadgeStyle: {
-            backgroundColor: colors.gold,
-            color: colors.primary,
-            fontFamily: fonts.uiSemi,
-            fontSize: 10,
-            minWidth: 18,
-            height: 18,
-            lineHeight: 14,
-          },
-        }}
-      />
-      <Tabs.Screen
         name="calendar"
         options={{
           href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="family"
-        options={{
-          title: t("tab.family"),
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home-outline" color={color} size={size} />
-          ),
-          tabBarTestID: "tab-family",
         }}
       />
       <Tabs.Screen

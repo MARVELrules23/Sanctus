@@ -130,15 +130,6 @@ export default function PrayerHubScreen() {
       onPress: () => router.push("/novenas"),
     });
     arr.push({
-      testID: "prayer-card-consecration",
-      title: "Consecration to St. Joseph",
-      subtitle: "33-day preparation — give yourself to Jesus through St. Joseph",
-      meta: "33 DAYS",
-      color: "#C29A3B",
-      icon: "shield-half-outline",
-      onPress: () => router.push("/consecration" as any),
-    });
-    arr.push({
       testID: "prayer-card-my-devotions",
       title: "My Prayers & Devotionals",
       subtitle: "Write your own prayers and create devotionals to any saint or angel",

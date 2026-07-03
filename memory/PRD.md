@@ -300,3 +300,11 @@ Reverent & traditional aesthetic: cream/parchment background, deep stained-gl- C
 - `library.py`: seeds `SEED_BOOKS + CHILDREN_BOOKS`; `_is_book_premium` now returns FREE for tradition=="children" (kids' books free to read). Seeded 3 books on startup (verified free, chapters readable).
 - Frontend `app/library/index.tsx`: TRADITION_LABEL children="For Children"; grouped memo splits `children` out of authored; renders a dedicated "For Children" section (testID library-section-children) between Books and Encyclicals. Verified rendering with all 3 books + Free-to-read tags.
 - NOTE: children's books are FREE by design choice (family focus); if user wants them Premium, remove the children rule in `_is_book_premium`.
+
+## Session update 28 (July 2026) — Family tab (prayers, reminders, devotional, question, saint spotlight), coloring book, book covers (DONE)
+- **Book cover art:** generated 3 illustrated covers via Gemini Nano Banana (gen_family_assets.py), stored on library_books.cover_image; `_public_book` returns cover_image; Library book cards now show the illustration.
+- **Coloring:** 6 AI line-art pages seeded into `coloring_pages` (cross, chalice-host, nativity, guardian-angel, holy-spirit-dove, sacred-heart). GET /api/coloring-pages. Screens: app/coloring/index.tsx (grid) + [slug].tsx (freehand SVG PanResponder canvas, palette, undo/clear, progress saved to AsyncStorage, translucent strokes over line-art).
+- **Family tab** rebuilt (app/(tabs)/family.tsx): GET /api/family/today returns morning_prayer, night_prayer (parent/child call-response), rotating devotional (deep-linked), daily question, and rotating Saint Spotlight (curated 16-saint pool, tap to expand bio). Localized EN/ES/IT.
+- **Reminders:** src/family-notifications.ts uses expo-notifications DAILY triggers at 06:00 & 19:00 device-local time (each user's timezone). Permission flow per contract (settings redirect if blocked). Web = unsupported; only fires on installed build.
+- Gotcha fixed: find_one with projection excluding _id returns {} (falsy) — use `is None`.
+- Children's books remain FREE.

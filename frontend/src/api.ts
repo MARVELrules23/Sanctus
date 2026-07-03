@@ -1473,6 +1473,24 @@ export async function getFoodTradition(slug: string): Promise<FoodTradition> {
   return await api(`/food-traditions/${slug}`);
 }
 
+// ---- Family tab ----
+export type FamilySaint = { name: string; feast: string; patronage: string; icon?: string; color?: string; bio: string };
+export type FamilyPrayer = { title: string; lines: { who: string; text: string }[] };
+export type FamilyToday = {
+  morning_prayer: FamilyPrayer;
+  night_prayer: FamilyPrayer;
+  devotional: { title: string; body: string; route?: string | null };
+  question: string;
+  saint: FamilySaint;
+};
+export async function getFamilyToday(): Promise<FamilyToday> {
+  return await api(`/family/today`);
+}
+export type ColoringPage = { slug: string; title: string; order: number; image: string };
+export async function getColoringPages(): Promise<{ items: ColoringPage[] }> {
+  return await api(`/coloring-pages`);
+}
+
 
 export async function getChallenge(slug: string): Promise<ChallengeDetail> {
   return await api(`/challenges/${encodeURIComponent(slug)}`);

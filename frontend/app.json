@@ -16,7 +16,8 @@
         "NSCalendarsUsageDescription": "Save parish events to your calendar",
         "NSCalendarsFullAccessUsageDescription": "Save parish events to your calendar",
         "NSRemindersUsageDescription": "Add prayer reminders to your reminders"
-      }
+      },
+      "bundleIdentifier": "app.emergent.faithfulfitness329c749ee"
     },
     "android": {
       "adaptiveIcon": {
@@ -30,7 +31,8 @@
         "READ_MEDIA_IMAGES",
         "READ_CALENDAR",
         "WRITE_CALENDAR"
-      ]
+      ],
+      "package": "app.emergent.faithfulfitness38b5cf76e"
     },
     "web": {
       "bundler": "metro",

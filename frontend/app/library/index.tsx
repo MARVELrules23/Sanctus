@@ -160,7 +160,15 @@ export default function LibraryIndexScreen() {
         style={({ pressed }) => [styles.bookCard, pressed && { opacity: 0.85 }]}
       >
         <View style={[styles.cover, { backgroundColor: accent }]}>
-          <Ionicons name={(b.cover_icon as any) || "book-outline"} size={28} color={colors.gold} />
+          {(b as any).cover_image ? (
+            <Image
+              source={{ uri: (b as any).cover_image }}
+              style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: radius.md }}
+              resizeMode="cover"
+            />
+          ) : (
+            <Ionicons name={(b.cover_icon as any) || "book-outline"} size={28} color={colors.gold} />
+          )}
           {b.type === "external" ? (
             <View style={styles.externalBadge}>
               <Ionicons name="open-outline" size={10} color={colors.surface} />

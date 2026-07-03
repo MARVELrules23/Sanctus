@@ -187,6 +187,7 @@ def _public_book(doc: Dict[str, Any], include_chapter_bodies: bool = False) -> D
         "tradition": doc.get("tradition") or "catholic-classic",
         "cover_color": doc.get("cover_color"),
         "cover_icon": doc.get("cover_icon"),
+        "cover_image": doc.get("cover_image"),
         "type": doc.get("type") or "embedded",
         "source_url": doc.get("source_url"),
         "status": doc.get("status") or "published",

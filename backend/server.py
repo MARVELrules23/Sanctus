@@ -41,6 +41,8 @@ EMERGENT_LLM_KEY = os.environ.get("EMERGENT_LLM_KEY", "")
 bible_svc.set_llm_key(EMERGENT_LLM_KEY)
 import food_traditions as food_svc
 food_svc.set_llm_key(EMERGENT_LLM_KEY)
+import family as family_svc
+family_svc.set_llm_key(EMERGENT_LLM_KEY)
 SESSION_DATA_URL = "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data"
 
 logger = logging.getLogger("sanctus")
@@ -421,6 +423,17 @@ async def food_tradition_one(slug: str):
         raise HTTPException(status_code=404, detail="unknown tradition")
     items = await food_svc.localize(db, [t])
     return items[0]
+
+
+@api.get("/family/today")
+async def family_today():
+    return await family_svc.get_today(db)
+
+
+@api.get("/coloring-pages")
+async def coloring_pages():
+    docs = await db.coloring_pages.find({}, {"_id": 0}).sort("order", 1).to_list(50)
+    return {"items": docs}
 
 
 @api.get("/liturgical/month")

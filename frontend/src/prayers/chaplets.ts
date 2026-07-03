@@ -32,7 +32,9 @@ export type ChapletKey =
   | "peter_and_paul"
   | "st_joseph_renewal"
   | "marian_renewal"
-  | "sacred_heart_renewal";
+  | "sacred_heart_renewal"
+  | "st_joseph_chaplet"
+  | "franciscan_crown";
 
 export type Chaplet = {
   key: ChapletKey;
@@ -494,6 +496,73 @@ function buildDivineMercy(): BeadStep[] {
 }
 
 /* -------------------------------------------------------------------------- */
+/*                            CHAPLET OF ST JOSEPH                             */
+/* -------------------------------------------------------------------------- */
+
+const ST_JOSEPH_MYSTERIES: { title: string; reflection: string }[] = [
+  { title: "The Annunciation to Joseph & the Flight into Egypt", reflection: "The doubt of Joseph, and the message of the Angel; the birth of Jesus, and the flight into Egypt." },
+  { title: "The Poverty of Bethlehem & the joy of the Nativity", reflection: "The hardship of the stable, turned to the joy of the Saviour's birth." },
+  { title: "The Circumcision & the Holy Name of Jesus", reflection: "The pain of the Child's blood, and the sweetness of naming Him 'Jesus.'" },
+  { title: "The Prophecy of Simeon & the joy of salvation", reflection: "The sword foretold, and the light for the Gentiles." },
+  { title: "The Life in Egypt & the fall of the idols", reflection: "The exile among strangers, comforted by the presence of God made flesh." },
+  { title: "The Return from Egypt & the fear of Archelaus", reflection: "The dread of the tyrant, and the peace of the return to Nazareth." },
+  { title: "The Loss & Finding of Jesus in the Temple", reflection: "The three days of anguish, turned to the joy of finding Him about His Father's business." },
+];
+
+function buildStJosephChaplet(): BeadStep[] {
+  const OUR_FATHER = "Our Father, Who art in heaven, hallowed be Thy name; Thy kingdom come; Thy will be done on earth as it is in heaven. Give us this day our daily bread; and forgive us our trespasses, as we forgive those who trespass against us; and lead us not into temptation, but deliver us from evil. Amen.";
+  const HAIL_MARY = "Hail Mary, full of grace, the Lord is with thee. Blessed art thou amongst women, and blessed is the fruit of thy womb, Jesus. Holy Mary, Mother of God, pray for us sinners, now and at the hour of our death. Amen.";
+  const steps: BeadStep[] = [];
+  steps.push({ label: "Sign of the Cross", prayer: "In the name of the Father, and of the Son, and of the Holy Spirit. Amen." });
+  steps.push({ label: "Opening", prayer: "O God, come to my assistance. O Lord, make haste to help me. Glory be… This chaplet honors the Seven Sorrows and Seven Joys of St. Joseph, praying an Our Father and a Hail Mary for each." });
+  ST_JOSEPH_MYSTERIES.forEach((m, i) => {
+    steps.push({ label: `${i + 1}. Sorrow & Joy — ${m.title}`, prayer: m.reflection });
+    steps.push({ label: "Our Father", prayer: OUR_FATHER });
+    steps.push({ label: "Hail Mary", prayer: HAIL_MARY });
+  });
+  steps.push({ label: "Antiphon", prayer: "V. Pray for us, O holy Joseph.\nR. That we may be made worthy of the promises of Christ." });
+  steps.push({ label: "Closing Prayer", prayer: "O God, who in Your ineffable providence chose blessed Joseph to be the spouse of Your most holy Mother, grant, we beseech You, that we may deserve to have him for our intercessor in heaven, whom we venerate as our protector on earth. Who lives and reigns forever. Amen." });
+  steps.push({ label: "Sign of the Cross", prayer: "In the name of the Father, and of the Son, and of the Holy Spirit. Amen." });
+  return steps;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                    THE FRANCISCAN CROWN (SERAPHIC ROSARY)                   */
+/* -------------------------------------------------------------------------- */
+
+const SEVEN_JOYS_OF_MARY = [
+  "The Annunciation — Gabriel greets Mary, and the Word is made flesh in her.",
+  "The Visitation — Mary hastens to Elizabeth, and Elizabeth calls her blessed.",
+  "The Nativity — Mary brings forth her Son, and lays Him in the manger.",
+  "The Adoration of the Magi — the nations come to worship the newborn King.",
+  "The Finding of Jesus in the Temple — after three days, joy in finding Him.",
+  "The Resurrection — Mary rejoices to see her Son risen from the dead.",
+  "The Assumption & Coronation — Mary is taken up and crowned Queen of Heaven.",
+];
+
+function buildFranciscanCrown(): BeadStep[] {
+  const OUR_FATHER = "Our Father, Who art in heaven, hallowed be Thy name; Thy kingdom come; Thy will be done on earth as it is in heaven. Give us this day our daily bread; and forgive us our trespasses, as we forgive those who trespass against us; and lead us not into temptation, but deliver us from evil. Amen.";
+  const HAIL_MARY = "Hail Mary, full of grace, the Lord is with thee. Blessed art thou amongst women, and blessed is the fruit of thy womb, Jesus. Holy Mary, Mother of God, pray for us sinners, now and at the hour of our death. Amen.";
+  const GLORY = "Glory be to the Father, and to the Son, and to the Holy Spirit, as it was in the beginning, is now, and ever shall be, world without end. Amen.";
+  const steps: BeadStep[] = [];
+  steps.push({ label: "Sign of the Cross", prayer: "In the name of the Father, and of the Son, and of the Holy Spirit. Amen." });
+  steps.push({ label: "The Seraphic Rosary", prayer: "The Franciscan Crown (Seraphic Rosary) commemorates the Seven Joys of Our Lady in seven decades. It began among the Friars Minor in the 15th century. At the end, two extra Hail Marys are added (to complete 72, the traditional years of Our Lady's life)." });
+  SEVEN_JOYS_OF_MARY.forEach((joy, i) => {
+    steps.push({ label: `${i + 1}. Joy — Meditation`, prayer: joy });
+    steps.push({ label: "Our Father", prayer: OUR_FATHER });
+    for (let j = 1; j <= 10; j++) {
+      steps.push({ label: `Decade ${i + 1} — Hail Mary ${j}/10`, prayer: HAIL_MARY });
+    }
+    steps.push({ label: "Glory Be", prayer: GLORY });
+  });
+  steps.push({ label: "Two Hail Marys", prayer: "Pray two more Hail Marys to complete the seventy-two, in honor of the years of Our Lady's earthly life.\n\n" + HAIL_MARY });
+  steps.push({ label: "Our Father & Hail Mary", prayer: "Conclude with one Our Father and one Hail Mary for the intentions of the Holy Father.\n\n" + OUR_FATHER });
+  steps.push({ label: "Closing Prayer", prayer: "O Mary, Queen of the Seraphim, who didst rejoice in these seven joys, obtain for us to share thy gladness now by grace, and hereafter in the joy of heaven. Through Christ our Lord. Amen." });
+  steps.push({ label: "Sign of the Cross", prayer: "In the name of the Father, and of the Son, and of the Holy Spirit. Amen." });
+  return steps;
+}
+
+/* -------------------------------------------------------------------------- */
 /*                                 REGISTRY                                    */
 /* -------------------------------------------------------------------------- */
 
@@ -654,6 +723,30 @@ export const CHAPLETS: Record<ChapletKey, Chaplet> = {
     note:
       "This renewal is usually prayed by those who have already consecrated themselves to the Sacred Heart of Jesus. If you haven't yet, consider doing so — you can begin the 33-day Sacred Heart Consecration Challenge in the Challenges section.",
   },
+  st_joseph_chaplet: {
+    key: "st_joseph_chaplet",
+    title: "Chaplet of St. Joseph",
+    subtitle: "Seven Sorrows & Joys of the Guardian of the Redeemer",
+    color: "#6B4E8E",
+    icon: "hammer-outline",
+    duration: "~12 min",
+    steps: buildStJosephChaplet(),
+    good_work_for_today:
+      "Do one hidden, patient work today in Joseph's spirit — labor offered quietly for your family, without seeking notice.",
+    daily_motto: "Ite ad Ioseph — Go to Joseph.",
+  },
+  franciscan_crown: {
+    key: "franciscan_crown",
+    title: "The Franciscan Crown (Seraphic Rosary)",
+    subtitle: "Seven decades of Our Lady's Joys — the Franciscan tradition",
+    color: "#5B4A2E",
+    icon: "flower-outline",
+    duration: "~20 min",
+    steps: buildFranciscanCrown(),
+    good_work_for_today:
+      "Bring a small joy to someone today — a glad word, a kindness done cheerfully — in honor of Our Lady's gladness.",
+    daily_motto: "Rejoice with Mary in her seven joys.",
+  },
 };
 
 export const CHAPLET_ORDER: ChapletKey[] = [
@@ -665,6 +758,8 @@ export const CHAPLET_ORDER: ChapletKey[] = [
   "st_lucy",
   "st_padre_pio",
   "peter_and_paul",
+  "st_joseph_chaplet",
+  "franciscan_crown",
   "st_joseph_renewal",
   "marian_renewal",
   "sacred_heart_renewal",

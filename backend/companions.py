@@ -1165,15 +1165,15 @@ SAINT_DEVOTIONS: Dict[str, List[Dict[str, str]]] = {
         {"title": "A daily Holy Hour", "body": "Keep a daily hour of adoration, the heartbeat of his priesthood."},
     ],
     "agnes": [
-        {"title": "Renew your consecration of purity", "body": "Offer your heart to Christ your Spouse each morning."},
+        {"title": "Renew your consecration of purity", "body": "Offer your heart to Christ your Spouse each morning.", "route": "/prayer/consecration_of_purity"},
         {"title": "The Rosary (Joyful Mysteries)", "body": "Meditate on Christ's hidden life with childlike love."},
-        {"title": "Litany of the virgin-martyrs", "body": "Ask the prayers of the holy virgins who kept the faith."},
+        {"title": "Litany of the virgin-martyrs", "body": "Ask the prayers of the holy virgins who kept the faith.", "route": "/prayer/litany_virgin_martyrs"},
         {"title": "Guardian Angel devotion", "body": "Entrust your purity to your angel each day."},
     ],
     "therese-lisieux": [
-        {"title": "The Little Way", "body": "Do small things with great love; offer tiny sacrifices all day."},
+        {"title": "The Little Way", "body": "Do small things with great love; offer tiny sacrifices all day.", "route": "/prayer/the_little_way"},
         {"title": "Sacrifice beads", "body": "Count acts of love and self-denial on a set of sacrifice beads."},
-        {"title": "Devotion to the Holy Face", "body": "Honor the Holy Face of Jesus, Thérèse's beloved devotion."},
+        {"title": "Devotion to the Holy Face", "body": "Honor the Holy Face of Jesus, Thérèse's beloved devotion.", "route": "/prayer/holy_face"},
         {"title": "Novena of the 'Shower of Roses'", "body": "Ask her intercession, trusting her promise of roses."},
     ],
     "benedict": [
@@ -1183,7 +1183,7 @@ SAINT_DEVOTIONS: Dict[str, List[Dict[str, str]]] = {
         {"title": "Compline before sleep", "body": "End the day with Night Prayer and a brief examen."},
     ],
     "francis-assisi": [
-        {"title": "The Franciscan Crown", "body": "Pray the seven-decade rosary of Our Lady's Joys."},
+        {"title": "The Franciscan Crown", "body": "Pray the seven-decade rosary of Our Lady's Joys.", "route": "/prayer/franciscan_crown"},
         {"title": "Stations of the Cross", "body": "Meditate on the Passion; Francis bore the stigmata for love of the Cross."},
         {"title": "The Peace Prayer", "body": "Pray daily, 'Lord, make me an instrument of Your peace.'"},
         {"title": "The Christmas crèche", "body": "Pray before a Nativity scene, a devotion Francis gave the Church."},
@@ -1196,9 +1196,9 @@ SAINT_DEVOTIONS: Dict[str, List[Dict[str, str]]] = {
     ],
     "st-joseph": [
         {"title": "Consecration to St. Joseph", "body": "Make and renew the 33-day consecration to the foster-father of Jesus."},
-        {"title": "'To you, O blessed Joseph'", "body": "Pray this Leonine prayer daily for the Church and your family."},
+        {"title": "'To you, O blessed Joseph'", "body": "Pray this Leonine prayer daily for the Church and your family.", "route": "/prayer/to_you_blessed_joseph"},
         {"title": "Wednesday devotion & Seven Sorrows and Joys", "body": "Honor Joseph on Wednesdays; pray his Seven Sorrows and Joys."},
-        {"title": "The Chaplet of St. Joseph", "body": "Pray the chaplet, entrusting your work and a holy death to him."},
+        {"title": "The Chaplet of St. Joseph", "body": "Pray the chaplet, entrusting your work and a holy death to him.", "route": "/prayer/st_joseph_chaplet"},
     ],
     "louis-zelie": [
         {"title": "The family Rosary", "body": "Pray the Rosary together as a household each evening."},
@@ -1219,7 +1219,7 @@ SAINT_DEVOTIONS: Dict[str, List[Dict[str, str]]] = {
         {"title": "A Mass offered for them", "body": "Have Mass offered for the intention closest to your heart."},
     ],
     "guardian-angel": [
-        {"title": "The 'Angel of God' prayer", "body": "Pray it morning and night to your guardian angel."},
+        {"title": "The 'Angel of God' prayer", "body": "Pray it morning and night to your guardian angel.", "route": "/prayer/angel_of_god"},
         {"title": "Chaplet of the Guardian Angel", "body": "Pray the chaplet honoring the nine choirs of angels."},
         {"title": "The St. Michael Prayer", "body": "Ask St. Michael's protection against the enemy."},
         {"title": "Send your angel on errands", "body": "Ask your angel to carry prayers and help others, as Padre Pio taught."},
@@ -1229,11 +1229,12 @@ SAINT_DEVOTIONS: Dict[str, List[Dict[str, str]]] = {
         {"title": "The Rosary — his 'weapon'", "body": "Pray it daily; Pio called the Rosary the weapon against evil."},
         {"title": "Frequent Confession", "body": "Go to Confession regularly, as Padre Pio urged all souls."},
         {"title": "Devotion to your Guardian Angel", "body": "Send your angel to those who need prayers."},
+        {"title": "'Stay with me, Lord'", "body": "Pray Padre Pio's beloved prayer after Holy Communion.", "route": "/prayer/stay_with_me_lord"},
     ],
     "st-lucy": [
         {"title": "Pray for the light of faith", "body": "Ask St. Lucy (whose name means 'light') for clear vision of soul."},
         {"title": "The Rosary in Advent", "body": "Pray for Christ the Light around her December feast."},
-        {"title": "Litany of the virgin-martyrs", "body": "Honor the holy martyrs who kept the faith unto death."},
+        {"title": "Litany of the virgin-martyrs", "body": "Honor the holy martyrs who kept the faith unto death.", "route": "/prayer/litany_virgin_martyrs"},
         {"title": "Quiet almsgiving", "body": "Give secretly to the poor, as Lucy gave her dowry."},
     ],
     "st-faustina": [
@@ -1247,18 +1248,20 @@ SAINT_DEVOTIONS: Dict[str, List[Dict[str, str]]] = {
         {"title": "Marian consecration (Totus Tuus)", "body": "Consecrate yourself to Jesus through Mary."},
         {"title": "The Angelus", "body": "Pray the Angelus at 6am, noon, and 6pm."},
         {"title": "The Brown Scapular or Miraculous Medal", "body": "Wear a Marian sacramental as a sign of her protection."},
+        {"title": "Little Office of the Blessed Virgin Mary", "body": "Pray the ancient hours in her honor — with the Brown Scapular promise.", "route": "/prayer/little_office_bvm"},
     ],
     "sacred-heart": [
         {"title": "The Nine First Fridays", "body": "Receive Communion on the first Friday of nine consecutive months."},
         {"title": "Morning Offering", "body": "Offer your day to the Sacred Heart each morning."},
         {"title": "Enthronement of the Sacred Heart", "body": "Consecrate your home and family to His Heart."},
         {"title": "Holy Hour of reparation", "body": "Keep a Thursday or Friday holy hour of adoration."},
+        {"title": "Act of Reparation to the Sacred Heart", "body": "Console the Heart of Jesus for the sins of the world.", "route": "/prayer/act_of_reparation"},
     ],
     "sts-peter-paul": [
         {"title": "Pray for the Pope", "body": "Offer a daily prayer for Peter's successor and the unity of the Church."},
         {"title": "Lectio on the Epistles", "body": "Read a passage of St. Paul's letters prayerfully."},
-        {"title": "Profess the Creed", "body": "Say the Creed daily — the faith for which they gave their lives."},
-        {"title": "Devotion to the Chair of St. Peter", "body": "Pray for fidelity to the Church's teaching."},
+        {"title": "Profess the Creed", "body": "Say the Creed daily — the faith for which they gave their lives.", "route": "/prayer/apostles_creed"},
+        {"title": "Devotion to the Chair of St. Peter", "body": "Pray for fidelity to the Church's teaching.", "route": "/prayer/chair_of_st_peter"},
     ],
     "carlo-acutis": [
         {"title": "Eucharistic adoration", "body": "Visit Jesus in the Blessed Sacrament — Carlo's 'highway to Heaven.'"},
@@ -1281,7 +1284,7 @@ SAINT_DEVOTIONS: Dict[str, List[Dict[str, str]]] = {
     "john-the-baptist": [
         {"title": "Daily examination & repentance", "body": "Prepare the way of the Lord by repenting of one sin each day."},
         {"title": "A spirit of penance", "body": "Take up a small fast or self-denial in John's desert spirit."},
-        {"title": "The Benedictus (Canticle of Zechariah)", "body": "Pray the canticle sung at his birth, part of Morning Prayer."},
+        {"title": "The Benedictus (Canticle of Zechariah)", "body": "Pray the canticle sung at his birth, part of Morning Prayer.", "route": "/prayer/benedictus"},
         {"title": "Novena to St. John the Baptist", "body": "Ask the forerunner for humility and courage."},
     ],
     "james-the-less": [
@@ -1293,7 +1296,7 @@ SAINT_DEVOTIONS: Dict[str, List[Dict[str, str]]] = {
     "thomas-aquinas": [
         {"title": "The prayer before study", "body": "Pray his 'Creator of all things' before work or study."},
         {"title": "Eucharistic adoration & 'Adoro te devote'", "body": "Adore the Blessed Sacrament with his own hymn."},
-        {"title": "'Tantum Ergo' at Benediction", "body": "Sing or pray his hymn before the exposed Eucharist."},
+        {"title": "'Tantum Ergo' at Benediction", "body": "Sing or pray his hymn before the exposed Eucharist.", "route": "/prayer/tantum_ergo"},
         {"title": "Read an article of the Summa or Catechism", "body": "Study one point of the faith slowly and prayerfully."},
         {"title": "Novena to St. Thomas Aquinas", "body": "Ask the Angelic Doctor for wisdom, purity, and love of the Eucharist."},
     ],
@@ -1437,7 +1440,8 @@ def _with_routes(items: List[Dict[str, str]], novena_slug: Optional[str]) -> Lis
     out: List[Dict[str, Any]] = []
     for it in items:
         d = dict(it)
-        r = _devotion_route(it.get("title", ""), novena_slug)
+        # An explicit route on the item wins (used to deep-link a specific prayer).
+        r = it.get("route") or _devotion_route(it.get("title", ""), novena_slug)
         if r:
             d["route"] = r
         out.append(d)

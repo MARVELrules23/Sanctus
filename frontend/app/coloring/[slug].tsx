@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Image, PanResponder, Platform, Pressable, StyleSheet, View } from "react-native";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { ActivityIndicator, Alert, Image, Platform, Pressable, StyleSheet, View } from "react-native";
 import { AutoText as Text } from "@/src/auto-text";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
@@ -8,11 +8,15 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import Svg, { Path } from "react-native-svg";
 import { captureRef } from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
+import { GestureDetector, Gesture, GestureHandlerRootView } from "react-native-gesture-handler";
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, runOnJS } from "react-native-reanimated";
 
 import { getColoringPages, ColoringPage } from "@/src/api";
 import { colors, fonts, radius, spacing } from "@/src/theme";
 
 const PALETTE = ["#E23B3B", "#F5A623", "#F8E71C", "#5BB543", "#3E8ED0", "#8E44AD", "#8B5A2B", "#F49AC2", "#2C3E50", "#FFFFFF"];
+const MAX_SCALE = 5;
+const MIN_SCALE = 1;
 type Stroke = { d: string; color: string };
 
 export default function ColoringCanvas() {
@@ -29,6 +33,14 @@ export default function ColoringCanvas() {
   colorRef.current = color;
   const currentRef = useRef("");
   const captureRefView = useRef<View>(null);
+
+  // Zoom / pan transform (shared with the UI thread for gestures).
+  const scale = useSharedValue(1);
+  const startScale = useSharedValue(1);
+  const tx = useSharedValue(0);
+  const ty = useSharedValue(0);
+  const startTx = useSharedValue(0);
+  const startTy = useSharedValue(0);
 
   const storageKey = `coloring_progress_${slug}`;
 
@@ -52,39 +64,100 @@ export default function ColoringCanvas() {
     AsyncStorage.setItem(storageKey, JSON.stringify(next)).catch(() => {});
   }, [storageKey]);
 
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: () => true,
-        onPanResponderGrant: (e) => {
-          const { locationX, locationY } = e.nativeEvent;
-          currentRef.current = `M ${locationX.toFixed(1)} ${locationY.toFixed(1)}`;
-          setCurrent(currentRef.current);
-        },
-        onPanResponderMove: (e) => {
-          const { locationX, locationY } = e.nativeEvent;
-          currentRef.current += ` L ${locationX.toFixed(1)} ${locationY.toFixed(1)}`;
-          setCurrent(currentRef.current);
-        },
-        onPanResponderRelease: () => {
-          const d = currentRef.current;
-          currentRef.current = "";
-          setCurrent("");
-          if (d.includes("L")) {
-            setStrokes((prev) => {
-              const next = [...prev, { d, color: colorRef.current }];
-              persist(next);
-              return next;
-            });
-          }
-        },
-      }),
-    [persist],
-  );
+  // --- Drawing (called from the gesture worklet via runOnJS) ---
+  const drawStart = useCallback((x: number, y: number) => {
+    currentRef.current = `M ${x.toFixed(1)} ${y.toFixed(1)}`;
+    setCurrent(currentRef.current);
+  }, []);
+  const drawMove = useCallback((x: number, y: number) => {
+    currentRef.current += ` L ${x.toFixed(1)} ${y.toFixed(1)}`;
+    setCurrent(currentRef.current);
+  }, []);
+  const drawEnd = useCallback(() => {
+    const d = currentRef.current;
+    currentRef.current = "";
+    setCurrent("");
+    if (d.includes("L")) {
+      setStrokes((prev) => {
+        const next = [...prev, { d, color: colorRef.current }];
+        persist(next);
+        return next;
+      });
+    }
+  }, [persist]);
+
+  // One-finger pan = draw. maxPointers(1) means it never fires during a pinch,
+  // and because the gesture claims the touch, the view stays perfectly steady
+  // (no scrolling) while the finger moves. Coordinates are converted from the
+  // on-screen point back into the (unscaled) content space so strokes line up
+  // even when zoomed in.
+  const drawGesture = Gesture.Pan()
+    .maxPointers(1)
+    .minDistance(0)
+    .onBegin((e) => {
+      "worklet";
+      const cx = (e.x - tx.value) / scale.value;
+      const cy = (e.y - ty.value) / scale.value;
+      runOnJS(drawStart)(cx, cy);
+    })
+    .onUpdate((e) => {
+      "worklet";
+      const cx = (e.x - tx.value) / scale.value;
+      const cy = (e.y - ty.value) / scale.value;
+      runOnJS(drawMove)(cx, cy);
+    })
+    .onEnd(() => {
+      "worklet";
+      runOnJS(drawEnd)();
+    })
+    .onFinalize(() => {
+      "worklet";
+    });
+
+  // Two-finger pinch = zoom (and pan via the focal point). Zoom is anchored to
+  // the top-left origin so the coordinate math above stays simple.
+  const pinchGesture = Gesture.Pinch()
+    .onStart(() => {
+      "worklet";
+      startScale.value = scale.value;
+      startTx.value = tx.value;
+      startTy.value = ty.value;
+    })
+    .onUpdate((e) => {
+      "worklet";
+      let next = startScale.value * e.scale;
+      if (next < MIN_SCALE) next = MIN_SCALE;
+      if (next > MAX_SCALE) next = MAX_SCALE;
+      // Keep the point under the fingers (focal) fixed while scaling/moving.
+      const cx = (e.focalX - startTx.value) / startScale.value;
+      const cy = (e.focalY - startTy.value) / startScale.value;
+      scale.value = next;
+      tx.value = e.focalX - cx * next;
+      ty.value = e.focalY - cy * next;
+    })
+    .onEnd(() => {
+      "worklet";
+      if (scale.value <= MIN_SCALE + 0.01) {
+        scale.value = withTiming(1);
+        tx.value = withTiming(0);
+        ty.value = withTiming(0);
+      }
+    });
+
+  const composed = Gesture.Simultaneous(drawGesture, pinchGesture);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: tx.value }, { translateY: ty.value }, { scale: scale.value }],
+  }));
 
   const undo = () => setStrokes((prev) => { const next = prev.slice(0, -1); persist(next); return next; });
   const clear = () => { setStrokes([]); persist([]); };
+
+  const resetZoom = () => {
+    scale.value = withTiming(1);
+    tx.value = withTiming(0);
+    ty.value = withTiming(0);
+  };
 
   const onShare = async () => {
     if (Platform.OS === "web") {
@@ -108,58 +181,61 @@ export default function ColoringCanvas() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top"]} testID="coloring-canvas-screen">
-      <Stack.Screen options={{ headerShown: false }} />
-      <View style={styles.header}>
-        <Pressable testID="coloring-canvas-back" onPress={() => router.back()} hitSlop={12}>
-          <Ionicons name="chevron-back" size={26} color={colors.primary} />
-        </Pressable>
-        <Text style={styles.headerTitle} numberOfLines={1}>{page?.title || "Color"}</Text>
-        <View style={{ flexDirection: "row", gap: spacing.md }}>
-          <Pressable testID="coloring-undo" onPress={undo} hitSlop={10}><Ionicons name="arrow-undo" size={22} color={colors.primary} /></Pressable>
-          <Pressable testID="coloring-clear" onPress={clear} hitSlop={10}><Ionicons name="trash-outline" size={22} color={colors.liturgical?.red || "#8A1C1C"} /></Pressable>
-          <Pressable testID="coloring-share" onPress={onShare} hitSlop={10} disabled={sharing}>
-            {sharing ? <ActivityIndicator size="small" color={colors.gold} /> : <Ionicons name="share-outline" size={22} color={colors.gold} />}
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaView style={styles.safe} edges={["top"]} testID="coloring-canvas-screen">
+        <Stack.Screen options={{ headerShown: false }} />
+        <View style={styles.header}>
+          <Pressable testID="coloring-canvas-back" onPress={() => router.back()} hitSlop={12}>
+            <Ionicons name="chevron-back" size={26} color={colors.primary} />
           </Pressable>
+          <Text style={styles.headerTitle} numberOfLines={1}>{page?.title || "Color"}</Text>
+          <View style={{ flexDirection: "row", gap: spacing.md }}>
+            <Pressable testID="coloring-reset-zoom" onPress={resetZoom} hitSlop={10}><Ionicons name="scan-outline" size={21} color={colors.primary} /></Pressable>
+            <Pressable testID="coloring-undo" onPress={undo} hitSlop={10}><Ionicons name="arrow-undo" size={22} color={colors.primary} /></Pressable>
+            <Pressable testID="coloring-clear" onPress={clear} hitSlop={10}><Ionicons name="trash-outline" size={22} color={colors.liturgical?.red || "#8A1C1C"} /></Pressable>
+            <Pressable testID="coloring-share" onPress={onShare} hitSlop={10} disabled={sharing}>
+              {sharing ? <ActivityIndicator size="small" color={colors.gold} /> : <Ionicons name="share-outline" size={22} color={colors.gold} />}
+            </Pressable>
+          </View>
         </View>
-      </View>
 
-      {loading ? (
-        <ActivityIndicator style={{ marginTop: 40 }} color={colors.gold} />
-      ) : !page ? (
-        <Text style={styles.empty}>Page not found.</Text>
-      ) : (
-        <View style={{ flex: 1 }}>
-          <View ref={captureRefView} collapsable={false} style={styles.canvasWrap} testID="coloring-canvas">
-            <Image source={{ uri: page.image }} style={styles.lineArt} resizeMode="contain" />
-            <Svg width="100%" height="100%" style={styles.overlay}>
-              {strokes.map((s, i) => (
-                <Path key={i} d={s.d} stroke={s.color} strokeWidth={22} strokeLinecap="round" strokeLinejoin="round" fill="none" opacity={0.55} />
+        {loading ? (
+          <ActivityIndicator style={{ marginTop: 40 }} color={colors.gold} />
+        ) : !page ? (
+          <Text style={styles.empty}>Page not found.</Text>
+        ) : (
+          <View style={{ flex: 1 }}>
+            <View ref={captureRefView} collapsable={false} style={styles.canvasWrap} testID="coloring-canvas">
+              <GestureDetector gesture={composed}>
+                <Animated.View style={[styles.content, animatedStyle]} testID="coloring-touch-layer">
+                  <Image source={{ uri: page.image }} style={styles.lineArt} resizeMode="contain" />
+                  <Svg width="100%" height="100%" style={styles.overlay}>
+                    {strokes.map((s, i) => (
+                      <Path key={i} d={s.d} stroke={s.color} strokeWidth={22} strokeLinecap="round" strokeLinejoin="round" fill="none" opacity={0.55} />
+                    ))}
+                    {current ? (
+                      <Path d={current} stroke={color} strokeWidth={22} strokeLinecap="round" strokeLinejoin="round" fill="none" opacity={0.55} />
+                    ) : null}
+                  </Svg>
+                </Animated.View>
+              </GestureDetector>
+            </View>
+
+            <View style={styles.palette}>
+              {PALETTE.map((c) => (
+                <Pressable
+                  key={c}
+                  testID={`coloring-color-${c}`}
+                  onPress={() => setColor(c)}
+                  style={[styles.swatch, { backgroundColor: c }, color === c && styles.swatchActive]}
+                />
               ))}
-              {current ? (
-                <Path d={current} stroke={color} strokeWidth={22} strokeLinecap="round" strokeLinejoin="round" fill="none" opacity={0.55} />
-              ) : null}
-            </Svg>
-            {/* Single transparent top layer captures ALL touches uniformly, so
-                the coordinates are consistent whether the finger is over the
-                line-art image or the surrounding margins. */}
-            <View style={styles.touchLayer} {...panResponder.panHandlers} testID="coloring-touch-layer" />
+            </View>
+            <Text style={styles.hint}>Draw with one finger — pinch with two fingers to zoom in. Colors are see-through so the picture shows.</Text>
           </View>
-
-          <View style={styles.palette}>
-            {PALETTE.map((c) => (
-              <Pressable
-                key={c}
-                testID={`coloring-color-${c}`}
-                onPress={() => setColor(c)}
-                style={[styles.swatch, { backgroundColor: c }, color === c && styles.swatchActive]}
-              />
-            ))}
-          </View>
-          <Text style={styles.hint}>Pick a color and draw with your finger. Colors are see-through so the picture shows.</Text>
-        </View>
-      )}
-    </SafeAreaView>
+        )}
+      </SafeAreaView>
+    </GestureHandlerRootView>
   );
 }
 
@@ -169,9 +245,9 @@ const styles = StyleSheet.create({
   headerTitle: { flex: 1, textAlign: "center", fontFamily: fonts.headingSemi, fontSize: 16, color: colors.textPrimary, marginHorizontal: spacing.sm },
   empty: { textAlign: "center", marginTop: 40, fontFamily: fonts.bodyRegular, color: colors.textSecondary },
   canvasWrap: { flex: 1, margin: spacing.md, borderRadius: radius.lg, overflow: "hidden", backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: colors.borderSoft },
+  content: { flex: 1, transformOrigin: "top left" },
   lineArt: { ...StyleSheet.absoluteFillObject, width: "100%", height: "100%", pointerEvents: "none" },
   overlay: { ...StyleSheet.absoluteFillObject, pointerEvents: "none" },
-  touchLayer: { ...StyleSheet.absoluteFillObject },
   palette: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: spacing.sm, paddingHorizontal: spacing.md },
   swatch: { width: 34, height: 34, borderRadius: 17, borderWidth: 1, borderColor: colors.borderSoft },
   swatchActive: { borderWidth: 3, borderColor: colors.primary, transform: [{ scale: 1.15 }] },

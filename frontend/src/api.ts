@@ -1935,10 +1935,20 @@ export type PremiumStatus = {
   pricing: PremiumPricing;
   trial_days: number;
   stripe_ready: boolean;
+  apple_ready?: boolean;
 };
 
 export async function getPremiumStatus(): Promise<PremiumStatus> {
   return await api<PremiumStatus>("/subscriptions/status");
+}
+
+export async function confirmApplePurchase(body: {
+  product_id: string;
+  transaction_id?: string | null;
+  original_transaction_id?: string | null;
+  receipt: string;
+}): Promise<{ ok: boolean; active: boolean } & Partial<PremiumStatus>> {
+  return await api(`/subscriptions/iap/apple/confirm`, { method: "POST", body });
 }
 
 export async function createPremiumCheckout(body: {

@@ -35,6 +35,7 @@ import {
 } from "@/src/api";
 import { useAuth } from "@/src/auth-context";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
+import ApplePaywallButtons from "@/src/components/ApplePaywallButtons";
 import {
   describeStatus,
   formatCents,
@@ -135,8 +136,7 @@ export default function PremiumScreen() {
     }
   }, [busy, selectedPlan, refresh, load]);
 
-  const openPortal = useCallback(async () => {
-    if (busy) return;
+  const openPortal = useCallback(async () => {    if (busy) return;
     setBusy("portal");
     try {
       const origin = publicOrigin();
@@ -154,6 +154,11 @@ export default function PremiumScreen() {
       setBusy(null);
     }
   }, [busy, refresh, load]);
+
+  const onEntitled = useCallback(async () => {
+    await refresh();
+    await load();
+  }, [refresh, load]);
 
   if (loading || !status) {
     return (
@@ -260,36 +265,46 @@ export default function PremiumScreen() {
               {trialDays}-day free trial. Cancel anytime before it ends.
             </Text>
 
-            <Pressable
-              onPress={startCheckout}
-              testID="premium-start-trial"
-              disabled={busy === "checkout" || !stripeReady}
-              style={({ pressed }) => [
-                styles.primaryBtn,
-                pressed && { opacity: 0.85 },
-                (busy === "checkout" || !stripeReady) && { opacity: 0.6 },
-              ]}
-            >
-              {busy === "checkout" ? (
-                <ActivityIndicator color={colors.gold} />
-              ) : (
-                <>
-                  <Ionicons name="lock-open-outline" size={16} color={colors.gold} />
-                  <Text style={styles.primaryBtnText}>
-                    Start {trialDays}-day free trial
+            {Platform.OS === "ios" ? (
+              <ApplePaywallButtons
+                selectedPlan={selectedPlan}
+                trialDays={trialDays}
+                onEntitled={onEntitled}
+              />
+            ) : (
+              <>
+                <Pressable
+                  onPress={startCheckout}
+                  testID="premium-start-trial"
+                  disabled={busy === "checkout" || !stripeReady}
+                  style={({ pressed }) => [
+                    styles.primaryBtn,
+                    pressed && { opacity: 0.85 },
+                    (busy === "checkout" || !stripeReady) && { opacity: 0.6 },
+                  ]}
+                >
+                  {busy === "checkout" ? (
+                    <ActivityIndicator color={colors.gold} />
+                  ) : (
+                    <>
+                      <Ionicons name="lock-open-outline" size={16} color={colors.gold} />
+                      <Text style={styles.primaryBtnText}>
+                        Start {trialDays}-day free trial
+                      </Text>
+                    </>
+                  )}
+                </Pressable>
+
+                {!stripeReady ? (
+                  <Text style={styles.disabledNote}>
+                    Payments are activated when this app is deployed. The button will
+                    light up there.
                   </Text>
-                </>
-              )}
-            </Pressable>
+                ) : null}
 
-            {!stripeReady ? (
-              <Text style={styles.disabledNote}>
-                Payments are activated when this app is deployed. The button will
-                light up there.
-              </Text>
-            ) : null}
-
-            <Text style={styles.secureNote}>Secure checkout by Stripe</Text>
+                <Text style={styles.secureNote}>Secure checkout by Stripe</Text>
+              </>
+            )}
           </>
         )}
 
@@ -318,8 +333,9 @@ export default function PremiumScreen() {
             full Library access.
           </Text>
           <Text style={styles.faqLine}>
-            • Cancel anytime in the Stripe billing portal &mdash; your access continues
-            through the period you paid for.
+            {Platform.OS === "ios"
+              ? "• Manage or cancel anytime in iOS Settings › Apple ID › Subscriptions — your access continues through the period you paid for."
+              : "• Cancel anytime in the Stripe billing portal — your access continues through the period you paid for."}
           </Text>
         </View>
 

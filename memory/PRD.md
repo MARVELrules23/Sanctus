@@ -379,3 +379,11 @@ Reverent & traditional aesthetic: cream/parchment background, deep stained-gl- C
   - **WARNING:** added root `ErrorBoundary` (src/components/ErrorBoundary.tsx) wrapping providers in app/_layout.tsx.
   - Updated legal.py deletion copy to reference the in-app path.
 - **NOT fixed (needs discussion / larger effort):** BLOCKER Apple 3.1.1 — Premium subscription sold via Stripe must use Apple IAP/StoreKit on iOS (requires App Store Connect product setup + native build). Left as-is pending user decision. Manual items (demo account for review, privacy manifest in built ipa, Data Safety labels) remain.
+
+## Session update 38 (July 2026) — Apple IAP for Premium (Apple 3.1.1 blocker)
+- Added Apple StoreKit in-app subscriptions on iOS; Stripe kept for web/Android + the physical shop.
+- Backend (subscriptions.py): new `POST /api/subscriptions/iap/apple/confirm` (auth) — validates the base64 app receipt via Apple verifyReceipt (prod→sandbox fallback on 21007) using `APPLE_SHARED_SECRET`, maps product→tier (premium_monthly→monthly, premium_annual→annual), writes the standard `premium` subdoc (so all is_premium_user gating works unchanged) + an `apple` subdoc. `/status` now returns `apple_ready`. Gated 503 until secret configured (verified). Added `APPLE_SHARED_SECRET=placeholder` to backend/.env.
+- Frontend: installed react-native-iap@15.3.6 (+ react-native-nitro-modules, expo-dev-client, expo-build-properties); plugins added to app.json. Platform-split component: `src/components/ApplePaywallButtons.ios.tsx` (real StoreKit via useIAP: Subscribe + Restore, gets receipt via getReceiptDataIOS, calls confirm, finishTransaction) and `.tsx` stub (web/Android → null, no iap import). premium/index.tsx renders Apple buttons on iOS, Stripe CTA elsewhere; cancel-FAQ copy is platform-aware. api.ts: confirmApplePurchase() + apple_ready on PremiumStatus.
+- Product IDs: premium_monthly, premium_annual (user to create in App Store Connect).
+- **Cannot be tested in web/Expo Go** — needs a native iOS build + sandbox tester. Verified: web bundle builds, backend 503 gate, status apple_ready flag, lint clean.
+- USER TODO before it works live: (1) App Store Connect subscription group + products premium_monthly/premium_annual, (2) active Paid Apps Agreement, (3) add real APPLE_SHARED_SECRET at deploy, (4) build via Emergent Publish + test on device.

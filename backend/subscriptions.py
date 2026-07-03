@@ -41,6 +41,7 @@ from datetime import datetime, timezone
 from typing import Any, Callable, Dict, Optional
 from urllib.parse import quote, urlencode, urlparse, urlunparse, parse_qsl
 
+import httpx
 import stripe
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -112,6 +113,56 @@ def _append_payment_link_params(url: str, params: Dict[str, str]) -> str:
 PAYMENT_LINK_MONTHLY_DEFAULT = "https://buy.stripe.com/bJe6oG3XJbE0gnw31fb7y00"
 PAYMENT_LINK_ANNUAL_DEFAULT = "https://buy.stripe.com/dRm4gyam7dM8b3c45jb7y01"
 
+# ---------------------------------------------------------------------------
+# Apple In-App Purchase (StoreKit auto-renewable subscriptions)
+# ---------------------------------------------------------------------------
+
+# App Store product IDs → internal tier. Must match App Store Connect.
+APPLE_PRODUCT_TIER = {
+    "premium_monthly": "monthly",
+    "premium_annual": "annual",
+}
+
+APPLE_VERIFY_PROD = "https://buy.itunes.apple.com/verifyReceipt"
+APPLE_VERIFY_SANDBOX = "https://sandbox.itunes.apple.com/verifyReceipt"
+
+
+def _is_apple_configured(shared_secret: str) -> bool:
+    """The App-Specific Shared Secret is a 32-char hex string from App Store
+    Connect. Treat empty/placeholder values as 'not configured' (mirrors the
+    Stripe placeholder handling so the preview environment stays quiet)."""
+    s = (shared_secret or "").strip()
+    return bool(s) and s.lower() not in ("", "placeholder", "changeme") and len(s) >= 16
+
+
+async def _verify_apple_receipt(receipt: str, shared_secret: str) -> Dict[str, Any]:
+    """Validate a base64 receipt against Apple. Tries production first and
+    falls back to sandbox on status 21007 (sandbox receipt sent to prod),
+    per Apple's guidance. Returns the parsed Apple response.
+
+    NOTE: `verifyReceipt` is deprecated by Apple in favour of the App Store
+    Server API; the Mongo shape below is provider-agnostic so the validator
+    can be swapped later without touching gating logic.
+    """
+    body = {
+        "receipt-data": receipt,
+        "password": shared_secret,
+        "exclude-old-transactions": True,
+    }
+    async with httpx.AsyncClient(timeout=15.0) as cli:
+        r = await cli.post(APPLE_VERIFY_PROD, json=body)
+        data = r.json()
+        if data.get("status") == 21007:
+            r = await cli.post(APPLE_VERIFY_SANDBOX, json=body)
+            data = r.json()
+            data["_environment"] = "Sandbox"
+        else:
+            data["_environment"] = "Production"
+    if data.get("status") != 0:
+        raise HTTPException(status_code=400, detail=f"Invalid receipt (status {data.get('status')})")
+    return data
+
+
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
@@ -164,6 +215,14 @@ class CustomerPortalRequest(BaseModel):
         return v.rstrip("/")
 
 
+class AppleConfirmRequest(BaseModel):
+    """Payload sent by the iOS client after a StoreKit purchase or restore."""
+    product_id: str = Field(..., description="App Store product id, e.g. premium_monthly")
+    transaction_id: Optional[str] = None
+    original_transaction_id: Optional[str] = None
+    receipt: str = Field(..., description="Base64 app receipt (transactionReceipt)")
+
+
 # ---------------------------------------------------------------------------
 # Router
 # ---------------------------------------------------------------------------
@@ -213,6 +272,15 @@ def build_subscriptions_router(
 
     checkout_ready = payment_links_ready or stripe_ready
 
+    apple_shared_secret = os.environ.get("APPLE_SHARED_SECRET", "")
+    apple_ready = _is_apple_configured(apple_shared_secret)
+    if apple_ready:
+        logger.info("subscriptions: Apple IAP configured (shared secret present)")
+    else:
+        logger.warning(
+            "subscriptions: APPLE_SHARED_SECRET missing/placeholder — Apple IAP receipt validation disabled until deploy"
+        )
+
     # ----------------------------- Premium status -------------------------
 
     async def _user_doc(user_id: str) -> Optional[Dict[str, Any]]:
@@ -242,12 +310,78 @@ def build_subscriptions_router(
             "checkout_ready": checkout_ready,
             "portal_ready": stripe_ready,
             "payment_links": payment_links_ready,
+            "apple_ready": apple_ready,
         }
 
     @router.get("/status")
     async def get_status(user=Depends(get_current_user)):
         doc = await _user_doc(user.user_id)
         return _public_status(doc, user)
+
+    # ----------------------------- Apple IAP ------------------------------
+
+    @router.post("/iap/apple/confirm")
+    async def confirm_apple_purchase(body: AppleConfirmRequest,
+                                     user=Depends(get_current_user)):
+        """Validate an Apple StoreKit receipt and grant/refresh premium.
+
+        Called by the iOS client after a purchase or during 'Restore
+        purchases'. The premium subdoc mirrors the Stripe shape so all
+        existing `is_premium_user()` gating keeps working unchanged.
+        """
+        if not apple_ready:
+            raise HTTPException(
+                status_code=503,
+                detail="Apple in-app purchases are activated when this app is deployed.",
+            )
+
+        data = await _verify_apple_receipt(body.receipt, apple_shared_secret)
+        infos = data.get("latest_receipt_info") or data.get("receipt", {}).get("in_app") or []
+        if not infos:
+            raise HTTPException(status_code=400, detail="No subscription found in receipt")
+
+        # Pick the entry with the furthest expiry (the current period).
+        def _exp(entry: Dict[str, Any]) -> int:
+            try:
+                return int(entry.get("expires_date_ms", "0"))
+            except (TypeError, ValueError):
+                return 0
+
+        latest = max(infos, key=_exp)
+        expires_ms = _exp(latest)
+        now_ms = int(_now().timestamp() * 1000)
+        active = expires_ms > now_ms
+        product_id = latest.get("product_id") or body.product_id
+        tier = APPLE_PRODUCT_TIER.get(product_id, "monthly")
+        period_end = int(expires_ms / 1000) if expires_ms else None
+
+        premium_doc = {
+            "active": active,
+            "provider": "apple",
+            "tier": tier,
+            "status": "active" if active else "canceled",
+            "current_period_end": period_end,
+            "cancel_at_period_end": False,
+            "trial_end": None,
+        }
+        apple_doc = {
+            "product_id": product_id,
+            "transaction_id": latest.get("transaction_id") or body.transaction_id,
+            "original_transaction_id": latest.get("original_transaction_id") or body.original_transaction_id,
+            "expires_at": period_end,
+            "environment": data.get("_environment", "Production"),
+            "updated_at": _now(),
+        }
+        await users.update_one(
+            {"user_id": user.user_id},
+            {"$set": {"premium": premium_doc, "apple": apple_doc}},
+        )
+        logger.info(
+            "apple IAP confirmed user=%s product=%s active=%s env=%s",
+            user.user_id, product_id, active, apple_doc["environment"],
+        )
+        doc = await _user_doc(user.user_id)
+        return {"ok": True, "active": active, **_public_status(doc, user)}
 
     # ----------------------------- Checkout -------------------------------
 

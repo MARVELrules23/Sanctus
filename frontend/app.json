@@ -65,7 +65,9 @@
         {
           "calendarPermission": "Save parish events to your calendar"
         }
-      ]
+      ],
+      "expo-build-properties",
+      "react-native-iap"
     ],
     "experiments": {
       "typedRoutes": true

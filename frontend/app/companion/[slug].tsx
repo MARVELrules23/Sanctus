@@ -6,12 +6,16 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 
-import { getCompanion, getCompanionImage, addDevotionPractice, CompanionDetail } from "@/src/api";
+import { getCompanion, getCompanionImage, addDevotionPractice, listMyDevotions, CompanionDetail } from "@/src/api";
 import LofiSaintBackground from "@/src/components/LofiSaintBackground";
 import { colors, fonts, radius, spacing } from "@/src/theme";
 
 // Public-domain Gregorian chant (Internet Archive) — soft looping ambiance.
 const CHANT_URL = "https://archive.org/download/GregorianChantMass/02Track2.mp3";
+
+// Must match the practice string stored by addToPractices so we can re-detect
+// already-added traditions when the screen reopens.
+const practiceStr = (title: string, body: string) => (body ? `${title} — ${body}` : title);
 
 export default function CompanionScreen() {
   const router = useRouter();
@@ -65,6 +69,30 @@ export default function CompanionScreen() {
     try {
       const d = await getCompanion(slug);
       setData(d);
+      // Restore which traditions were already added so the boxes stay checked
+      // after leaving and returning to this companion.
+      try {
+        const { items } = await listMyDevotions();
+        const mine = items.find(
+          (x) => (x.saint_slug && x.saint_slug === slug) || x.saint_name === d.name
+        );
+        if (mine) {
+          const saved = new Set(mine.practices);
+          const restored = new Set<string>();
+          d.church_traditions?.forEach((tr, i) => {
+            if (saved.has(practiceStr(tr.title, tr.body))) restored.add(`ct-${i}`);
+          });
+          d.daily_traditions?.forEach((tr, i) => {
+            if (saved.has(practiceStr(tr.title, tr.body))) restored.add(`dt-${i}`);
+          });
+          d.vocation_traditions?.items?.forEach((tr, i) => {
+            if (saved.has(practiceStr(tr.title, tr.body))) restored.add(`vt-${i}`);
+          });
+          if (restored.size > 0) setAddedKeys(restored);
+        }
+      } catch {
+        /* non-blocking */
+      }
     } finally {
       setLoading(false);
     }

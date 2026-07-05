@@ -407,6 +407,7 @@ async def delete_me(user: User = Depends(get_current_user)):
         "family_members", "journal", "meals", "self_defense_acks",
         "self_defense_progress", "self_defense_sessions", "support_tickets",
         "user_churches", "virtue_plans", "weight_log", "wellness", "workouts",
+        "custom_devotions", "custom_prayers",
         "community_posts", "community_replies", "community_post_likes",
         "community_prayers", "community_prayer_prays", "community_reports",
         "community_churches", "parish_events",

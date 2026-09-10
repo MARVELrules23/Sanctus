@@ -387,3 +387,9 @@ Reverent & traditional aesthetic: cream/parchment background, deep stained-gl- C
 - Product IDs: premium_monthly, premium_annual (user to create in App Store Connect).
 - **Cannot be tested in web/Expo Go** — needs a native iOS build + sandbox tester. Verified: web bundle builds, backend 503 gate, status apple_ready flag, lint clean.
 - USER TODO before it works live: (1) App Store Connect subscription group + products premium_monthly/premium_annual, (2) active Paid Apps Agreement, (3) add real APPLE_SHARED_SECRET at deploy, (4) build via Emergent Publish + test on device.
+
+## Session update 39 (2026) — Workshop lofi backdrop enhancement
+- LofiSaintBackground now takes a `variant` prop; workshop.tsx passes variant="workshop".
+- Workshop variant: warm amber candle/lamp glow with a fast flame flicker (layered on the slow pulse), falling fine sawdust motes + a couple of rising warm embers, warmer fallback gradient, and stronger parallax Ken-Burns drift. Companion pages keep the original golden-halo "saint" variant unchanged.
+- Static image stays AI-generated (Nano Banana cannot output GIF/video). User wants an eventual true video loop of St Joseph working wood via expo-video — deferred until a source clip is provided.
+- Verified rendering at /sanctuary/workshop; animations are reanimated-driven (work in Expo Go + native).

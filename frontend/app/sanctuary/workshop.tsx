@@ -109,7 +109,7 @@ export default function WorkshopScreen() {
     <View style={styles.root} testID="workshop-screen">
       <Stack.Screen options={{ headerShown: false }} />
 
-      <LofiSaintBackground image={image} />
+      <LofiSaintBackground image={image} variant="workshop" />
 
       <SafeAreaView edges={["top", "bottom"]} style={styles.safe}>
         {/* Top controls */}
